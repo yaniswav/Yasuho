@@ -262,6 +262,7 @@ from cogs.system.dashboard_announcement_actions import (
 from cogs.system.dashboard_announcement_actions import (
     EXECUTORS as _ANNOUNCEMENT_EXECUTORS,
 )
+from cogs.system.dashboard_card_actions import EXECUTORS as _CARD_EXECUTORS
 from cogs.system.dashboard_music_actions import EXECUTORS as _MUSIC_EXECUTORS
 from cogs.system.dashboard_user_actions import EXECUTORS as _USER_EXECUTORS
 from tools import autoroom, i18n, modchecks, premium, role_menus, settings
@@ -1962,6 +1963,8 @@ _EXECUTORS = {
     # Scheduled announcements (cogs/system/dashboard_announcement_actions.py):
     # every write goes through the bot's AnnouncementStore.
     **_ANNOUNCEMENT_EXECUTORS,
+    # Server card background upload/clear (cogs/system/dashboard_card_actions.py).
+    **_CARD_EXECUTORS,
     "event_reminders_reconcile": _exec_event_reminders_reconcile,
     "suggestions_reconcile": _exec_suggestions_reconcile,
     "birthdays_reconcile": _exec_birthdays_reconcile,
@@ -2129,7 +2132,8 @@ async def _finish(pool, action_id, status, result):
     """Write the terminal ``status`` + ``result`` JSON back for an action."""
     await pool.execute(
         "UPDATE dashboard_actions "
-        "SET status = $1, result = $2::jsonb, updated_at = now() "
+        "SET status = $1, result = $2::jsonb, payload = payload - 'image', "
+        "updated_at = now() "
         "WHERE id = $3",
         status,
         json.dumps(result),
@@ -2301,7 +2305,8 @@ async def reconcile(bot):
     # expire. Both bounds are code constants / process state, never user input.
     await pool.execute(
         "UPDATE dashboard_actions "
-        "SET status = 'failed', result = $2::jsonb, updated_at = now() "
+        "SET status = 'failed', result = $2::jsonb, payload = payload - 'image', "
+        "updated_at = now() "
         "WHERE status IN ('pending', 'running') "
         "AND created_at < now() - $1 * INTERVAL '1 minute' "
         "AND NOT (id = ANY($3::bigint[]))",

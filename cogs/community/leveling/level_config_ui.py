@@ -44,7 +44,7 @@ from . import engine as leveling
 from . import rank_card
 from .rank_card_user import MAX_SOURCE_MB as _MAX_SOURCE_MB
 from .rank_card_user import rank_card_error_message as _rank_card_error_message
-from tools import interactions, rendering
+from tools import card_themes, interactions, rendering
 from tools.cooldowns import Cooldowns
 from tools.formats import format_dt, random_colour
 from tools.i18n import N_, _
@@ -306,6 +306,8 @@ async def _render_card_preview(bot, leveling_cog, guild, member):
     if has_background:
         background = await rank_card.fetch_background(pool, guild.id)
 
+    theme = await card_themes.for_guild(bot, guild.id)
+
     def _render():
         return leveling_cog._render_rank_card(
             avatar_bytes,
@@ -317,6 +319,7 @@ async def _render_card_preview(bot, leveling_cog, guild, member):
             next_threshold,
             accent,
             background,
+            theme,
         )
 
     return await rendering.run_image_job(bot, _render)

@@ -6,6 +6,7 @@ RGB image. These tests build a tiny in-memory PNG for the avatar so nothing
 touches the network, disk fixtures, Discord, or a database.
 """
 
+import hashlib
 import io
 
 from PIL import Image
@@ -77,3 +78,18 @@ def test_render_card_background_colour_applied():
     with Image.open(result) as img:
         # Top-right corner is background only (avatar sits on the left).
         assert img.getpixel((img.width - 1, 0)) == bg
+
+
+def _golden_avatar():
+    img = Image.new("RGBA", (16, 16))
+    img.putdata([(x * 15, y * 15, (x + y) * 7, 255) for y in range(16) for x in range(16)])
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+    return buf.getvalue()
+
+
+def test_default_welcome_render_matches_the_golden_hash():
+    out = render_card(_golden_avatar(), "Yasuho", 42, (30, 40, 50)).getvalue()
+    assert hashlib.sha256(out).hexdigest() == (
+        "166e66051060b6cb8faa3f95403783df3ba812398314f20d104b70c0c58e0725"
+    )

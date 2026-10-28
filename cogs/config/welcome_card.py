@@ -11,6 +11,8 @@ import io
 
 from PIL import Image, ImageDraw, ImageFont
 
+from tools import card_themes
+
 # Reuse a TTF already shipped with the bot (see cogs/fun/fun.py); fall back to
 # PIL's bitmap default if the file is missing so a render never hard-fails.
 _FONT_PATH = "ressources/fonts/impact.ttf"
@@ -28,7 +30,9 @@ def _load_fonts():
     return title_font, sub_font
 
 
-def render_card(avatar_bytes, display_name, member_count, bg_rgb):
+def render_card(
+    avatar_bytes, display_name, member_count, bg_rgb, style=card_themes.DEFAULT.welcome
+):
     """Render a welcome card and return it as a PNG ``BytesIO``.
 
     Parameters are plain values so this function is pure and never touches the
@@ -63,7 +67,7 @@ def render_card(avatar_bytes, display_name, member_count, bg_rgb):
             avatar_x + size + ring,
             avatar_y + size + ring,
         ),
-        fill=(255, 255, 255, 255),
+        fill=style.ring + (255,),
     )
     card.paste(avatar, (avatar_x, avatar_y), mask)
 
@@ -84,17 +88,17 @@ def render_card(avatar_bytes, display_name, member_count, bg_rgb):
         (text_x, 60),
         welcome_text,
         font=title_font,
-        fill=(255, 255, 255, 255),
+        fill=style.text + (255,),
         stroke_width=2,
-        stroke_fill=(0, 0, 0, 160),
+        stroke_fill=style.stroke,
     )
     draw.text(
         (text_x, 112),
         f"Member #{member_count}",
         font=sub_font,
-        fill=(255, 255, 255, 255),
+        fill=style.text + (255,),
         stroke_width=1,
-        stroke_fill=(0, 0, 0, 160),
+        stroke_fill=style.stroke,
     )
 
     buf = io.BytesIO()

@@ -231,6 +231,8 @@ def test_scheduled_announcement_limits_are_three_free_and_25_premium():
     assert premium.GUILD_PREMIUM.suggestions_custom
     assert not premium.GUILD_FREE.birthdays_custom
     assert premium.GUILD_PREMIUM.birthdays_custom
+    assert not premium.GUILD_FREE.premium_card_themes
+    assert premium.GUILD_PREMIUM.premium_card_themes
 
 
 def test_guild_free_dataclass_is_built_from_the_checked_constants():
@@ -253,6 +255,7 @@ def test_guild_free_dataclass_is_built_from_the_checked_constants():
         event_reminders_custom=premium.FREE_EVENT_REMINDERS_CUSTOM,
         suggestions_custom=premium.FREE_SUGGESTIONS_CUSTOM,
         birthdays_custom=premium.FREE_BIRTHDAYS_CUSTOM,
+        premium_card_themes=premium.FREE_PREMIUM_CARD_THEMES,
     )
 
 
@@ -312,6 +315,7 @@ def test_guild_limits_clamps_a_value_over_its_ceiling():
         event_reminders_custom=False,
         suggestions_custom=False,
         birthdays_custom=False,
+        premium_card_themes=False,
     )
     assert limits.max_guild_playlists == premium.GUILD_CEILINGS["max_guild_playlists"]
 

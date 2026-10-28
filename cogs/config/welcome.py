@@ -5,7 +5,7 @@ import discord
 from discord.ext import commands
 
 from . import welcome_card
-from tools import embed_creator, interactions, rendering, settings
+from tools import card_themes, embed_creator, interactions, rendering, settings
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.snowflake import coerce_id
@@ -712,6 +712,7 @@ class Welcome(commands.Cog):
         member_count = member.guild.member_count or 0
         colour = random_colour()
         bg_rgb = ((colour >> 16) & 0xFF, (colour >> 8) & 0xFF, colour & 0xFF)
+        theme = await card_themes.for_guild(self.bot, member.guild.id)
 
         return await rendering.run_image_job(
             self.bot,
@@ -720,6 +721,7 @@ class Welcome(commands.Cog):
             display_name,
             member_count,
             bg_rgb,
+            theme.welcome,
         )
 
     async def _render_card_file(self, member):

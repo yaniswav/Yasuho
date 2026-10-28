@@ -530,6 +530,8 @@ async def _invalidate_rank_card(bot, gid):
     move any cached metadata anyway, which only a re-read on render can see. No
     Leveling cog loaded, or a missing hook, is a safe no-op.
     """
+    # The card theme lives in the guild_settings blob (tools/card_themes).
+    settings.invalidate_guild(gid)
     cog = bot.get_cog("Leveling")
     if cog is None:
         return

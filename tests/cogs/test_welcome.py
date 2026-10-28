@@ -12,6 +12,7 @@ import discord
 
 import cogs.config.welcome as welcome_module
 from cogs.config.welcome import Welcome, WelcomeStatusView, _default_config
+from tools import card_themes
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +147,7 @@ class _FakeJoiningMember:
     def __init__(self):
         self.display_avatar = _FakeAvatar()
         self.display_name = "Newbie"
-        self.guild = types.SimpleNamespace(member_count=42)
+        self.guild = types.SimpleNamespace(id=1, member_count=42)
 
 
 async def test_get_config_caches_no_legacy_row_so_it_queries_at_most_once(
@@ -211,6 +212,11 @@ async def test_render_welcome_card_routes_through_run_image_job(monkeypatch):
 
     monkeypatch.setattr(welcome_module.rendering, "run_image_job", _fake_run_image_job)
 
+    async def _for_guild(bot, guild_id):
+        return card_themes.DEFAULT
+
+    monkeypatch.setattr(card_themes, "for_guild", _for_guild)
+
     bot = types.SimpleNamespace()
     cog = Welcome(bot)
     result = await cog.render_welcome_card(_FakeJoiningMember())
@@ -223,3 +229,4 @@ async def test_render_welcome_card_routes_through_run_image_job(monkeypatch):
     assert args[0] == b"avatar-bytes"
     assert args[1] == "Newbie"
     assert args[2] == 42
+    assert args[4] is card_themes.DEFAULT.welcome

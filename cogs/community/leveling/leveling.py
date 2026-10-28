@@ -13,7 +13,7 @@ from . import engine as leveling
 from . import gate as leveling_gate
 from . import rank_card
 from .rank_card_user import RankCardUserMixin, may_attach_files
-from tools import rendering, settings
+from tools import card_themes, rendering, settings
 from tools.cooldowns import Cooldowns
 from tools.formats import public_echo, random_colour
 from tools.i18n import _, ngettext
@@ -84,13 +84,6 @@ _RANK_CARD_CACHE_CAP = 512
 # guild's repeat /rank calls do not re-query. Distinct from a cache MISS (which
 # BoundedLRU reports as None), hence a real tuple rather than None.
 _STOCK_RANK_CARD = (None, False)
-
-# Scrim painted over a custom background before any text is drawn. The stock
-# card's text colours were picked against the near-black panel below, so a
-# bright photo would make them unreadable; this keeps the contrast budget the
-# layout was designed for while leaving the image clearly visible.
-_BACKGROUND_SCRIM = (18, 19, 26)
-_BACKGROUND_SCRIM_ALPHA = 150
 
 # The full set of level_config columns the hot-path LevelConfig mirror is built
 # from. EVERY read that refreshes a cached config - cog_load's bulk SELECT and
@@ -1593,7 +1586,7 @@ class Leveling(RankCardUserMixin, commands.Cog):
         self.invalidate_rank_card(guild_id)
 
     @staticmethod
-    def _paint_background(card, data):
+    def _paint_background(card, data, style=card_themes.DEFAULT.rank):
         """Paint a stored background under the card, returning success.
 
         The blob is written by cogs/community/leveling/rank_card.validate_and_downscale, so it is
@@ -1620,9 +1613,9 @@ class Leveling(RankCardUserMixin, commands.Cog):
         )
         card.paste(image, (0, 0), mask)
         card.paste(
-            Image.new("RGB", (width, height), _BACKGROUND_SCRIM),
+            Image.new("RGB", (width, height), style.scrim),
             (0, 0),
-            mask.point(lambda value: value * _BACKGROUND_SCRIM_ALPHA // 255),
+            mask.point(lambda value: value * style.scrim_alpha // 255),
         )
         return True
 
@@ -1638,6 +1631,7 @@ class Leveling(RankCardUserMixin, commands.Cog):
         next_threshold,
         accent,
         background=None,
+        theme=card_themes.DEFAULT,
     ):
         """Blocking Pillow render of a member's rank card. Returns a BytesIO PNG.
 
@@ -1655,17 +1649,20 @@ class Leveling(RankCardUserMixin, commands.Cog):
         are the ones that stay legible at any hue: the avatar ring, the LEVEL
         label and the bar fill.
         """
+        style = theme.rank
         width, height = rank_card.CARD_SIZE
         card = Image.new("RGBA", (width, height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(card)
 
         # Rounded dark panel (or the guild's background under a contrast scrim,
         # falling back to the panel if the stored blob cannot be decoded).
-        if background is None or not cls._paint_background(card, background):
+        if background is None or not cls._paint_background(
+            card, background, style
+        ):
             draw.rounded_rectangle(
                 (0, 0, width - 1, height - 1),
                 radius=rank_card.CARD_RADIUS,
-                fill=(28, 30, 38, 255),
+                fill=style.panel + (255,),
             )
 
         # Circular avatar with an accent ring on the left.
@@ -1697,7 +1694,7 @@ class Leveling(RankCardUserMixin, commands.Cog):
             ) > name_max:
                 display = display[:-1]
             display = display + "..."
-        draw.text((text_x, 48), display, font=name_font, fill=(240, 242, 248))
+        draw.text((text_x, 48), display, font=name_font, fill=style.name)
 
         # Rank + level, right-aligned on their own row.
         stat_font = cls._load_font(30)
@@ -1712,7 +1709,7 @@ class Leveling(RankCardUserMixin, commands.Cog):
             (width - 45 - level_w - 28 - rank_w, 108),
             rank_text,
             font=stat_font,
-            fill=(176, 182, 200),
+            fill=style.muted,
         )
 
         # XP progress toward the next level.
@@ -1725,7 +1722,7 @@ class Leveling(RankCardUserMixin, commands.Cog):
         draw.rounded_rectangle(
             (bar_x, bar_y, bar_x + bar_w, bar_y + bar_h),
             radius=bar_h // 2,
-            fill=(58, 61, 74, 255),
+            fill=style.track + (255,),
         )
         fill_w = int(bar_w * pct)
         if fill_w > 0:
@@ -1743,7 +1740,7 @@ class Leveling(RankCardUserMixin, commands.Cog):
             (bar_x + bar_w - xp_w, bar_y - 30),
             xp_text,
             font=xp_font,
-            fill=(176, 182, 200),
+            fill=style.muted,
         )
 
         buf = io.BytesIO()
@@ -1813,6 +1810,8 @@ class Leveling(RankCardUserMixin, commands.Cog):
                 if style_accent is not None:
                     accent = style_accent
 
+                theme = await card_themes.for_guild(self.bot, ctx.guild.id)
+
                 def _render():
                     return self._render_rank_card(
                         avatar_bytes,
@@ -1824,6 +1823,7 @@ class Leveling(RankCardUserMixin, commands.Cog):
                         next_threshold,
                         accent,
                         background,
+                        theme,
                     )
 
                 buf = await rendering.run_image_job(self.bot, _render)

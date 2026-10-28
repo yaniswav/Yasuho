@@ -282,6 +282,7 @@ EXCLUDED_GUILD_FIELDS = {
     "event_reminders_custom": "binary capability refused at the panel button; LIMIT-REACHED is its measure",
     "suggestions_custom": "binary capability refused at the panel button; LIMIT-REACHED is its measure",
     "birthdays_custom": "binary capability refused at the panel button; LIMIT-REACHED is its measure",
+    "premium_card_themes": "binary capability resolved silently to the default theme, nothing to refuse",
 }
 EXCLUDED_USER_FIELDS = {}
 

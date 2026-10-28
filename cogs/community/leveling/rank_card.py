@@ -24,6 +24,10 @@ writers cannot drift: the dashboard mirrors these exact statements and the same
 caps, then fires ``pg_notify('yasuho_dashboard', {"kind": "rank_card", ...})``
 so ``cogs/system/dashboard_sync.py`` drops the bot's cached config.
 
+The ``rank_cards`` row is the server's card style (accent and background); the
+guild's theme (``tools/card_themes``) lives in ``guild_settings`` and composes
+with it.
+
 Why normalise on the way IN rather than on every render: the card is drawn
 inside the shared image semaphore (``tools/rendering.run_image_job``, 2 slots
 bot-wide). Storing a pre-cropped, pre-bounded WebP means a ``/rank`` render only

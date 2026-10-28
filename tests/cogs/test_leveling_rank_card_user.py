@@ -233,6 +233,7 @@ def _record_renders(monkeypatch):
         next_threshold,
         accent,
         background,
+        theme,
     ):
         renders.append({"name": name, "accent": accent, "background": background})
         return io.BytesIO(b"card")

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-28 11:01+0000\n"
+"POT-Creation-Date: 2026-10-28 11:53+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -589,8 +589,8 @@ msgstr "そのタイプに一致するタイトルがありません。"
 
 #: cogs/anilist/edit_forms.py:331 cogs/anilist/edit_forms.py:335
 #: cogs/community/leveling/level_admin.py:91
-#: cogs/community/leveling/level_config_ui.py:787
-#: cogs/community/leveling/level_config_ui.py:866
+#: cogs/community/leveling/level_config_ui.py:790
+#: cogs/community/leveling/level_config_ui.py:869
 #: cogs/community/leveling/level_rewards.py:106
 #: cogs/community/leveling/seasons_views.py:214
 #: cogs/community/leveling/seasons_views.py:236
@@ -845,7 +845,7 @@ msgid "Unknown title"
 msgstr "不明なタイトル"
 
 #: cogs/anilist/feed_delivery.py:312
-#: cogs/community/leveling/level_config_ui.py:696
+#: cogs/community/leveling/level_config_ui.py:699
 msgid "You are clicking too fast - give it a moment."
 msgstr "クリックが速すぎます - 少し待ってください。"
 
@@ -1110,7 +1110,7 @@ msgid "Stop tracking a title..."
 msgstr "追跡を解除するタイトルを選択..."
 
 #: cogs/anilist/feed_views.py:562 cogs/anilist/feed_views.py:841
-#: cogs/community/leveling/leveling.py:248
+#: cogs/community/leveling/leveling.py:241
 #: cogs/community/leveling/seasons_views.py:170 cogs/community/reminders.py:823
 #: cogs/music/views.py:1631 cogs/music/views.py:2064 cogs/music/views.py:2462
 msgid "Next"
@@ -1295,7 +1295,7 @@ msgstr "有効"
 #: cogs/config/tickets/panel.py:94 cogs/config/tickets/panel.py:491
 #: cogs/config/twitch.py:426 cogs/config/verification.py:113
 #: cogs/config/welcome.py:426 cogs/config/welcome.py:547
-#: cogs/config/welcome.py:801 cogs/moderation/modlog.py:278
+#: cogs/config/welcome.py:803 cogs/moderation/modlog.py:278
 msgid "Disabled"
 msgstr "無効"
 
@@ -1313,7 +1313,7 @@ msgstr "このサーバーへのAniListアクティビティの反映方法を�
 #: cogs/config/event_reminders.py:264 cogs/config/milestones.py:251
 #: cogs/config/rolemenus.py:686 cogs/config/starboard.py:284
 #: cogs/config/twitch.py:441 cogs/config/welcome.py:438
-#: cogs/config/welcome.py:560 cogs/config/welcome.py:780
+#: cogs/config/welcome.py:560 cogs/config/welcome.py:782
 #: cogs/moderation/modlog.py:601 cogs/moderation/modlog.py:718
 msgid "Channel"
 msgstr "チャンネル"
@@ -1879,7 +1879,7 @@ msgstr "例: 10m、明日18時、または <t:...> タグ"
 #: cogs/community/birthdays/panel.py:183 cogs/community/reminders.py:367
 #: cogs/config/milestones.py:262 cogs/config/reactionroles.py:226
 #: cogs/config/reactionroles.py:342 cogs/config/twitch.py:36
-#: cogs/config/twitch.py:458 cogs/config/welcome.py:782
+#: cogs/config/twitch.py:458 cogs/config/welcome.py:784
 msgid "Message"
 msgstr "メッセージ"
 
@@ -1967,7 +1967,7 @@ msgstr "-# {count}件保留中"
 msgid "-# Page {page}/{pages} - {count} pending"
 msgstr "-# ページ {page}/{pages} - {count}件保留中"
 
-#: cogs/community/leveling/leveling.py:241
+#: cogs/community/leveling/leveling.py:234
 #: cogs/community/leveling/seasons_views.py:163 cogs/community/reminders.py:816
 #: cogs/music/views.py:1624 cogs/music/views.py:2057 cogs/music/views.py:2455
 msgid "Prev"
@@ -2434,7 +2434,7 @@ msgid "*Not set.*"
 msgstr "*未設定。*"
 
 #: cogs/community/birthdays/panel.py:176
-#: cogs/community/leveling/level_config_ui.py:750
+#: cogs/community/leveling/level_config_ui.py:753
 #: cogs/config/buttonroles.py:220 cogs/config/reactionroles.py:59
 #: cogs/config/reactionroles.py:228
 msgid "Role"
@@ -2699,8 +2699,8 @@ msgstr "サーバー全体: **x{factor}**"
 
 #: cogs/community/leveling/level_config_ui.py:173
 #: cogs/community/leveling/level_config_ui.py:179
-#: cogs/community/leveling/level_config_ui.py:896
-#: cogs/community/leveling/level_config_ui.py:902
+#: cogs/community/leveling/level_config_ui.py:899
+#: cogs/community/leveling/level_config_ui.py:905
 #: cogs/config/tickets/panel.py:156 cogs/config/verification.py:116
 msgid "(deleted)"
 msgstr "(削除済み)"
@@ -2714,95 +2714,95 @@ msgstr "実行中のXPイベントはありません。`/levelconfig event set` 
 msgid "**{factor}x** XP until {when}."
 msgstr "{when} まで XP **x{factor}**。"
 
-#: cogs/community/leveling/level_config_ui.py:334
+#: cogs/community/leveling/level_config_ui.py:337
 msgid "Set rank card accent"
 msgstr "ランクカードのアクセントを設定"
 
-#: cogs/community/leveling/level_config_ui.py:338
+#: cogs/community/leveling/level_config_ui.py:341
 msgid "Hex colour"
 msgstr "16進数カラー"
 
-#: cogs/community/leveling/level_config_ui.py:363
+#: cogs/community/leveling/level_config_ui.py:366
 msgid "Set background..."
 msgstr "背景を設定..."
 
-#: cogs/community/leveling/level_config_ui.py:374
+#: cogs/community/leveling/level_config_ui.py:377
 msgid "Reset background"
 msgstr "背景をリセット"
 
-#: cogs/community/leveling/level_config_ui.py:386
+#: cogs/community/leveling/level_config_ui.py:389
 msgid "Set accent..."
 msgstr "アクセントを設定..."
 
-#: cogs/community/leveling/level_config_ui.py:396
+#: cogs/community/leveling/level_config_ui.py:399
 msgid "Reset accent"
 msgstr "アクセントをリセット"
 
-#: cogs/community/leveling/level_config_ui.py:409
+#: cogs/community/leveling/level_config_ui.py:412
 msgid "Preview my card"
 msgstr "自分のカードをプレビュー"
 
-#: cogs/community/leveling/level_config_ui.py:429
+#: cogs/community/leveling/level_config_ui.py:432
 msgid "Turn off member styles"
 msgstr "メンバースタイルをオフにする"
 
-#: cogs/community/leveling/level_config_ui.py:430
+#: cogs/community/leveling/level_config_ui.py:433
 msgid "Turn on member styles"
 msgstr "メンバースタイルをオンにする"
 
-#: cogs/community/leveling/level_config_ui.py:498
+#: cogs/community/leveling/level_config_ui.py:501
 #, python-brace-format
 msgid "Rank card - {guild}"
 msgstr "ランクカード - {guild}"
 
-#: cogs/community/leveling/level_config_ui.py:501
+#: cogs/community/leveling/level_config_ui.py:504
 msgid "Customise the background and accent colour used on this server's /rank cards."
 msgstr "このサーバーの/rankカードで使用される背景とアクセントカラーをカスタマイズします。"
 
-#: cogs/community/leveling/level_config_ui.py:510
+#: cogs/community/leveling/level_config_ui.py:513
 #, python-brace-format
 msgid "Set - a custom {width}x{height} background image is used."
 msgstr "設定済み - カスタムの{width}x{height}背景画像が使用されます。"
 
-#: cogs/community/leveling/level_config_ui.py:514
+#: cogs/community/leveling/level_config_ui.py:517
 msgid "Not set - the stock panel background is used."
 msgstr "未設定 - 標準のパネル背景が使用されます。"
 
-#: cogs/community/leveling/level_config_ui.py:518
+#: cogs/community/leveling/level_config_ui.py:521
 #: cogs/community/leveling/rank_card_user.py:451
 msgid "Background"
 msgstr "背景"
 
-#: cogs/community/leveling/level_config_ui.py:532
+#: cogs/community/leveling/level_config_ui.py:535
 #: cogs/community/leveling/rank_card_user.py:464
 #, python-brace-format
 msgid "Set - {hex}"
 msgstr "設定済み - {hex}"
 
-#: cogs/community/leveling/level_config_ui.py:535
+#: cogs/community/leveling/level_config_ui.py:538
 msgid "Default - each member's own role colour is used."
 msgstr "デフォルト - 各メンバー自身のロールカラーが使用されます。"
 
-#: cogs/community/leveling/level_config_ui.py:539
+#: cogs/community/leveling/level_config_ui.py:542
 #: cogs/community/leveling/rank_card_user.py:462
 #: cogs/community/profile/registry.py:238
 msgid "Accent colour"
 msgstr "アクセントカラー"
 
-#: cogs/community/leveling/level_config_ui.py:554
+#: cogs/community/leveling/level_config_ui.py:557
 msgid "On - members who set their own card style with /rankcard see it here. Turn this off to keep one look for every card."
 msgstr "オン - /rankcard で自分のカードスタイルを設定したメンバーには、ここでもそれが反映されます。すべてのカードを同じ見た目にするにはオフにしてください。"
 
-#: cogs/community/leveling/level_config_ui.py:559
+#: cogs/community/leveling/level_config_ui.py:562
 msgid "Off - every card here uses this server's look. Nothing members set is deleted; it still applies elsewhere."
 msgstr "オフ - ここではすべてのカードがこのサーバーの見た目を使用します。メンバーが設定した内容は削除されず、他の場所では引き続き適用されます。"
 
-#: cogs/community/leveling/level_config_ui.py:564
-#: cogs/community/leveling/level_config_ui.py:1925
+#: cogs/community/leveling/level_config_ui.py:567
+#: cogs/community/leveling/level_config_ui.py:1928
 msgid "Member card styles"
 msgstr "メンバーのカードスタイル"
 
-#: cogs/community/leveling/level_config_ui.py:579
+#: cogs/community/leveling/level_config_ui.py:582
 #: cogs/community/leveling/seasons_views.py:185
 #: cogs/community/leveling/seasons_views.py:431
 #: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:769
@@ -2811,7 +2811,7 @@ msgstr "メンバーのカードスタイル"
 msgid "Only you can use these controls"
 msgstr "これらの操作はあなただけが使用できます"
 
-#: cogs/community/leveling/level_config_ui.py:581
+#: cogs/community/leveling/level_config_ui.py:584
 #: cogs/community/leveling/seasons_views.py:187
 #: cogs/community/leveling/seasons_views.py:433
 #: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:771
@@ -2820,65 +2820,65 @@ msgstr "これらの操作はあなただけが使用できます"
 msgid "times out after 3 min"
 msgstr "3分後にタイムアウトします"
 
-#: cogs/community/leveling/level_config_ui.py:608
+#: cogs/community/leveling/level_config_ui.py:611
 #, python-brace-format
 msgid "To set a background, run `/levelconfig card background` and attach an image (PNG, JPEG, or WebP; max {mb} MB)."
 msgstr "背景を設定するには、`/levelconfig card background`を実行し、画像（PNG、JPEG、またはWebP、最大{mb}MB）を添付してください。"
 
-#: cogs/community/leveling/level_config_ui.py:746
+#: cogs/community/leveling/level_config_ui.py:749
 msgid "Channel/category"
 msgstr "チャンネル/カテゴリー"
 
-#: cogs/community/leveling/level_config_ui.py:747
-#: cogs/community/leveling/level_config_ui.py:751
-#: cogs/community/leveling/level_config_ui.py:826
-#: cogs/community/leveling/level_config_ui.py:830
+#: cogs/community/leveling/level_config_ui.py:750
+#: cogs/community/leveling/level_config_ui.py:754
+#: cogs/community/leveling/level_config_ui.py:829
+#: cogs/community/leveling/level_config_ui.py:833
 msgid "Unknown (deleted)"
 msgstr "不明 (削除済み)"
 
-#: cogs/community/leveling/level_config_ui.py:760
+#: cogs/community/leveling/level_config_ui.py:763
 msgid "Pick a no-XP zone to remove..."
 msgstr "削除するXP対象外ゾーンを選択..."
 
-#: cogs/community/leveling/level_config_ui.py:780
+#: cogs/community/leveling/level_config_ui.py:783
 msgid "Removed that no-XP zone."
 msgstr "XP対象外ゾーンを削除しました。"
 
-#: cogs/community/leveling/level_config_ui.py:821
+#: cogs/community/leveling/level_config_ui.py:824
 msgid "Global boost"
 msgstr "全体ブースト"
 
-#: cogs/community/leveling/level_config_ui.py:822
+#: cogs/community/leveling/level_config_ui.py:825
 msgid "Server-wide"
 msgstr "サーバー全体"
 
-#: cogs/community/leveling/level_config_ui.py:825
+#: cogs/community/leveling/level_config_ui.py:828
 msgid "Channel/category boost"
 msgstr "チャンネル/カテゴリーブースト"
 
-#: cogs/community/leveling/level_config_ui.py:829
+#: cogs/community/leveling/level_config_ui.py:832
 msgid "Role boost"
 msgstr "ロールブースト"
 
-#: cogs/community/leveling/level_config_ui.py:839
+#: cogs/community/leveling/level_config_ui.py:842
 msgid "Pick an XP boost to remove..."
 msgstr "削除するXPブーストを選択..."
 
-#: cogs/community/leveling/level_config_ui.py:859
+#: cogs/community/leveling/level_config_ui.py:862
 msgid "Removed that XP boost."
 msgstr "XPブーストを削除しました。"
 
-#: cogs/community/leveling/level_config_ui.py:921
+#: cogs/community/leveling/level_config_ui.py:924
 #, python-brace-format
 msgid "No-XP zones | {guild}"
 msgstr "XP対象外ゾーン | {guild}"
 
-#: cogs/community/leveling/level_config_ui.py:930
+#: cogs/community/leveling/level_config_ui.py:933
 msgid "No no-XP zones configured yet. Use `/levelconfig noxp add` to mute a channel, category, or role."
 msgstr "XP対象外ゾーンはまだ設定されていません。`/levelconfig noxp add` でチャンネル・カテゴリー・ロールを除外できます。"
 
-#: cogs/community/leveling/level_config_ui.py:940
-#: cogs/community/leveling/level_config_ui.py:995
+#: cogs/community/leveling/level_config_ui.py:943
+#: cogs/community/leveling/level_config_ui.py:998
 #, python-brace-format
 msgid ""
 "**Channels & categories**\n"
@@ -2887,8 +2887,8 @@ msgstr ""
 "**チャンネルとカテゴリー**\n"
 "{lines}"
 
-#: cogs/community/leveling/level_config_ui.py:950
-#: cogs/community/leveling/level_config_ui.py:1005
+#: cogs/community/leveling/level_config_ui.py:953
+#: cogs/community/leveling/level_config_ui.py:1008
 #, python-brace-format
 msgid ""
 "**Roles**\n"
@@ -2897,17 +2897,17 @@ msgstr ""
 "**ロール**\n"
 "{lines}"
 
-#: cogs/community/leveling/level_config_ui.py:971
+#: cogs/community/leveling/level_config_ui.py:974
 #, python-brace-format
 msgid "XP boosts | {guild}"
 msgstr "XPブースト | {guild}"
 
-#: cogs/community/leveling/level_config_ui.py:980
+#: cogs/community/leveling/level_config_ui.py:983
 msgid "No XP boosts configured yet. Use `/levelconfig boost add` to boost or reduce XP globally, per channel, or per role."
 msgstr "XPブーストはまだ設定されていません。`/levelconfig boost add` で全体・チャンネル別・ロール別にXPを増減できます。"
 
-#: cogs/community/leveling/level_config_ui.py:1011
-#: cogs/community/leveling/level_config_ui.py:1108
+#: cogs/community/leveling/level_config_ui.py:1014
+#: cogs/community/leveling/level_config_ui.py:1111
 #, python-brace-format
 msgid ""
 "**XP event**\n"
@@ -2916,16 +2916,16 @@ msgstr ""
 "**XPイベント**\n"
 "{event}"
 
-#: cogs/community/leveling/level_config_ui.py:1046
+#: cogs/community/leveling/level_config_ui.py:1049
 #, python-brace-format
 msgid "Level config | {guild}"
 msgstr "レベル設定 | {guild}"
 
-#: cogs/community/leveling/level_config_ui.py:1053
+#: cogs/community/leveling/level_config_ui.py:1056
 msgid "No no-XP zones configured. Use `/levelconfig noxp add`."
 msgstr "XP対象外ゾーンは未設定です。`/levelconfig noxp add` で追加できます。"
 
-#: cogs/community/leveling/level_config_ui.py:1059
+#: cogs/community/leveling/level_config_ui.py:1062
 #, python-brace-format
 msgid ""
 "**No-XP zones ({count}/{max})**\n"
@@ -2934,7 +2934,7 @@ msgstr ""
 "**XP対象外ゾーン ({count}/{max})**\n"
 "{summary}"
 
-#: cogs/community/leveling/level_config_ui.py:1069
+#: cogs/community/leveling/level_config_ui.py:1072
 #, python-brace-format
 msgid ""
 "**Announce mode**\n"
@@ -2947,7 +2947,7 @@ msgstr ""
 "**通知メッセージ**\n"
 "{template}"
 
-#: cogs/community/leveling/level_config_ui.py:1078
+#: cogs/community/leveling/level_config_ui.py:1081
 #, python-brace-format
 msgid ""
 "**Voice XP**\n"
@@ -2956,11 +2956,11 @@ msgstr ""
 "**ボイスXP**\n"
 "{voice}"
 
-#: cogs/community/leveling/level_config_ui.py:1088
+#: cogs/community/leveling/level_config_ui.py:1091
 msgid "No XP boosts configured. Use `/levelconfig boost add`."
 msgstr "XPブーストは未設定です。`/levelconfig boost add` で追加できます。"
 
-#: cogs/community/leveling/level_config_ui.py:1098
+#: cogs/community/leveling/level_config_ui.py:1101
 #, python-brace-format
 msgid ""
 "**XP boosts ({count}/{max})**\n"
@@ -2969,184 +2969,184 @@ msgstr ""
 "**XPブースト ({count}/{max})**\n"
 "{summary}"
 
-#: cogs/community/leveling/level_config_ui.py:1160
-#: cogs/community/leveling/level_config_ui.py:1434
-#: cogs/community/leveling/level_config_ui.py:1460
-#: cogs/community/leveling/level_config_ui.py:1508
-#: cogs/community/leveling/level_config_ui.py:1557
+#: cogs/community/leveling/level_config_ui.py:1163
+#: cogs/community/leveling/level_config_ui.py:1437
+#: cogs/community/leveling/level_config_ui.py:1463
+#: cogs/community/leveling/level_config_ui.py:1511
+#: cogs/community/leveling/level_config_ui.py:1560
 msgid "The leveling system isn't loaded right now."
 msgstr "レベルシステムは現在読み込まれていません。"
 
-#: cogs/community/leveling/level_config_ui.py:1272 cogs/config/settings.py:89
+#: cogs/community/leveling/level_config_ui.py:1275 cogs/config/settings.py:89
 #: cogs/config/settings.py:215
 msgid "Leveling"
 msgstr "レベリング"
 
-#: cogs/community/leveling/level_config_ui.py:1274
+#: cogs/community/leveling/level_config_ui.py:1277
 msgid "Leveling enabled for this server."
 msgstr "このサーバーでレベリングを有効にしました。"
 
-#: cogs/community/leveling/level_config_ui.py:1276
+#: cogs/community/leveling/level_config_ui.py:1279
 msgid "Leveling disabled for this server."
 msgstr "このサーバーでレベリングを無効にしました。"
 
-#: cogs/community/leveling/level_config_ui.py:1309
+#: cogs/community/leveling/level_config_ui.py:1312
 msgid "Give exactly one of a channel/category or a role."
 msgstr "チャンネル/カテゴリーかロールのどちらか一方だけを指定してください。"
 
-#: cogs/community/leveling/level_config_ui.py:1314
+#: cogs/community/leveling/level_config_ui.py:1317
 msgid "You can't use @everyone as a no-XP zone."
 msgstr "@everyone はXP対象外ゾーンに使用できません。"
 
-#: cogs/community/leveling/level_config_ui.py:1330
-#: cogs/community/leveling/level_config_ui.py:1367
+#: cogs/community/leveling/level_config_ui.py:1333
+#: cogs/community/leveling/level_config_ui.py:1370
 #, python-brace-format
 msgid "This server already has the maximum of {max} no-XP zones."
 msgstr "このサーバーはすでに上限の {max} 件のXP対象外ゾーンがあります。"
 
-#: cogs/community/leveling/level_config_ui.py:1359
+#: cogs/community/leveling/level_config_ui.py:1362
 #, python-brace-format
 msgid "{target} is already a no-XP zone."
 msgstr "{target} はすでにXP対象外ゾーンです。"
 
-#: cogs/community/leveling/level_config_ui.py:1376
+#: cogs/community/leveling/level_config_ui.py:1379
 msgid "No-XP zone added"
 msgstr "XP対象外ゾーンを追加しました"
 
-#: cogs/community/leveling/level_config_ui.py:1377
+#: cogs/community/leveling/level_config_ui.py:1380
 #, python-brace-format
 msgid "{target} will no longer earn XP."
 msgstr "{target} ではXPを獲得できなくなります。"
 
-#: cogs/community/leveling/level_config_ui.py:1391
+#: cogs/community/leveling/level_config_ui.py:1394
 msgid "This server has no no-XP zones configured yet."
 msgstr "このサーバーにはまだXP対象外ゾーンがありません。"
 
-#: cogs/community/leveling/level_config_ui.py:1395
+#: cogs/community/leveling/level_config_ui.py:1398
 msgid "Pick a no-XP zone to remove:"
 msgstr "削除するXP対象外ゾーンを選択:"
 
-#: cogs/community/leveling/level_config_ui.py:1429
+#: cogs/community/leveling/level_config_ui.py:1432
 msgid "Give a channel when setting the fixed mode."
 msgstr "固定モードにするときはチャンネルを指定してください。"
 
-#: cogs/community/leveling/level_config_ui.py:1442
+#: cogs/community/leveling/level_config_ui.py:1445
 msgid "Announce mode updated"
 msgstr "通知モードを更新しました"
 
-#: cogs/community/leveling/level_config_ui.py:1466
+#: cogs/community/leveling/level_config_ui.py:1469
 #, python-brace-format
 msgid "The level-up message was reset to the default: \"{template}\""
 msgstr "レベルアップメッセージをデフォルトに戻しました: \"{template}\""
 
-#: cogs/community/leveling/level_config_ui.py:1486
+#: cogs/community/leveling/level_config_ui.py:1489
 msgid "Level-up message updated"
 msgstr "レベルアップメッセージを更新しました"
 
-#: cogs/community/leveling/level_config_ui.py:1487
+#: cogs/community/leveling/level_config_ui.py:1490
 #, python-brace-format
 msgid "Preview: {preview}"
 msgstr "プレビュー: {preview}"
 
-#: cogs/community/leveling/level_config_ui.py:1512
+#: cogs/community/leveling/level_config_ui.py:1515
 msgid "Voice XP enabled"
 msgstr "ボイスXPを有効にしました"
 
-#: cogs/community/leveling/level_config_ui.py:1513
+#: cogs/community/leveling/level_config_ui.py:1516
 msgid "Members now earn XP for time spent together in voice."
 msgstr "メンバーはボイスで一緒に過ごした時間でXPを獲得するようになりました。"
 
-#: cogs/community/leveling/level_config_ui.py:1516
+#: cogs/community/leveling/level_config_ui.py:1519
 msgid "Heads up: server leveling is off, so no voice XP is granted until you turn leveling on."
 msgstr "ご注意：サーバーのレベルシステムがオフのため、オンにするまでボイスXPは付与されません。"
 
-#: cogs/community/leveling/level_config_ui.py:1520
+#: cogs/community/leveling/level_config_ui.py:1523
 msgid "Voice XP disabled"
 msgstr "ボイスXPを無効にしました"
 
-#: cogs/community/leveling/level_config_ui.py:1521
+#: cogs/community/leveling/level_config_ui.py:1524
 msgid "Members no longer earn XP for time in voice."
 msgstr "メンバーはボイスの滞在時間でXPを獲得しなくなりました。"
 
-#: cogs/community/leveling/level_config_ui.py:1548
+#: cogs/community/leveling/level_config_ui.py:1551
 #, python-brace-format
 msgid "The rate must be between {min} and {max} XP per minute."
 msgstr "レートは1分あたり {min} から {max} XP の間にしてください。"
 
-#: cogs/community/leveling/level_config_ui.py:1561
+#: cogs/community/leveling/level_config_ui.py:1564
 msgid "Voice XP rate updated"
 msgstr "ボイスXPレートを更新しました"
 
-#: cogs/community/leveling/level_config_ui.py:1563
+#: cogs/community/leveling/level_config_ui.py:1566
 #, python-brace-format
 msgid "Members now earn **{rate}** XP per eligible minute in voice."
 msgstr "メンバーはボイスの対象1分ごとに **{rate}** XPを獲得するようになりました。"
 
-#: cogs/community/leveling/level_config_ui.py:1601
+#: cogs/community/leveling/level_config_ui.py:1604
 msgid "Give at most one of a channel/category or a role - give neither for a server-wide boost."
 msgstr "チャンネル/カテゴリーかロールはどちらか一方まで。両方空欄でサーバー全体のブーストになります。"
 
-#: cogs/community/leveling/level_config_ui.py:1609
+#: cogs/community/leveling/level_config_ui.py:1612
 msgid "You can't target @everyone directly - leave both the channel and role empty for a server-wide boost instead."
 msgstr "@everyone を直接指定できません。チャンネルとロールを空欄にするとサーバー全体のブーストになります。"
 
-#: cogs/community/leveling/level_config_ui.py:1635
+#: cogs/community/leveling/level_config_ui.py:1638
 msgid "the whole server"
 msgstr "サーバー全体"
 
-#: cogs/community/leveling/level_config_ui.py:1666
+#: cogs/community/leveling/level_config_ui.py:1669
 #, python-brace-format
 msgid "This server already has the maximum of {max} XP boosts."
 msgstr "このサーバーはすでに上限の {max} 件のXPブーストがあります。"
 
-#: cogs/community/leveling/level_config_ui.py:1674
+#: cogs/community/leveling/level_config_ui.py:1677
 msgid "XP boost set"
 msgstr "XPブーストを設定しました"
 
-#: cogs/community/leveling/level_config_ui.py:1676
+#: cogs/community/leveling/level_config_ui.py:1679
 #, python-brace-format
 msgid "{target} now has a **{factor}x** XP multiplier."
 msgstr "{target} のXP倍率が **x{factor}** になりました。"
 
-#: cogs/community/leveling/level_config_ui.py:1689
+#: cogs/community/leveling/level_config_ui.py:1692
 msgid "This server has no XP boosts configured yet."
 msgstr "このサーバーにはまだXPブーストがありません。"
 
-#: cogs/community/leveling/level_config_ui.py:1692
+#: cogs/community/leveling/level_config_ui.py:1695
 msgid "Pick an XP boost to remove:"
 msgstr "削除するXPブーストを選択:"
 
-#: cogs/community/leveling/level_config_ui.py:1710
+#: cogs/community/leveling/level_config_ui.py:1713
 msgid "XP event"
 msgstr "XPイベント"
 
-#: cogs/community/leveling/level_config_ui.py:1785
+#: cogs/community/leveling/level_config_ui.py:1788
 msgid "XP event started"
 msgstr "XPイベントを開始しました"
 
-#: cogs/community/leveling/level_config_ui.py:1797
+#: cogs/community/leveling/level_config_ui.py:1800
 msgid "The XP event was stopped."
 msgstr "XPイベントを停止しました。"
 
-#: cogs/community/leveling/level_config_ui.py:1884
+#: cogs/community/leveling/level_config_ui.py:1887
 #: cogs/community/leveling/rank_card_user.py:569
 msgid "I couldn't download that attachment - try again."
 msgstr "その添付ファイルをダウンロードできませんでした - もう一度お試しください。"
 
-#: cogs/community/leveling/level_config_ui.py:1897
+#: cogs/community/leveling/level_config_ui.py:1900
 #: cogs/community/leveling/rank_card_user.py:584
 msgid "Rank card background updated"
 msgstr "ランクカードの背景を更新しました"
 
-#: cogs/community/leveling/level_config_ui.py:1899
+#: cogs/community/leveling/level_config_ui.py:1902
 msgid "This server's /rank cards now use the uploaded image as their background."
 msgstr "このサーバーの/rankカードは、アップロードされた画像を背景として使用するようになりました。"
 
-#: cogs/community/leveling/level_config_ui.py:1928
+#: cogs/community/leveling/level_config_ui.py:1931
 msgid "Members can use their own /rankcard background and accent on this server."
 msgstr "メンバーはこのサーバーで自分の /rankcard の背景とアクセントを使用できます。"
 
-#: cogs/community/leveling/level_config_ui.py:1933
+#: cogs/community/leveling/level_config_ui.py:1936
 msgid "Every /rank card here uses this server's look. Nothing members set was deleted."
 msgstr "ここではすべての /rank カードがこのサーバーの見た目を使用します。メンバーが設定した内容は削除されていません。"
 
@@ -3247,17 +3247,17 @@ msgstr "メンバーは獲得したすべての報酬ロールを保持するよ
 msgid "Reward mode updated"
 msgstr "報酬モードを更新しました"
 
-#: cogs/community/leveling/leveling.py:157
+#: cogs/community/leveling/leveling.py:150
 #, python-brace-format
 msgid "**#{rank}** {name} - level **{level}** ({xp} XP)"
 msgstr "**#{rank}** {name} - レベル **{level}** ({xp} XP)"
 
-#: cogs/community/leveling/leveling.py:163
+#: cogs/community/leveling/leveling.py:156
 #, python-brace-format
 msgid "**#{rank}** {name} - {xp} XP"
 msgstr "**#{rank}** {name} - {xp} XP"
 
-#: cogs/community/leveling/leveling.py:173
+#: cogs/community/leveling/leveling.py:166
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -3266,7 +3266,7 @@ msgstr ""
 "{marker} **{name}**\n"
 "レベル **{level}** - {xp} XP"
 
-#: cogs/community/leveling/leveling.py:180
+#: cogs/community/leveling/leveling.py:173
 #, python-brace-format
 msgid ""
 "{marker} **{name}**\n"
@@ -3275,28 +3275,28 @@ msgstr ""
 "{marker} **{name}**\n"
 "{xp} XP"
 
-#: cogs/community/leveling/leveling.py:228
+#: cogs/community/leveling/leveling.py:221
 #, python-brace-format
 msgid "{count} member"
 msgid_plural "{count} members"
 msgstr[0] "{count}人"
 
-#: cogs/community/leveling/leveling.py:232
+#: cogs/community/leveling/leveling.py:225
 #, python-brace-format
 msgid "-# Page {page}/{pages} - {members}"
 msgstr "-# ページ {page}/{pages} - {members}"
 
-#: cogs/community/leveling/leveling.py:1408
+#: cogs/community/leveling/leveling.py:1401
 #, python-brace-format
 msgid "{base} ... and earned {roles}"
 msgstr "{base} ... さらに {roles} を獲得しました"
 
-#: cogs/community/leveling/leveling.py:1416
+#: cogs/community/leveling/leveling.py:1409
 #, python-brace-format
 msgid "{user} reached level **{level}**! ... and earned {roles}"
 msgstr "{user} がレベル **{level}** に到達しました！ ... さらに {roles} を獲得しました"
 
-#: cogs/community/leveling/leveling.py:1423
+#: cogs/community/leveling/leveling.py:1416
 #, python-brace-format
 msgid "{user} reached level **{level}**!"
 msgstr "{user} がレベル **{level}** に到達しました!"
@@ -5451,11 +5451,11 @@ msgid "Header"
 msgstr "ヘッダー"
 
 #: cogs/config/rolemenus.py:711 cogs/config/rolemenus.py:1020
-#: cogs/system/dashboard_actions.py:1499
+#: cogs/system/dashboard_actions.py:1500
 msgid "Pick your roles"
 msgstr "ロールを選択"
 
-#: cogs/config/rolemenus.py:718 cogs/system/dashboard_actions.py:1504
+#: cogs/config/rolemenus.py:718 cogs/system/dashboard_actions.py:1505
 #: cogs/utility/info.py:158
 msgid "Roles"
 msgstr "ロール"
@@ -6355,11 +6355,11 @@ msgstr ""
 msgid "Use `/verify setup` to turn on verification."
 msgstr "`/verify setup` で認証を有効にできます。"
 
-#: cogs/config/verification.py:203 cogs/system/dashboard_actions.py:578
+#: cogs/config/verification.py:203 cogs/system/dashboard_actions.py:579
 msgid "Verification"
 msgstr "認証"
 
-#: cogs/config/verification.py:206 cogs/system/dashboard_actions.py:581
+#: cogs/config/verification.py:206 cogs/system/dashboard_actions.py:582
 msgid "Click the button below to verify and unlock the server."
 msgstr "下のボタンをクリックして認証し、サーバーのロックを解除してください。"
 
@@ -6479,19 +6479,19 @@ msgstr "`/welcome` でフルビルダーを開けます。"
 msgid "Welcome {mention}!"
 msgstr "ようこそ {mention}!"
 
-#: cogs/config/welcome.py:779 cogs/config/welcome.py:799
+#: cogs/config/welcome.py:781 cogs/config/welcome.py:801
 msgid "Welcome message"
 msgstr "ウェルカムメッセージ"
 
-#: cogs/config/welcome.py:786
+#: cogs/config/welcome.py:788
 msgid "Use /welcome to open the full builder."
 msgstr "/welcome を使って完全なビルダーを開いてください。"
 
-#: cogs/config/welcome.py:802
+#: cogs/config/welcome.py:804
 msgid "Welcome messages have been turned off."
 msgstr "ウェルカムメッセージをオフにしました。"
 
-#: cogs/config/welcome.py:892
+#: cogs/config/welcome.py:894
 #, python-brace-format
 msgid "Welcome {member}!"
 msgstr "ようこそ {member}!"
@@ -10405,8 +10405,8 @@ msgstr "キューが空のときも、Yasuhoがボイスチャンネルに残り
 msgid "**Extended server playlists**"
 msgstr "**拡張されたサーバープレイリスト**"
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:155
-#: tests/cogs/test_premium_panel.py:159
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:156
+#: tests/cogs/test_premium_panel.py:160
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr "最大{count}件のプレイリスト(各{tracks}曲)。"
@@ -12628,6 +12628,10 @@ msgstr "🥁 ベースブースト"
 #: tests/test_view_locale_hygiene.py:529 tools/views.py:79
 msgid "This menu isn't for you."
 msgstr "このメニューはあなた用ではありません。"
+
+#: tools/card_themes.py:60
+msgid "Classic"
+msgstr "クラシック"
 
 #: tools/embed_creator.py:303
 msgid "default"
