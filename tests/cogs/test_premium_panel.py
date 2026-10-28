@@ -90,6 +90,8 @@ def _synthetic_guild_plus():
         serverstats_retention_days=365,
         music_247=True,
         premium_badge=True,
+        max_scheduled_announcements=23,
+        milestones_custom=True,
     )
 
 

@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import discord
 
 from .announcements_schedule import RECURRENCES, next_occurrence
-from tools import embed_creator
+from tools import embed_creator, premium
 
 UTC = datetime.timezone.utc
 log = logging.getLogger(__name__)
@@ -20,9 +20,21 @@ _FIELDS = (
 )
 
 
+class AnnouncementLimitReached(ValueError):
+    """The guild already holds as many scheduled announcements as its tier allows."""
+
+
+class AnnouncementArchived(ValueError):
+    """The announcement is over the guild's current limit (a lapsed Yasuho+)."""
+
+
 def max_for_guild(bot, guild_id):
-    """Safety ceiling; future guild premium limits have this single seam."""
-    return 50
+    """The guild's scheduled-announcement limit (free 3, Yasuho+ 25).
+
+    GuildLimits clamps it to the 50 safety ceiling, so the catalogue can be
+    wrong but never unsafe.
+    """
+    return premium.resolve_guild_limits(bot, guild_id).max_scheduled_announcements
 
 
 def validate(values):
@@ -167,7 +179,7 @@ class AnnouncementStore:
                     "SELECT count(*) FROM scheduled_announcements WHERE guild_id = $1", guild_id,
                 )
                 if count >= max_for_guild(self.bot, guild_id):
-                    raise ValueError("Announcement safety ceiling reached")
+                    raise AnnouncementLimitReached("Announcement limit reached")
                 row = await conn.fetchrow(
                     "INSERT INTO scheduled_announcements "
                     "(guild_id, channel_id, author_id, content, embed, role_id, timezone, "
@@ -178,6 +190,19 @@ class AnnouncementStore:
                 await self._timer(conn, row)
         self._wake()
         return row
+
+    async def _is_archived(self, conn, row):
+        """Lazy archival (tools/premium_archive doctrine): nothing is stored or
+        deleted by a downgrade. A row is archived while at least ``limit``
+        older rows exist, i.e. the newest rows past the limit lose, the oldest
+        ``limit`` keep working. Recomputed at use time, so it lifts the moment
+        the limit rises again or the excess is deleted.
+        """
+        older = await conn.fetchval(
+            "SELECT count(*) FROM scheduled_announcements WHERE guild_id = $1 AND id < $2",
+            row["guild_id"], row["id"],
+        )
+        return older >= max_for_guild(self.bot, row["guild_id"])
 
     @staticmethod
     def _args(data):
@@ -207,6 +232,9 @@ class AnnouncementStore:
                 )
                 if data["enabled"] and next_at is None:
                     raise ValueError("One-shot time must be in the future")
+                # An archived row may be paused or deleted, never (re)activated.
+                if data["enabled"] and await self._is_archived(conn, old):
+                    raise AnnouncementArchived("Announcement archived over the limit")
                 if not data["enabled"]:
                     next_at = None  # paused: no next send to show
                 row = await conn.fetchrow(
@@ -271,9 +299,14 @@ class AnnouncementStore:
                     "updated_at=now() WHERE id=$1", row["id"], next_at, next_at is not None,
                 )
                 await self._timer(conn, updated)
+                # The next occurrence stays scheduled either way, so the series
+                # resumes by itself if the limit rises; only this send is skipped.
+                archived = await self._is_archived(conn, row)
         self._wake()
         result = dict(claimed)
-        result["extra"] = {"announcement": dict(row), "scheduled_at": planned}
+        result["extra"] = {
+            "announcement": dict(row), "scheduled_at": planned, "archived": archived,
+        }
         return result
 
     async def record_result(self, row, error=None):

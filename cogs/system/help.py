@@ -123,6 +123,7 @@ CATEGORIES = [
             "Settings",
             "Welcome",
             "Announcements",
+            "Milestones",
             "CustomCommands",
             "Starboard",
             "TemporaryRooms",

@@ -186,3 +186,50 @@ def test_a_malformed_stored_embed_is_a_value_error_not_a_crash():
                 {"description": "x" * 4096, "footer": {"text": "y" * 2048}}):
         with pytest.raises(ValueError):
             render_embed(bad)
+
+
+async def test_schedule_over_the_limit_is_refused_ephemerally_with_the_limit():
+    from cogs.community.announcements_store import AnnouncementLimitReached
+
+    store = _Store()
+
+    async def _full(*args, **kwargs):
+        raise AnnouncementLimitReached("Announcement limit reached")
+
+    store.create = _full
+    cog, guild, _channel = _setup(store)
+    draft = {"embed": {"title": "x"}, "channel_id": None, "role_id": None}
+    panel = AnnouncePanel(cog, guild, 1, draft)
+    draft["channel_id"] = 9
+    interaction = types.SimpleNamespace(
+        user=types.SimpleNamespace(id=42), response=_Response(), followup=_Followup()
+    )
+    when = datetime.datetime(2030, 1, 6, 21, 0, tzinfo=datetime.timezone.utc)
+
+    await panel.schedule(interaction, when, "none", "UTC")
+
+    ((args, kwargs),) = interaction.followup.sent
+    assert "limit of 3" in args[0]
+    assert kwargs["ephemeral"] is True
+
+
+async def test_manager_marks_rows_past_the_limit_archived_and_refuses_resume():
+    from cogs.community.announcements_store import AnnouncementArchived
+
+    rows = [_row(i) for i in range(1, 6)]
+    store = _Store(rows)
+    cog, guild, _channel = _setup(store)
+    panel = ScheduledPanel(cog, guild, 1, store.rows, selected=5)
+    lines = panel.build_embed().description.splitlines()
+    assert "archived" not in lines[2] and "archived" in lines[3] and "archived" in lines[4]
+
+    async def _refuse(*args):
+        raise AnnouncementArchived("Announcement archived over the limit")
+
+    store.set_enabled = _refuse
+    interaction = types.SimpleNamespace(
+        user=types.SimpleNamespace(id=42), response=_Response()
+    )
+    await panel._toggle(interaction)
+    ((args, kwargs),) = interaction.response.sent
+    assert "over its limit of 3" in args[0] and kwargs["ephemeral"] is True

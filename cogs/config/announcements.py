@@ -17,7 +17,12 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import discord
 from discord.ext import commands
 
-from tools import embed_creator, interactions
+from cogs.community.announcements_store import (
+    AnnouncementArchived,
+    AnnouncementLimitReached,
+    max_for_guild,
+)
+from tools import embed_creator, interactions, premium, premium_upsell
 from tools.formats import random_colour
 from tools.i18n import N_, _
 from tools.time import FutureTime, ShortTime, parse_timestamp_token
@@ -37,6 +42,27 @@ PLACEHOLDER_HINT = "{server} {members} {channel}"
 # Kept under its old name: the builder preview, the legacy timer listener and
 # the scheduled-announcement engine all resolve the same tokens.
 build_substitution = embed_creator.server_substitution
+
+
+async def _refuse_over_limit(interaction, bot, guild, text, *, responded):
+    """An ephemeral limit refusal with the house upsell note (and slash button)."""
+    upsell = await premium_upsell.for_guild_refusal(
+        bot,
+        limit_key="scheduled_announcements",
+        guild_id=guild.id,
+        person_id=interaction.user.id,
+        is_admin=premium_upsell.invoker_is_admin(interaction.user),
+        already_top_tier=premium_upsell.is_guild_already_top_tier(bot, guild.id),
+        benefit=str(premium.GUILD_PREMIUM.max_scheduled_announcements),
+    )
+    kwargs = {"ephemeral": True}
+    if upsell is not None:
+        text += "\n" + upsell.line
+        view = upsell.view()
+        if view is not None:
+            kwargs["view"] = view
+    send = interaction.followup.send if responded else interaction.response.send_message
+    await send(text, **kwargs)
 
 
 class _TargetChannelSelect(discord.ui.ChannelSelect):
@@ -397,13 +423,19 @@ class AnnouncePanel(AuthorView):
                 embed=self.draft.get("embed"),
                 role_id=self.draft.get("role_id"),
             )
+        except AnnouncementLimitReached:
+            return await _refuse_over_limit(
+                interaction, self.cog.bot, self.guild,
+                _(
+                    "This server has reached its limit of {limit} scheduled "
+                    "announcements. Delete one with `/announcements` first."
+                ).format(limit=max_for_guild(self.cog.bot, self.guild.id)),
+                responded=True,
+            )
         except ValueError:
             log.info("Announcement schedule refused", exc_info=True)
             return await interaction.followup.send(
-                _(
-                    "I couldn't schedule that: check the time, and that this "
-                    "server has fewer than 50 scheduled announcements."
-                ),
+                _("I couldn't schedule that: check the time and try again."),
                 ephemeral=True,
             )
         lines = [
@@ -453,7 +485,7 @@ class AnnouncePanel(AuthorView):
         await interaction.followup.send(message, ephemeral=True)
 
 
-def _summary(row):
+def _summary(row, archived=False):
     """One line per scheduled announcement for the manager panel."""
     embed = row["embed"]
     if isinstance(embed, str):
@@ -462,7 +494,9 @@ def _summary(row):
     title = embed.get("title") or embed.get("description") or ""
     title = (title if isinstance(title, str) else "")[:40]
     repeat = _(dict(REPEAT_CHOICES).get(row["recurrence"], REPEAT_CHOICES[0][1]))
-    if row["enabled"] and row["next_run_at"] is not None:
+    if archived and row["enabled"]:
+        when = _("archived, over the limit")
+    elif row["enabled"] and row["next_run_at"] is not None:
         when = discord.utils.format_dt(row["next_run_at"], "R")
     elif row["failures"] >= 3:
         when = _("stopped after repeated failures")
@@ -548,7 +582,11 @@ class ScheduledPanel(AuthorView):
                 "Nothing scheduled. Build one with `/announce`, then press **Schedule**."
             )
         else:
-            text = "\n".join(_summary(r) for r in self.rows[:50])
+            # Rows past the limit (newest first) are archived: see the store.
+            limit = max_for_guild(self.cog.bot, self.guild.id)
+            text = "\n".join(
+                _summary(r, archived=i >= limit) for i, r in enumerate(self.rows[:50])
+            )
             embed.description = text if len(text) <= 4000 else text[:3997] + "..."
         return embed
 
@@ -586,6 +624,16 @@ class ScheduledPanel(AuthorView):
             return await self.rerender(interaction)
         try:
             await store.set_enabled(self.guild.id, row["id"], not row["enabled"])
+        except AnnouncementArchived:
+            return await _refuse_over_limit(
+                interaction, self.cog.bot, self.guild,
+                _(
+                    "This server is over its limit of {limit} scheduled "
+                    "announcements, so this one is archived. Delete another to "
+                    "free a slot."
+                ).format(limit=max_for_guild(self.cog.bot, self.guild.id)),
+                responded=False,
+            )
         except ValueError:
             return await interaction.response.send_message(
                 _(

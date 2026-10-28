@@ -2220,3 +2220,12 @@ LEFT JOIN ent_agg ea
     ON ea.scope_type = sc.scope_type AND ea.scope_id = sc.scope_id AND ea.product = sc.product
 LEFT JOIN grant_agg ga
     ON ga.scope_type = sc.scope_type AND ga.scope_id = sc.scope_id AND ga.product = sc.product;
+
+-- Member milestones (cogs/config/milestones.py). The config (enabled, channel,
+-- Yasuho+ custom list/message) lives in guild_settings.settings->'milestones';
+-- this row is only the per-guild HIGH-WATER mark, so announcing a milestone is
+-- ONE conditional UPDATE (last_milestone < $m) that concurrent joins race on.
+CREATE TABLE IF NOT EXISTS milestone_state (
+    guild_id BIGINT PRIMARY KEY,
+    last_milestone INTEGER NOT NULL DEFAULT 0 CHECK (last_milestone >= 0)
+);

@@ -219,6 +219,14 @@ def test_free_user_values_match_their_owning_cog_constants():
     assert premium.FREE_MAX_RECURRING_REMINDERS == reminders.MAX_RECURRING_REMINDERS
 
 
+def test_scheduled_announcement_limits_are_three_free_and_25_premium():
+    assert premium.GUILD_FREE.max_scheduled_announcements == 3
+    assert premium.GUILD_PREMIUM.max_scheduled_announcements == 25
+    assert premium.GUILD_CEILINGS["max_scheduled_announcements"] == 50
+    assert not premium.GUILD_FREE.milestones_custom
+    assert premium.GUILD_PREMIUM.milestones_custom
+
+
 def test_guild_free_dataclass_is_built_from_the_checked_constants():
     assert premium.GUILD_FREE == premium.GuildLimits(
         max_guild_playlists=premium.FREE_MAX_GUILD_PLAYLISTS,
@@ -234,6 +242,8 @@ def test_guild_free_dataclass_is_built_from_the_checked_constants():
         serverstats_retention_days=premium.FREE_SERVERSTATS_RETENTION_DAYS,
         music_247=premium.FREE_MUSIC_247,
         premium_badge=premium.FREE_PREMIUM_BADGE,
+        max_scheduled_announcements=premium.FREE_MAX_SCHEDULED_ANNOUNCEMENTS,
+        milestones_custom=premium.FREE_MILESTONES_CUSTOM,
     )
 
 
@@ -288,6 +298,8 @@ def test_guild_limits_clamps_a_value_over_its_ceiling():
         serverstats_retention_days=1,
         music_247=False,
         premium_badge=False,
+        max_scheduled_announcements=1,
+        milestones_custom=False,
     )
     assert limits.max_guild_playlists == premium.GUILD_CEILINGS["max_guild_playlists"]
 

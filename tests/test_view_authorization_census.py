@@ -761,6 +761,12 @@ CLASSIFIED: dict[str, tuple[str, str]] = {
         "Opened only from AnnouncePanel (announcements.py:206), an "
         "AuthorView; accepted revocation-only residual.",
     ),
+    "cogs.config.milestones.MilestoneModal": (
+        "GATED_FLOW_MODAL",
+        "Opened only from MilestonePanel._customize (milestones.py), an "
+        "AuthorView that re-checks Manage Server on every click, and only "
+        "while the guild has Yasuho+; accepted revocation-only residual.",
+    ),
     "cogs.config.buttonroles.AddButtonModal": (
         "GATED_FLOW_MODAL",
         "Opened only from BuilderView (buttonroles.py:437,619), an "

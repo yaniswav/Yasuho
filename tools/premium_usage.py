@@ -139,6 +139,9 @@ _TICKETS_OPEN_PER_GUILD_SQL = (
     "SELECT guild_id, count(*) AS cnt FROM tickets "
     "WHERE status = 'open' GROUP BY guild_id"
 )
+_SCHEDULED_ANNOUNCEMENTS_SQL = (
+    "SELECT guild_id, count(*) AS cnt FROM scheduled_announcements GROUP BY guild_id"
+)
 # music_247: a BOOLEAN capability (FREE_MUSIC_247 = False), not a numeric
 # cap - every row is one guild with 24/7 currently configured, so the inner
 # query's "count" is always exactly 1 per scope. Percentiles collapse to 1
@@ -229,6 +232,13 @@ RESOURCE_SPECS = [
         query=_query(_TICKETS_OPEN_PER_GUILD_SQL),
     ),
     ResourceSpec(
+        key="scheduled_announcements",
+        label="scheduled announcements / guild",
+        scope="guild",
+        field="max_scheduled_announcements",
+        query=_query(_SCHEDULED_ANNOUNCEMENTS_SQL),
+    ),
+    ResourceSpec(
         key="music_247",
         label="24/7 music enabled",
         scope="guild",
@@ -268,6 +278,7 @@ EXCLUDED_GUILD_FIELDS = {
     "history_max_items": "truncates silently (no refusal, no premium_upsell site)",
     "serverstats_retention_days": "a retention window, not a count that can be refused",
     "premium_badge": "cosmetic boolean, nothing to refuse",
+    "milestones_custom": "binary capability refused at the modal; LIMIT-REACHED is its measure",
 }
 EXCLUDED_USER_FIELDS = {}
 

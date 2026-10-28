@@ -168,6 +168,13 @@ GUILD_DELETE_QUERIES = (
         "DELETE FROM serverstats_digest_state WHERE guild_id = $1",
     ),
     (
+        # Member-milestone high-water mark (cogs/config/milestones.py): guild
+        # config state, no personal data. The milestone settings themselves are
+        # a guild_settings key and leave with that row.
+        "milestone_state",
+        "DELETE FROM milestone_state WHERE guild_id = $1",
+    ),
+    (
         # The dashboard -> bot action queue. Rows are terminal audit records
         # (kind, payload, the requesting user's id) that nothing else ever
         # deletes, so without this they would outlive the guild for good.
@@ -264,6 +271,7 @@ UNION SELECT guild_id FROM dashboard_audit
 UNION SELECT guild_id FROM server_stats_messages
 UNION SELECT guild_id FROM server_stats_days
 UNION SELECT guild_id FROM serverstats_digest_state
+UNION SELECT guild_id FROM milestone_state
 UNION SELECT guild_id FROM premium_entitlements WHERE guild_id IS NOT NULL
 UNION SELECT guild_id FROM premium_grants WHERE guild_id IS NOT NULL
 UNION
@@ -769,6 +777,12 @@ def invalidate_guild_caches(bot, guild_id):
     starboard = bot.get_cog("Starboard")
     if starboard is not None:
         starboard._config.pop(guild_id, None)
+
+    milestones = bot.get_cog("Milestones")
+    if milestones is not None:
+        # Highest milestone this process knows is already announced: the row it
+        # mirrors is deleted here, so a re-invite must not inherit the floor.
+        milestones._floor.pop(guild_id, None)
 
     twitch = bot.get_cog("Twitch")
     if twitch is not None:

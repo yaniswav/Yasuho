@@ -5,7 +5,7 @@ the claim and the result write-back) and merged into its single kind table,
 exactly like ``dashboard_music_actions``. The dashboard never writes the
 ``scheduled_announcements`` table itself: every change goes through
 ``AnnouncementStore`` here, so the exactly-once timer bookkeeping, the
-per-guild ceiling and the validation are the bot's own.
+per-guild limit and the validation are the bot's own.
 
 Handler contract: ``async handler(bot, guild_id, payload[, actor]) -> dict``.
 ``guild_id`` is authoritative (the claimed row); every payload value is
@@ -24,7 +24,9 @@ Success: ``{"ok": true, "announcement_id", "next_run_at": ISO-8601 | null}``.
 Error codes: ``bad_payload``, ``guild_unavailable``, ``engine_unavailable``,
 ``channel_not_found``, ``not_text_channel``, ``missing_permissions``,
 ``role_not_found``, ``role_not_mentionable``, ``not_found``,
-``limit_reached``, ``invalid_announcement``.
+``limit_reached`` (free 3 / Yasuho+ 25 rows, paused ones count),
+``announcement_archived`` (resume/edit-while-enabled of a row over the limit
+after a downgrade; pause and delete still work), ``invalid_announcement``.
 
 Typography rule: ASCII '-' and '...' only.
 """
@@ -33,6 +35,8 @@ import datetime
 import logging
 
 import discord
+
+from cogs.community.announcements_store import AnnouncementArchived, AnnouncementLimitReached
 
 log = logging.getLogger(__name__)
 
@@ -63,8 +67,10 @@ def _result(row):
 
 def _error(exc):
     text = str(exc)
-    if "ceiling" in text:
+    if isinstance(exc, AnnouncementLimitReached):
         return {"ok": False, "error": "limit_reached"}
+    if isinstance(exc, AnnouncementArchived):
+        return {"ok": False, "error": "announcement_archived"}
     return {"ok": False, "error": "invalid_announcement", "detail": text[:200]}
 
 

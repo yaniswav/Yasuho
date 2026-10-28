@@ -13,10 +13,16 @@ import discord
 import pytest
 
 from cogs.community.announcements_schedule import next_occurrence
-from cogs.community.announcements_store import render, validate
+from cogs.community.announcements_store import (
+    AnnouncementArchived,
+    AnnouncementLimitReached,
+    max_for_guild,
+    render,
+    validate,
+)
 from cogs.community.reminders import Reminder
 from cogs.community.scheduled_announcements import ScheduledAnnouncements
-from tools import privacy, retention
+from tools import premium, privacy, retention
 
 UTC = datetime.timezone.utc
 NOW = datetime.datetime(2026, 1, 1, 9, tzinfo=UTC)
@@ -150,7 +156,11 @@ class Connection:
 
     async def fetchval(self, query, *args):
         self.pool.queries.append((query, args))
-        return sum(r["guild_id"] == args[0] for r in self.pool.rows.values())
+        # The archival probe also passes the row id: count only OLDER rows.
+        return sum(
+            r["guild_id"] == args[0] and (len(args) == 1 or r["id"] < args[1])
+            for r in self.pool.rows.values()
+        )
 
     async def fetchrow(self, query, *args):
         pool = self.pool
@@ -463,10 +473,64 @@ async def test_create_list_get_and_cap():
     assert await cog.store.get(99, row["id"]) is None
     assert await cog.store.list_for_guild(3) == [row]
     assert len(pool.timers) == 1 and reminder._have_data.is_set()
-    pool.rows = {i: announcement(id=i) for i in range(1, 51)}
-    with pytest.raises(ValueError, match="ceiling"):
+    pool.rows = {i: announcement(id=i, enabled=False) for i in range(1, 4)}
+    # The free limit counts every row, paused ones included.
+    with pytest.raises(AnnouncementLimitReached):
         await cog.store.create(3, 9, 5, local_time=local("2026-01-02T09:00"), timezone="UTC", content="Hi")
     assert len(pool.timers) == 1
+
+
+def _premium(cog):
+    cog.bot.premium = SimpleNamespace(for_guild=lambda gid: premium.GUILD_PREMIUM)
+
+
+async def test_premium_limit_is_25_and_the_ceiling_stays_50():
+    pool = Pool()
+    cog, reminder, channel, dispatched = engine(pool)
+    _premium(cog)
+    pool.rows = {i: announcement(id=i, enabled=False) for i in range(1, 25)}
+    await cog.store.create(3, 9, 5, local_time=local("2026-01-02T09:00"), timezone="UTC", content="Hi")
+    with pytest.raises(AnnouncementLimitReached):
+        await cog.store.create(3, 9, 5, local_time=local("2026-01-02T09:00"), timezone="UTC", content="Hi")
+    # A catalogue typo can never lift the limit past the safety ceiling.
+    cog.bot.premium = SimpleNamespace(for_guild=lambda gid: premium.GuildLimits(
+        **{**premium.GUILD_PREMIUM.__dict__, "max_scheduled_announcements": 9999}
+    ))
+    assert max_for_guild(cog.bot, 3) == 50
+
+
+async def test_downgrade_archives_the_newest_rows_and_never_deletes(caplog):
+    pool = Pool()
+    cog, reminder, channel, dispatched = engine(pool)
+    pool.rows = {i: announcement(id=i) for i in range(1, 7)}
+    # Six enabled rows left over from a lapsed Yasuho+; the free limit is 3.
+    for i in range(1, 7):
+        pool.timers[100 + i] = dict(id=100 + i, event="announcement", expires=NOW,
+                                    extra={}, announcement_id=i, claimed_at=None)
+    # Archived rows cannot be resumed or edited while enabled...
+    pool.rows[5]["enabled"] = False
+    with pytest.raises(AnnouncementArchived):
+        await cog.store.set_enabled(3, 5, True)
+    with pytest.raises(AnnouncementArchived):
+        await cog.store.update(3, 6, content="edited")
+    # ...but can be paused, and the oldest three keep working.
+    assert (await cog.store.set_enabled(3, 6, False))["enabled"] is False
+    assert (await cog.store.update(3, 2, content="edited"))["content"] == "edited"
+    assert len(pool.rows) == 6
+    # Their timers still tick (the series survives) but nothing is sent.
+    with caplog.at_level("INFO"):
+        await reminder._deliver_at_most_once(dict(pool.timers[104]))
+        event, extra = dispatched.pop()
+        await cog.on_announcement_timer_complete(extra)
+    channel.send.assert_not_awaited()
+    assert "ANNOUNCE-SKIP-ARCHIVED" in caplog.text
+    await reminder._deliver_at_most_once(dict(pool.timers[103]))
+    event, extra = dispatched.pop()
+    await cog.on_announcement_timer_complete(extra)
+    channel.send.assert_awaited_once()
+    # Back to Yasuho+: the same rows are active again, no bookkeeping.
+    _premium(cog)
+    assert (await cog.store.set_enabled(3, 5, True))["enabled"] is True
 
 
 async def test_invalid_create_does_not_issue_sql():

@@ -60,6 +60,7 @@ import core
 
 from cogs.community.leveling.leveling import Leveling
 from cogs.config.customcommands import CustomCommands
+from cogs.config.milestones import Milestones
 from cogs.config.rooms import TemporaryRooms
 from cogs.config.starboard import Starboard
 from cogs.config.twitch import Twitch
@@ -216,6 +217,21 @@ REGISTRY = (
         EMPTY,
         HEALS,
         "Negative-cached (channel_id, threshold). Read-through in get_config.",
+    ),
+    # -- Milestones ---------------------------------------------------------
+    _mirror(
+        "Milestones",
+        "_floor",
+        GUILD_MAP,
+        DROP,
+        KEEP,
+        HEALS,
+        "Highest milestone this process knows is already announced, so a join "
+        "in an enabled guild skips the database until a higher one is reached. "
+        "Only ever saves queries (the conditional UPDATE on milestone_state is "
+        "the source of truth), so a reconnect has nothing to fix; the purge "
+        "drops it because milestone_state is deleted and a re-invite must not "
+        "inherit the floor. Cold entries are re-armed on the next join.",
     ),
     # -- AutoMod ------------------------------------------------------------
     _mirror(
@@ -773,6 +789,7 @@ def bot_framework_attrs():
 COG_CLASSES = {
     "ModLog": ModLog,
     "Starboard": Starboard,
+    "Milestones": Milestones,
     "AutoMod": AutoMod,
     "Twitch": Twitch,
     "Leveling": Leveling,
@@ -1155,6 +1172,7 @@ def test_a_deliberate_omission_is_pinned_in_both_directions():
         "Leveling._period_markers",
         "CustomCommands._cd",
         "AutoMod._spam",
+        "Milestones._floor",
         "ModLog._recent_bans",
         "ModLog._suppressed",
         "bot.blacklist",

@@ -28,6 +28,9 @@ class ScheduledAnnouncements(commands.Cog):
             if row["recurrence"] == "none":
                 log.info("ANNOUNCE-DISABLED id=%s reason=late-one-shot", row["id"])
             return
+        if extra.get("archived"):
+            log.info("ANNOUNCE-SKIP-ARCHIVED id=%s guild=%s", row["id"], row["guild_id"])
+            return
         try:
             guild = self.bot.get_guild(row["guild_id"])
             if guild is None or guild.me is None:

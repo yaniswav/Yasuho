@@ -119,6 +119,7 @@ _EXPECTED_SQL_SUBSTRINGS = {
     "voice_hubs": ["guild_settings", "autorooms"],
     "tickets_open_per_member": ["tickets", "status = 'open'", "opener_id"],
     "tickets_open_per_guild": ["tickets", "status = 'open'"],
+    "scheduled_announcements": ["scheduled_announcements", "GROUP BY guild_id"],
     "music_247": ["music_247"],
     "favourites": ["music_favorites", "GROUP BY user_id"],
     "reminders_pending": ["timers", "event = 'reminder'", "author_id"],

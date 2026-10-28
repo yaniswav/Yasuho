@@ -214,6 +214,13 @@ FREE_SERVERSTATS_RETENTION_DAYS = 90  # cogs/community/serverstats/cog.RETENTION
 FREE_MUSIC_247 = False
 FREE_PREMIUM_BADGE = False
 
+# Scheduled announcements (cogs/community/announcements_store). Counts EVERY
+# row of the guild, paused ones included, so a free server cannot hoard them.
+FREE_MAX_SCHEDULED_ANNOUNCEMENTS = 3
+# Member milestones (cogs/config/milestones): a custom milestone list and
+# message template are a Yasuho+ capability; free uses the fixed list.
+FREE_MILESTONES_CUSTOM = False
+
 FREE_MAX_FAVOURITES = 100  # cogs/music/music.MAX_FAVOURITES
 FREE_MAX_PENDING_REMINDERS = 25  # cogs/community/reminders.MAX_PENDING_REMINDERS
 FREE_MAX_RECURRING_REMINDERS = 5  # cogs/community/reminders.MAX_RECURRING_REMINDERS
@@ -253,6 +260,7 @@ GUILD_CEILINGS = {
     "max_tickets_open_per_user": 20,
     "max_tickets_open_per_guild": 500,
     "serverstats_retention_days": 365,
+    "max_scheduled_announcements": 50,
 }
 
 USER_CEILINGS = {
@@ -279,6 +287,8 @@ class GuildLimits:
     serverstats_retention_days: int
     music_247: bool
     premium_badge: bool
+    max_scheduled_announcements: int
+    milestones_custom: bool
 
     def __post_init__(self):
         for name, ceiling in GUILD_CEILINGS.items():
@@ -318,6 +328,8 @@ GUILD_FREE = GuildLimits(
     serverstats_retention_days=FREE_SERVERSTATS_RETENTION_DAYS,
     music_247=FREE_MUSIC_247,
     premium_badge=FREE_PREMIUM_BADGE,
+    max_scheduled_announcements=FREE_MAX_SCHEDULED_ANNOUNCEMENTS,
+    milestones_custom=FREE_MILESTONES_CUSTOM,
 )
 
 # Yasuho+ (guild subscription). Values from the retained plan's table
@@ -336,6 +348,8 @@ GUILD_PREMIUM = GuildLimits(
     serverstats_retention_days=365,
     music_247=True,
     premium_badge=True,
+    max_scheduled_announcements=25,
+    milestones_custom=True,
 )
 
 USER_FREE = UserLimits(

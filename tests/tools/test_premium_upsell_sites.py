@@ -54,6 +54,8 @@ _ALLOWED_IMPORTERS = {
     "cogs/music/playlists_shared.py",
     "cogs/community/reminders.py",
     "cogs/config/rolemenus.py",
+    "cogs/config/announcements.py",
+    "cogs/config/milestones.py",
     "cogs/config/rooms_config.py",
     "cogs/config/tickets/open.py",
     "cogs/anilist/feed.py",
