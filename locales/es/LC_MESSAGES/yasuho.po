@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-28 10:05+0000\n"
+"POT-Creation-Date: 2026-10-28 10:29+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -458,7 +458,7 @@ msgid "Edit"
 msgstr "Editar"
 
 #: cogs/anilist/collection.py:381 cogs/anilist/feed_views.py:1308
-#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:456
+#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:473
 #: cogs/config/rooms_config.py:489 tools/views.py:80
 msgid "This panel isn't for you."
 msgstr "Este panel no es para ti."
@@ -550,7 +550,8 @@ msgid "Keep current status"
 msgstr "Mantener el estado actual"
 
 #: cogs/anilist/edit_forms.py:179 cogs/anilist/feed_views.py:1409
-#: cogs/anilist/media_view.py:396 cogs/config/event_reminders.py:259
+#: cogs/anilist/media_view.py:396 cogs/community/suggestions/panel.py:195
+#: cogs/community/suggestions/render.py:55 cogs/config/event_reminders.py:259
 #: cogs/config/milestones.py:246 cogs/config/twitch.py:439
 #: cogs/config/welcome.py:436 cogs/config/welcome.py:558
 msgid "Status"
@@ -1071,11 +1072,11 @@ msgstr "Los miembros pueden unirse: {state}"
 msgid "On"
 msgstr "Activado"
 
-#: cogs/anilist/feed_views.py:284 cogs/config/welcome.py:152
-#: cogs/config/welcome.py:450 cogs/config/welcome.py:452
-#: cogs/config/welcome.py:454 cogs/config/welcome.py:566
-#: cogs/config/welcome.py:568 cogs/config/welcome.py:570
-#: cogs/music/views.py:514
+#: cogs/anilist/feed_views.py:284 cogs/community/suggestions/panel.py:214
+#: cogs/config/welcome.py:152 cogs/config/welcome.py:450
+#: cogs/config/welcome.py:452 cogs/config/welcome.py:454
+#: cogs/config/welcome.py:566 cogs/config/welcome.py:568
+#: cogs/config/welcome.py:570 cogs/music/views.py:514
 msgid "Off"
 msgstr "Desactivado"
 
@@ -1214,15 +1215,15 @@ msgstr[1] "{count} usuarios silenciados de {total} seguidos"
 msgid "Muted here ({count})"
 msgstr "Silenciado aquí ({count})"
 
-#: cogs/anilist/feed_views.py:1033 cogs/config/event_reminders.py:204
-#: cogs/config/milestones.py:201 cogs/config/twitch.py:321
-#: cogs/config/welcome.py:207
+#: cogs/anilist/feed_views.py:1033 cogs/community/suggestions/panel.py:138
+#: cogs/config/event_reminders.py:204 cogs/config/milestones.py:201
+#: cogs/config/twitch.py:321 cogs/config/welcome.py:207
 msgid "Disable"
 msgstr "Desactivar"
 
-#: cogs/anilist/feed_views.py:1033 cogs/config/event_reminders.py:204
-#: cogs/config/milestones.py:201 cogs/config/twitch.py:321
-#: cogs/config/welcome.py:207
+#: cogs/anilist/feed_views.py:1033 cogs/community/suggestions/panel.py:138
+#: cogs/config/event_reminders.py:204 cogs/config/milestones.py:201
+#: cogs/config/twitch.py:321 cogs/config/welcome.py:207
 msgid "Enable"
 msgstr "Activar"
 
@@ -1232,7 +1233,7 @@ msgstr "Eliminar"
 
 #: cogs/anilist/feed_views.py:1065 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
-#: cogs/community/usersettings.py:245 cogs/community/usersettings.py:336
+#: cogs/community/usersettings.py:246 cogs/community/usersettings.py:353
 #: cogs/config/tickets/lifecycle.py:280 cogs/system/arg_completion.py:286
 msgid "Cancel"
 msgstr "Cancelar"
@@ -1289,21 +1290,22 @@ msgstr "Feed de actividad de AniList"
 msgid "This server has no AniList feed yet. Pick a channel below to create one (up to {max} per server)."
 msgstr "Este servidor todavía no tiene un feed de AniList. Elige un canal abajo para crear uno (hasta {max} por servidor)."
 
-#: cogs/anilist/feed_views.py:1391 cogs/config/event_reminders.py:260
-#: cogs/config/milestones.py:247 cogs/config/settings.py:53
-#: cogs/config/tickets/panel.py:92 cogs/config/tickets/panel.py:489
-#: cogs/config/twitch.py:424 cogs/config/verification.py:111
-#: cogs/config/welcome.py:424 cogs/config/welcome.py:545
-#: cogs/moderation/modlog.py:276
+#: cogs/anilist/feed_views.py:1391 cogs/community/suggestions/panel.py:195
+#: cogs/config/event_reminders.py:260 cogs/config/milestones.py:247
+#: cogs/config/settings.py:53 cogs/config/tickets/panel.py:92
+#: cogs/config/tickets/panel.py:489 cogs/config/twitch.py:424
+#: cogs/config/verification.py:111 cogs/config/welcome.py:424
+#: cogs/config/welcome.py:545 cogs/moderation/modlog.py:276
 msgid "Enabled"
 msgstr "Activado"
 
-#: cogs/anilist/feed_views.py:1391 cogs/config/event_reminders.py:260
-#: cogs/config/milestones.py:247 cogs/config/settings.py:53
-#: cogs/config/tickets/panel.py:94 cogs/config/tickets/panel.py:491
-#: cogs/config/twitch.py:426 cogs/config/verification.py:113
-#: cogs/config/welcome.py:426 cogs/config/welcome.py:547
-#: cogs/config/welcome.py:801 cogs/moderation/modlog.py:278
+#: cogs/anilist/feed_views.py:1391 cogs/community/suggestions/panel.py:195
+#: cogs/config/event_reminders.py:260 cogs/config/milestones.py:247
+#: cogs/config/settings.py:53 cogs/config/tickets/panel.py:94
+#: cogs/config/tickets/panel.py:491 cogs/config/twitch.py:426
+#: cogs/config/verification.py:113 cogs/config/welcome.py:426
+#: cogs/config/welcome.py:547 cogs/config/welcome.py:801
+#: cogs/moderation/modlog.py:278
 msgid "Disabled"
 msgstr "Desactivado"
 
@@ -1316,12 +1318,13 @@ msgstr "{status} ({count} fallos recientes)"
 msgid "Configure how AniList activity is mirrored into this server. Every change saves instantly."
 msgstr "Configura cómo se refleja la actividad de AniList en este servidor. Cada cambio se guarda al instante."
 
-#: cogs/anilist/feed_views.py:1407 cogs/config/announcements.py:315
-#: cogs/config/event_reminders.py:264 cogs/config/milestones.py:251
-#: cogs/config/rolemenus.py:686 cogs/config/starboard.py:284
-#: cogs/config/twitch.py:441 cogs/config/welcome.py:438
-#: cogs/config/welcome.py:560 cogs/config/welcome.py:780
-#: cogs/moderation/modlog.py:601 cogs/moderation/modlog.py:718
+#: cogs/anilist/feed_views.py:1407 cogs/community/suggestions/panel.py:197
+#: cogs/config/announcements.py:315 cogs/config/event_reminders.py:264
+#: cogs/config/milestones.py:251 cogs/config/rolemenus.py:686
+#: cogs/config/starboard.py:284 cogs/config/twitch.py:441
+#: cogs/config/welcome.py:438 cogs/config/welcome.py:560
+#: cogs/config/welcome.py:780 cogs/moderation/modlog.py:601
+#: cogs/moderation/modlog.py:718
 msgid "Channel"
 msgstr "Canal"
 
@@ -1427,7 +1430,7 @@ msgstr "No pude abrir el formulario de código."
 #: cogs/anilist/lookup.py:39 cogs/config/settings.py:52
 #: cogs/config/settings.py:173 cogs/config/settings.py:182
 #: cogs/config/settings.py:196 cogs/config/settings.py:204
-#: cogs/system/help.py:515 cogs/utility/info.py:36 cogs/utility/info.py:148
+#: cogs/system/help.py:516 cogs/utility/info.py:36 cogs/utility/info.py:148
 msgid "Unknown"
 msgstr "Desconocido"
 
@@ -2007,142 +2010,146 @@ msgstr "&lt;@{author_id}&gt;, {when}: {message}"
 msgid "Tap the button below to set a reminder."
 msgstr "Toca el botón de abajo para crear un recordatorio."
 
-#: cogs/community/usersettings.py:88
+#: cogs/community/usersettings.py:89
 msgid "Level-up announcements"
 msgstr "Anuncios de subida de nivel"
 
-#: cogs/community/usersettings.py:90
+#: cogs/community/usersettings.py:91
 msgid "Get pinged in chat when you reach a new level."
 msgstr "Recibe una mención en el chat cuando alcances un nuevo nivel."
 
-#: cogs/community/usersettings.py:99
+#: cogs/community/usersettings.py:100
 msgid "Level-up ping"
 msgstr "Ping de subida de nivel"
 
-#: cogs/community/usersettings.py:102
+#: cogs/community/usersettings.py:103
 msgid "Ping you by mention in level-up announcements. Turn off to be named without a ping."
 msgstr "Te menciona en los anuncios de subida de nivel. Desactívalo para aparecer sin ping."
 
-#: cogs/community/usersettings.py:109
+#: cogs/community/usersettings.py:110
 msgid "Expanded help"
 msgstr "Ayuda ampliada"
 
-#: cogs/community/usersettings.py:111
+#: cogs/community/usersettings.py:112
 msgid "Show every subcommand inline when you browse help."
 msgstr "Muestra todos los subcomandos en línea al navegar por la ayuda."
 
-#: cogs/community/usersettings.py:131
+#: cogs/community/usersettings.py:132
 msgid "Music autoplay"
 msgstr "Reproducción automática de música"
 
-#: cogs/community/usersettings.py:134
+#: cogs/community/usersettings.py:135
 msgid "Keep playing recommended tracks when your music queue runs out. Servers can set their own default, which applies until you pick here."
 msgstr "Sigue reproduciendo pistas recomendadas cuando tu cola de música se vacía. Los servidores pueden definir su propio valor por defecto, que se aplica hasta que elijas aquí."
 
-#: cogs/community/usersettings.py:146
+#: cogs/community/usersettings.py:147
 msgid "Play search picker"
 msgstr "Selector de búsqueda en play"
 
-#: cogs/community/usersettings.py:149
+#: cogs/community/usersettings.py:150
 msgid "On /play, choose from the top matches instead of instantly queuing the first."
 msgstr "En /play, elige entre los mejores resultados en lugar de poner el primero al instante."
 
-#: cogs/community/usersettings.py:156
+#: cogs/community/usersettings.py:157
 msgid "Avatar history tracking"
 msgstr "Seguimiento del historial de avatares"
 
-#: cogs/community/usersettings.py:159
+#: cogs/community/usersettings.py:160
 msgid "Let Yasuho save future avatar and banner changes for public history."
 msgstr "Deja que Yasuho guarde los futuros cambios de avatar y banner para el historial público."
 
-#: cogs/community/usersettings.py:171
+#: cogs/community/usersettings.py:172
 msgid "Vote-again reminder"
 msgstr "Recordatorio de voto"
 
-#: cogs/community/usersettings.py:174
+#: cogs/community/usersettings.py:175
 msgid "DM you once you can vote for Yasuho again (about 12h after your last vote)."
 msgstr "Te envía un MD cuando puedas volver a votar por Yasuho (unas 12 h después de tu último voto)."
 
-#: cogs/community/usersettings.py:189
+#: cogs/community/usersettings.py:190
 msgid "Chapter alert language"
 msgstr "Idioma de las alertas de capítulos"
 
-#: cogs/community/usersettings.py:192
+#: cogs/community/usersettings.py:193
 msgid "Which translation your new-chapter DMs link to, when it is out. Server posts follow the server language."
 msgstr "La traducción a la que enlazan tus MD de nuevos capítulos, una vez publicado. Las publicaciones del servidor siguen el idioma del servidor."
 
-#: cogs/community/usersettings.py:197
+#: cogs/community/usersettings.py:198
 msgid "Pick a chapter language..."
 msgstr "Elige un idioma de capítulo..."
 
-#: cogs/community/usersettings.py:244
+#: cogs/community/usersettings.py:245
 msgid "Delete my profile"
 msgstr "Eliminar mi perfil"
 
-#: cogs/community/usersettings.py:277
+#: cogs/community/usersettings.py:292
 msgid "Your profile is gone: fields, gaming IDs and every visibility choice."
 msgstr "Tu perfil ha desaparecido: campos, IDs de juego y todas las opciones de visibilidad."
 
-#: cogs/community/usersettings.py:281
+#: cogs/community/usersettings.py:296
 msgid "Your scheduled announcements and their pending deliveries are gone."
 msgstr "Tus anuncios programados y sus envíos pendientes se han borrado."
 
-#: cogs/community/usersettings.py:283
+#: cogs/community/usersettings.py:298
+msgid "Your suggestions and votes are gone, and I removed what I could of the posted messages."
+msgstr "Tus sugerencias y tus votos se han borrado, y he quitado lo que he podido de los mensajes publicados."
+
+#: cogs/community/usersettings.py:300
 msgid "Your top.gg vote record is gone too."
 msgstr "Tu historial de votos de top.gg también se ha borrado."
 
-#: cogs/community/usersettings.py:285
+#: cogs/community/usersettings.py:302
 msgid "So is your personal rank card."
 msgstr "También lo es tu tarjeta de rango personal."
 
-#: cogs/community/usersettings.py:288
+#: cogs/community/usersettings.py:305
 msgid "Your AniList link is gone as well, and your episode and chapter alert opt-ins with it."
 msgstr "Tu vínculo de AniList también se ha borrado, y con él tus suscripciones a las alertas de episodios y capítulos."
 
-#: cogs/community/usersettings.py:293
+#: cogs/community/usersettings.py:310
 msgid "Your Pack Confort purchase record is gone from our database too (it comes back automatically if you still hold that purchase), and so is the note of your last premium offer reminder."
 msgstr "Tu registro de compra del Pack Confort también se ha borrado de nuestra base de datos (vuelve automáticamente si todavía tienes esa compra), igual que la nota de tu último aviso de oferta premium."
 
-#: cogs/community/usersettings.py:304
+#: cogs/community/usersettings.py:321
 msgid "Something went wrong deleting your profile."
 msgstr "Algo salió mal al eliminar tu perfil."
 
-#: cogs/community/usersettings.py:314
+#: cogs/community/usersettings.py:331
 msgid "Profile deletion cancelled."
 msgstr "Eliminación del perfil cancelada."
 
-#: cogs/community/usersettings.py:335
+#: cogs/community/usersettings.py:352
 msgid "Delete my avatar history"
 msgstr "Eliminar mi historial de avatares"
 
-#: cogs/community/usersettings.py:356
+#: cogs/community/usersettings.py:373
 #, python-brace-format
 msgid "Deleted {count} saved image(s) ({size}). Future avatar tracking is now turned off."
 msgstr "Se eliminaron {count} imagen(es) guardada(s) ({size}). El seguimiento de avatares se ha desactivado a partir de ahora."
 
-#: cogs/community/usersettings.py:367
+#: cogs/community/usersettings.py:384
 msgid "Something went wrong deleting your avatar history."
 msgstr "Algo salió mal al eliminar tu historial de avatares."
 
-#: cogs/community/usersettings.py:377
+#: cogs/community/usersettings.py:394
 msgid "Avatar history deletion cancelled."
 msgstr "Eliminación del historial de avatares cancelada."
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:392
+#: cogs/community/usersettings.py:409
 msgid "Turn off"
 msgstr "Desactivar"
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:392
+#: cogs/community/usersettings.py:409
 msgid "Turn on"
 msgstr "Activar"
 
-#: cogs/community/usersettings.py:476
+#: cogs/community/usersettings.py:493
 msgid "## Your preferences"
 msgstr "## Tus preferencias"
 
-#: cogs/community/usersettings.py:480
+#: cogs/community/usersettings.py:497
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
@@ -2150,15 +2157,15 @@ msgstr ""
 "Estos ajustes solo te afectan a **ti**, en todos los lugares donde me usan.\n"
 "Usa el botón junto a cada preferencia para activarla o desactivarla."
 
-#: cogs/community/usersettings.py:490
+#: cogs/community/usersettings.py:507
 msgid "ON"
 msgstr "ACTIVADO"
 
-#: cogs/community/usersettings.py:490
+#: cogs/community/usersettings.py:507
 msgid "OFF"
 msgstr "DESACTIVADO"
 
-#: cogs/community/usersettings.py:491
+#: cogs/community/usersettings.py:508
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
@@ -2167,7 +2174,7 @@ msgstr ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:513
+#: cogs/community/usersettings.py:530
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {value}\n"
@@ -2176,58 +2183,62 @@ msgstr ""
 "{emoji} **{label}** - {value}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:527
+#: cogs/community/usersettings.py:544
 msgid "-# Only you can use these controls."
 msgstr "-# Solo tú puedes usar estos controles."
 
-#: cogs/community/usersettings.py:553 cogs/community/usersettings.py:573
-#: cogs/community/usersettings.py:593
+#: cogs/community/usersettings.py:570 cogs/community/usersettings.py:590
+#: cogs/community/usersettings.py:610
 msgid "Something went wrong updating that setting."
 msgstr "Algo salió mal al actualizar ese ajuste."
 
-#: cogs/community/usersettings.py:652
+#: cogs/community/usersettings.py:669
 #, python-brace-format
 msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
 msgstr "Usa `{prefix}mydata export` para recibir tus datos, `{prefix}mydata deleteprofile` para borrar tu perfil, o `{prefix}mydata deleteavatars` para borrar los avatares guardados."
 
-#: cogs/community/usersettings.py:725
+#: cogs/community/usersettings.py:742
 msgid "I sent your data export to you by direct message."
 msgstr "Te envié tu exportación de datos por mensaje directo."
 
 #: cogs/community/profile/connectors/cog.py:280
-#: cogs/community/usersettings.py:729
+#: cogs/community/usersettings.py:746
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "No pude enviarte un mensaje directo. Por favor, activa los MD."
 
-#: cogs/community/usersettings.py:734
+#: cogs/community/usersettings.py:751
 msgid "Something went wrong building your data export."
 msgstr "Algo salió mal al preparar tu exportación de datos."
 
-#: cogs/community/usersettings.py:757
+#: cogs/community/usersettings.py:774
 msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
 msgstr "Esto elimina permanentemente tu biografía, tus pronombres, tu color de acento, tus campos personalizados, tus IDs de juego y todas las decisiones que tomaste sobre quién podía verlos. Esto no se puede deshacer."
 
-#: cogs/community/usersettings.py:763
+#: cogs/community/usersettings.py:780
 msgid "It also deletes your top.gg vote record: your vote streak and your lifetime vote count start over from zero."
 msgstr "También elimina tu historial de votos de top.gg: tu racha de votos y tu total acumulado vuelven a empezar desde cero."
 
-#: cogs/community/usersettings.py:768
+#: cogs/community/usersettings.py:785
 msgid "Your scheduled announcements and their pending deliveries will be deleted."
 msgstr "Tus anuncios programados y sus envíos pendientes se borrarán."
 
-#: cogs/community/usersettings.py:772
+#: cogs/community/usersettings.py:789
+msgid "It also deletes your suggestions and your votes, and removes the posted suggestion messages where I can. Their discussion threads stay for the other members, renamed and locked."
+msgstr "También borra tus sugerencias y tus votos, y quita los mensajes de sugerencia publicados donde puedo. Sus hilos de discusión se quedan para los demás miembros, renombrados y bloqueados."
+
+#: cogs/community/usersettings.py:795
 msgid "And your personal rank card: the background image you uploaded and the accent colour you picked."
 msgstr "Y tu tarjeta de rango personal: la imagen de fondo que subiste y el color de acento que elegiste."
 
-#: cogs/community/usersettings.py:777
+#: cogs/community/usersettings.py:800
 msgid "And your AniList link: the stored login is deleted, so relinking needs a fresh sign-in with AniList. Your episode and chapter alert opt-ins go with it."
 msgstr "Y tu vínculo de AniList: el inicio de sesión guardado se elimina, así que volver a vincularlo requiere autenticarse de nuevo con AniList. Tus suscripciones a las alertas de episodios y capítulos se van con él."
 
-#: cogs/community/usersettings.py:783
+#: cogs/community/usersettings.py:806
 msgid "And your Pack Confort purchase record: it comes back on its own if you still hold that purchase, the next time we check with Discord. Also the note of when you last saw a premium offer reminder, so you may see one again sooner than usual."
 msgstr "Y tu registro de compra del Pack Confort: vuelve solo en la próxima comprobación con Discord si todavía tienes esa compra. También la nota de la última vez que viste un aviso de oferta premium, así que podrías ver otro antes de lo habitual."
 
-#: cogs/community/usersettings.py:800
+#: cogs/community/usersettings.py:823
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "Esto elimina permanentemente todos los avatares globales, avatares de servidor y banners guardados de tu cuenta. También desactiva el seguimiento futuro. Esto no se puede deshacer."
 
@@ -4002,6 +4013,273 @@ msgstr "Actividad ({days} días)"
 msgid "Retention ({weeks} weeks)"
 msgstr "Retención ({weeks} semanas)"
 
+#: cogs/community/suggestions/cog.py:109
+msgid "Use the /suggest slash command to write a suggestion."
+msgstr "Usa el comando /suggest para escribir una sugerencia."
+
+#: cogs/community/suggestions/cog.py:113 cogs/community/suggestions/cog.py:143
+msgid "The suggestion box is not set up in this server."
+msgstr "El buzón de sugerencias no está configurado en este servidor."
+
+#: cogs/community/suggestions/cog.py:117 cogs/community/suggestions/cog.py:148
+msgid "Please wait a minute between suggestions."
+msgstr "Espera un minuto entre sugerencias, por favor."
+
+#: cogs/community/suggestions/cog.py:137
+msgid "A suggestion needs a title and details."
+msgstr "Una sugerencia necesita un título y detalles."
+
+#: cogs/community/suggestions/cog.py:153
+msgid "I can't post in the suggestions channel. Ask a moderator to check my permissions."
+msgstr "No puedo publicar en el canal de sugerencias. Pide a un moderador que revise mis permisos."
+
+#: cogs/community/suggestions/cog.py:164
+msgid "I couldn't post your suggestion. Please try again later."
+msgstr "No pude publicar tu sugerencia. Inténtalo de nuevo más tarde."
+
+#: cogs/community/suggestions/cog.py:167
+#, python-brace-format
+msgid "Your suggestion was posted: {url}"
+msgstr "Tu sugerencia se ha publicado: {url}"
+
+#: cogs/community/suggestions/cog.py:212
+msgid "Your vote was recorded."
+msgstr "Tu voto se ha registrado."
+
+#: cogs/community/suggestions/cog.py:213
+msgid "Your vote was removed."
+msgstr "Tu voto se ha quitado."
+
+#: cogs/community/suggestions/cog.py:214
+msgid "Voting is closed on this suggestion."
+msgstr "La votación está cerrada para esta sugerencia."
+
+#: cogs/community/suggestions/cog.py:215 cogs/community/suggestions/cog.py:307
+msgid "This suggestion no longer exists."
+msgstr "Esta sugerencia ya no existe."
+
+#: cogs/community/suggestions/cog.py:269 cogs/community/suggestions/cog.py:300
+msgid "Only the server's staff can change a suggestion's status."
+msgstr "Solo el personal del servidor puede cambiar el estado de una sugerencia."
+
+#: cogs/community/suggestions/cog.py:281
+msgid "Choose the new status."
+msgstr "Elige el nuevo estado."
+
+#: cogs/community/suggestions/cog.py:290 cogs/community/suggestions/cog.py:303
+msgid "That status is not available."
+msgstr "Ese estado no está disponible."
+
+#: cogs/community/suggestions/cog.py:312
+#, python-brace-format
+msgid "Status set to {status}."
+msgstr "Estado establecido en {status}."
+
+#: cogs/community/suggestions/cog.py:449
+msgid "Top suggestions this week"
+msgstr "Mejores sugerencias de la semana"
+
+#: cogs/community/suggestions/panel.py:20
+msgid "Monday"
+msgstr "lunes"
+
+#: cogs/community/suggestions/panel.py:20
+msgid "Tuesday"
+msgstr "martes"
+
+#: cogs/community/suggestions/panel.py:20
+msgid "Wednesday"
+msgstr "miércoles"
+
+#: cogs/community/suggestions/panel.py:20
+msgid "Thursday"
+msgstr "jueves"
+
+#: cogs/community/suggestions/panel.py:21
+msgid "Friday"
+msgstr "viernes"
+
+#: cogs/community/suggestions/panel.py:21
+msgid "Saturday"
+msgstr "sábado"
+
+#: cogs/community/suggestions/panel.py:21
+msgid "Sunday"
+msgstr "domingo"
+
+#: cogs/community/suggestions/panel.py:30
+msgid "Suggestions channel..."
+msgstr "Canal de sugerencias..."
+
+#: cogs/community/suggestions/panel.py:45
+msgid "Staff role (optional)..."
+msgstr "Rol del personal (opcional)..."
+
+#: cogs/community/suggestions/panel.py:60
+msgid "Remove a custom status..."
+msgstr "Quitar un estado personalizado..."
+
+#: cogs/community/suggestions/panel.py:77
+msgid "Digest day (09:00 UTC)..."
+msgstr "Día del resumen (09:00 UTC)..."
+
+#: cogs/community/suggestions/panel.py:94
+msgid "Add a custom status"
+msgstr "Añadir un estado personalizado"
+
+#: cogs/community/suggestions/panel.py:97
+msgid "Label"
+msgstr "Etiqueta"
+
+#: cogs/community/suggestions/panel.py:100
+msgid "Colour (#RRGGBB)"
+msgstr "Color (#RRGGBB)"
+
+#: cogs/community/suggestions/panel.py:114
+msgid "That colour is not valid. Use the form #RRGGBB."
+msgstr "Ese color no es válido. Usa el formato #RRGGBB."
+
+#: cogs/community/suggestions/panel.py:118
+#, python-brace-format
+msgid "Use a new label, and no more than {count} custom statuses."
+msgstr "Usa una etiqueta nueva y no más de {count} estados personalizados."
+
+#: cogs/community/suggestions/panel.py:144 cogs/config/event_reminders.py:216
+#: cogs/config/milestones.py:213
+msgid "Customize"
+msgstr "Personalizar"
+
+#: cogs/community/suggestions/panel.py:155
+msgid "Add status"
+msgstr "Añadir estado"
+
+#: cogs/community/suggestions/panel.py:159
+msgid "Disable digest"
+msgstr "Desactivar el resumen"
+
+#: cogs/community/suggestions/panel.py:159
+msgid "Enable digest"
+msgstr "Activar el resumen"
+
+#: cogs/community/suggestions/panel.py:182 cogs/config/announcements.py:601
+#: cogs/config/event_reminders.py:243 cogs/config/milestones.py:231
+msgid "You need the Manage Server permission for this."
+msgstr "Necesitas el permiso Gestionar servidor para esto."
+
+#: cogs/community/suggestions/panel.py:191
+msgid "Suggestion box"
+msgstr "Buzón de sugerencias"
+
+#: cogs/community/suggestions/panel.py:192
+msgid "Members post suggestions with /suggest and everyone votes on them."
+msgstr "Los miembros publican sugerencias con /suggest y todos votan por ellas."
+
+#: cogs/community/suggestions/panel.py:198 cogs/config/announcements.py:316
+#: cogs/config/buttonroles.py:550 cogs/config/event_reminders.py:265
+#: cogs/config/milestones.py:252 cogs/config/rolemenus.py:679
+#: cogs/config/tickets/panel.py:157 cogs/config/twitch.py:420
+#: cogs/config/verification.py:118 cogs/config/welcome.py:422
+#: cogs/config/welcome.py:543 cogs/moderation/modlog.py:274
+msgid "*Not set.*"
+msgstr "*No establecido.*"
+
+#: cogs/community/suggestions/panel.py:201
+msgid "Staff role"
+msgstr "Rol del personal"
+
+#: cogs/community/suggestions/panel.py:202
+#: cogs/community/suggestions/panel.py:207 cogs/config/event_reminders.py:275
+msgid "*None.*"
+msgstr "*Ninguno.*"
+
+#: cogs/community/suggestions/panel.py:206
+msgid "Custom statuses"
+msgstr "Estados personalizados"
+
+#: cogs/community/suggestions/panel.py:211
+msgid "Weekly digest"
+msgstr "Resumen semanal"
+
+#: cogs/community/suggestions/panel.py:212
+#, python-brace-format
+msgid "On, {day} 09:00 UTC"
+msgstr "Activado, {day} 09:00 UTC"
+
+#: cogs/community/suggestions/panel.py:217
+msgid "Yasuho+ unlocks custom statuses and a weekly digest."
+msgstr "Yasuho+ desbloquea los estados personalizados y un resumen semanal."
+
+#: cogs/community/suggestions/panel.py:242
+msgid "I can't post suggestions in that channel. Give me View Channel, Send Messages and Embed Links there first."
+msgstr "No puedo publicar sugerencias en ese canal. Primero dame los permisos Ver canal, Enviar mensajes e Insertar enlaces allí."
+
+#: cogs/community/suggestions/panel.py:253
+msgid "Pick a real role, not @everyone."
+msgstr "Elige un rol real, no @everyone."
+
+#: cogs/community/suggestions/panel.py:261
+msgid "Pick a suggestions channel first."
+msgstr "Elige primero un canal de sugerencias."
+
+#: cogs/community/suggestions/panel.py:295
+msgid "Custom statuses and the weekly digest are a Yasuho+ feature."
+msgstr "Los estados personalizados y el resumen semanal son una función de Yasuho+."
+
+#: cogs/community/suggestions/render.py:29
+msgid "Approved"
+msgstr "Aprobada"
+
+#: cogs/community/suggestions/render.py:31
+msgid "Rejected"
+msgstr "Rechazada"
+
+#: cogs/community/suggestions/render.py:33
+msgid "Implemented"
+msgstr "Implementada"
+
+#: cogs/community/suggestions/render.py:34
+msgid "Open"
+msgstr "Abierta"
+
+#: cogs/community/suggestions/render.py:56
+msgid "Votes"
+msgstr "Votos"
+
+#: cogs/community/suggestions/render.py:59 cogs/moderation/moderation.py:479
+#: cogs/moderation/moderation.py:696 cogs/moderation/moderation.py:773
+msgid "Reason"
+msgstr "Motivo"
+
+#: cogs/community/suggestions/views.py:29
+msgid "Suggestions are unavailable right now."
+msgstr "Las sugerencias no están disponibles en este momento."
+
+#: cogs/community/suggestions/views.py:93
+#: cogs/community/suggestions/views.py:153
+msgid "Set status"
+msgstr "Establecer estado"
+
+#: cogs/community/suggestions/views.py:125
+msgid "Choose a status..."
+msgstr "Elige un estado..."
+
+#: cogs/community/suggestions/views.py:158
+msgid "Reason (optional)"
+msgstr "Motivo (opcional)"
+
+#: cogs/community/suggestions/views.py:175
+msgid "New suggestion"
+msgstr "Nueva sugerencia"
+
+#: cogs/community/suggestions/views.py:178 cogs/config/rolemenus.py:314
+#: tools/embed_creator.py:431
+msgid "Title"
+msgstr "Título"
+
+#: cogs/community/suggestions/views.py:181
+msgid "Details"
+msgstr "Detalles"
+
 #: cogs/config/announcements.py:81
 msgid "Target channel..."
 msgstr "Canal de destino..."
@@ -4099,15 +4377,6 @@ msgstr "Creador de anuncios"
 #: cogs/config/announcements.py:307
 msgid "Compose the embed with the menu, pick a channel (and optionally a role to ping), then **Send**. Preview shows it only to you."
 msgstr "Compón el embed con el menú, elige un canal (y opcionalmente un rol a mencionar) y luego pulsa **Enviar**. La vista previa solo la ves tú."
-
-#: cogs/config/announcements.py:316 cogs/config/buttonroles.py:550
-#: cogs/config/event_reminders.py:265 cogs/config/milestones.py:252
-#: cogs/config/rolemenus.py:679 cogs/config/tickets/panel.py:157
-#: cogs/config/twitch.py:420 cogs/config/verification.py:118
-#: cogs/config/welcome.py:422 cogs/config/welcome.py:543
-#: cogs/moderation/modlog.py:274
-msgid "*Not set.*"
-msgstr "*No establecido.*"
 
 #: cogs/config/announcements.py:320 cogs/config/welcome.py:453
 #: cogs/config/welcome.py:479 cogs/config/welcome.py:569
@@ -4213,11 +4482,6 @@ msgstr "Anuncios programados"
 #: cogs/config/announcements.py:582
 msgid "Nothing scheduled. Build one with `/announce`, then press **Schedule**."
 msgstr "Nada programado. Crea uno con `/announce` y pulsa **Programar**."
-
-#: cogs/config/announcements.py:601 cogs/config/event_reminders.py:243
-#: cogs/config/milestones.py:231
-msgid "You need the Manage Server permission for this."
-msgstr "Necesitas el permiso Gestionar servidor para esto."
 
 #: cogs/config/announcements.py:631
 #, python-brace-format
@@ -4718,10 +4982,6 @@ msgstr "Cuándo recordar..."
 msgid "Role to ping (optional)..."
 msgstr "Rol a mencionar (opcional)..."
 
-#: cogs/config/event_reminders.py:216 cogs/config/milestones.py:213
-msgid "Customize"
-msgstr "Personalizar"
-
 #: cogs/config/event_reminders.py:252
 msgid "Event reminders"
 msgstr "Recordatorios de eventos"
@@ -4737,10 +4997,6 @@ msgstr "Recordatorios"
 #: cogs/config/event_reminders.py:274
 msgid "Role to ping"
 msgstr "Rol a mencionar"
-
-#: cogs/config/event_reminders.py:275
-msgid "*None.*"
-msgstr "*Ninguno.*"
 
 #: cogs/config/event_reminders.py:279
 msgid "Yasuho+ unlocks the reminder times and a role ping."
@@ -4931,10 +5187,6 @@ msgstr "Sin cambios."
 #: cogs/config/rolemenus.py:311
 msgid "Menu header"
 msgstr "Encabezado del menú"
-
-#: cogs/config/rolemenus.py:314 tools/embed_creator.py:431
-msgid "Title"
-msgstr "Título"
 
 #: cogs/config/rolemenus.py:320 tools/embed_creator.py:455
 msgid "Description"
@@ -7109,11 +7361,6 @@ msgstr "Confirmar baneo"
 #, python-brace-format
 msgid "Are you sure you want to ban {target} (`{id}`)?"
 msgstr "¿Seguro que quieres banear a {target} (`{id}`)?"
-
-#: cogs/moderation/moderation.py:479 cogs/moderation/moderation.py:696
-#: cogs/moderation/moderation.py:773
-msgid "Reason"
-msgstr "Motivo"
 
 #: cogs/moderation/moderation.py:484
 msgid "Ban cancelled"
@@ -9668,56 +9915,56 @@ msgstr "Expulsiones, baneos, advertencias, automod y registros de moderación."
 msgid "Welcome messages, starboard, custom commands and more."
 msgstr "Mensajes de bienvenida, starboard, comandos personalizados y más."
 
-#: cogs/system/help.py:138
+#: cogs/system/help.py:139
 msgid "Reaction roles, role menus, button roles and verification."
 msgstr "Roles por reacción, menús de roles, roles con botones y verificación."
 
-#: cogs/system/help.py:146
+#: cogs/system/help.py:147
 msgid "Anything not yet sorted into a category."
 msgstr "Todo lo que aún no está clasificado en una categoría."
 
-#: cogs/system/help.py:248 cogs/system/help.py:295 cogs/system/help.py:308
-#: cogs/system/help.py:788
+#: cogs/system/help.py:249 cogs/system/help.py:296 cogs/system/help.py:309
+#: cogs/system/help.py:789
 msgid "No description provided."
 msgstr "No se ha proporcionado descripción."
 
-#: cogs/system/help.py:300 cogs/system/help.py:792
+#: cogs/system/help.py:301 cogs/system/help.py:793
 msgid "Aliases"
 msgstr "Alias"
 
-#: cogs/system/help.py:313
+#: cogs/system/help.py:314
 #, python-brace-format
 msgid "This command has {count}. Toggle expansion in /preferences, or use `{prefix}help {group} <subcommand>`."
 msgstr "Este comando tiene {count}. Activa o desactiva la expansión en /preferences, o usa `{prefix}help {group} <subcommand>`."
 
-#: cogs/system/help.py:318
+#: cogs/system/help.py:319
 #, python-brace-format
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
 msgstr[0] "{n} subcomando"
 msgstr[1] "{n} subcomandos"
 
-#: cogs/system/help.py:323
+#: cogs/system/help.py:324
 msgid "Subcommands"
 msgstr "Subcomandos"
 
-#: cogs/system/help.py:352
+#: cogs/system/help.py:353
 msgid "Jump to a category..."
 msgstr "Ir a una categoría..."
 
-#: cogs/system/help.py:421 cogs/system/help.py:550 cogs/system/help.py:569
+#: cogs/system/help.py:422 cogs/system/help.py:551 cogs/system/help.py:570
 #, python-brace-format
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] "{n} comando"
 msgstr[1] "{n} comandos"
 
-#: cogs/system/help.py:482
+#: cogs/system/help.py:483
 #, python-brace-format
 msgid "{bot} • Help"
 msgstr "{bot} • Ayuda"
 
-#: cogs/system/help.py:484
+#: cogs/system/help.py:485
 #, python-brace-format
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
@@ -9728,19 +9975,19 @@ msgstr ""
 "\n"
 "Usa el menú para ir a una categoría, las flechas para navegar, o `{prefix}help <command>` para un comando específico."
 
-#: cogs/system/help.py:510
+#: cogs/system/help.py:511
 msgid "Enabled ✅"
 msgstr "Activado ✅"
 
-#: cogs/system/help.py:510
+#: cogs/system/help.py:511
 msgid "Disabled ❌"
 msgstr "Desactivado ❌"
 
-#: cogs/system/help.py:518
+#: cogs/system/help.py:519
 msgid "🏠 Server"
 msgstr "🏠 Servidor"
 
-#: cogs/system/help.py:521
+#: cogs/system/help.py:522
 #, python-brace-format
 msgid ""
 "Prefix: `{prefix}`\n"
@@ -9751,66 +9998,66 @@ msgstr ""
 "Miembros: **{members}**\n"
 "Niveles: {leveling}"
 
-#: cogs/system/help.py:533
+#: cogs/system/help.py:534
 msgid "🏠 Direct Messages"
 msgstr "🏠 Mensajes directos"
 
-#: cogs/system/help.py:535
+#: cogs/system/help.py:536
 #, python-brace-format
 msgid "Default prefix: `{prefix}`"
 msgstr "Prefijo predeterminado: `{prefix}`"
 
-#: cogs/system/help.py:561
+#: cogs/system/help.py:562
 msgid "📚 Categories"
 msgstr "📚 Categorías"
 
-#: cogs/system/help.py:567
+#: cogs/system/help.py:568
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
 msgstr "{commands} en {categories} categorías • Usa el menú o las flechas para explorar"
 
-#: cogs/system/help.py:573
+#: cogs/system/help.py:574
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] "{n} categoría"
 msgstr[1] "{n} categorías"
 
-#: cogs/system/help.py:582
+#: cogs/system/help.py:583
 #, python-brace-format
 msgid "Category {current}/{total} • {prefix}help <command> for details"
 msgstr "Categoria {current}/{total} • {prefix}help <command> para mas detalles"
 
-#: cogs/system/help.py:588
+#: cogs/system/help.py:589
 #, python-brace-format
 msgid "...more commands available. Use `{prefix}help <command>` to see them."
 msgstr "...hay mas comandos disponibles. Usa `{prefix}help <command>` para verlos."
 
-#: cogs/system/help.py:605
+#: cogs/system/help.py:606
 msgid "No commands available."
 msgstr "No hay comandos disponibles."
 
-#: cogs/system/help.py:670
+#: cogs/system/help.py:671
 msgid "Something went wrong opening the help menu."
 msgstr "Algo salió mal al abrir el menú de ayuda."
 
-#: cogs/system/help.py:739
+#: cogs/system/help.py:740
 msgid "Collapse subcommands"
 msgstr "Contraer subcomandos"
 
-#: cogs/system/help.py:739
+#: cogs/system/help.py:740
 msgid "Expand subcommands"
 msgstr "Expandir subcomandos"
 
-#: cogs/system/help.py:756
+#: cogs/system/help.py:757
 msgid "Something went wrong updating that preference."
 msgstr "Algo salió mal al actualizar esa preferencia."
 
-#: cogs/system/help.py:772 cogs/system/help.py:812
+#: cogs/system/help.py:773 cogs/system/help.py:813
 msgid "Help"
 msgstr "Ayuda"
 
-#: cogs/system/help.py:774
+#: cogs/system/help.py:775
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
 msgstr "Usa `{prefix}help <command>` para más información sobre un comando."
@@ -10038,8 +10285,8 @@ msgstr "Yasuho se queda en tu canal de voz, incluso cuando la cola está vacía.
 msgid "**Extended server playlists**"
 msgstr "**Playlists del servidor ampliadas**"
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:153
-#: tests/cogs/test_premium_panel.py:157
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:154
+#: tests/cogs/test_premium_panel.py:158
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr "Hasta {count} playlists de {tracks} canciones."

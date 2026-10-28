@@ -112,7 +112,10 @@ EXPORT_COOLDOWN_SECONDS = 3600
 # exported, never erasable - it is the OWNER's audit trail of a gift, not a
 # projection of anything, so forgetting it is not the recipient's call.
 # v15 adds authored scheduled announcements, erased with their pending timers.
-EXPORT_VERSION = 15
+# v16 adds the suggestion box: the suggestions this user wrote (`suggestions_authored`)
+# and the votes they cast (`suggestion_votes_cast`, by guild and number), both erased
+# on request; the posted messages are deleted best effort by the confirm view.
+EXPORT_VERSION = 16
 
 # THE list of tables a profile lives in, deleted together. This mirrors
 # retention.GUILD_DELETE_QUERIES for the USER side: profile data is keyed by
@@ -197,6 +200,12 @@ ANILIST_TOKEN_DELETE = "DELETE FROM anilist_tokens WHERE user_id = $1"
 USER_DELETE_QUERIES = PROFILE_DELETE_QUERIES + (
     # The foreign-key cascade cancels pending deliveries in the same transaction.
     ("scheduled_announcements", "DELETE FROM scheduled_announcements WHERE author_id = $1"),
+    # The suggestion box (cogs/community/suggestions): the votes this user cast
+    # and the suggestions they wrote (other members' votes on them cascade). The
+    # posted messages and threads are deleted best effort by the caller, from refs
+    # read BEFORE this runs (cogs.community.suggestions.store.message_refs).
+    ("suggestion_votes", "DELETE FROM suggestion_votes WHERE user_id = $1"),
+    ("suggestions", "DELETE FROM suggestions WHERE author_id = $1"),
     # This user's OWN Pack Confort rows (tools/premium.py) - WHERE user_id
     # only, same carve-out the export query above uses, so a Yasuho+ row
     # (guild-scoped, user_id NULL) is never reachable from here. Safe to erase
@@ -567,6 +576,18 @@ async def collect_user_export(pool, user_id):
         "SELECT * FROM scheduled_announcements WHERE author_id = $1 ORDER BY id",
         user_id,
     )
+    suggestions = await pool.fetch(
+        "SELECT guild_id, number, channel_id, message_id, thread_id, title, details, "
+        "status, status_reason, created_at, updated_at "
+        "FROM suggestions WHERE author_id = $1 ORDER BY id",
+        user_id,
+    )
+    suggestion_votes = await pool.fetch(
+        "SELECT s.guild_id, s.number, v.value FROM suggestion_votes v "
+        "JOIN suggestions s ON s.id = v.suggestion_id "
+        "WHERE v.user_id = $1 ORDER BY s.guild_id, s.number",
+        user_id,
+    )
     reminders = await pool.fetch(
         "SELECT id, expires, created, extra FROM timers "
         "WHERE event = 'reminder' "
@@ -701,6 +722,8 @@ async def collect_user_export(pool, user_id):
             {**dict(row), "embed": _json_value(row["embed"], None)}
             for row in announcements
         ],
+        "suggestions_authored": _records(suggestions),
+        "suggestion_votes_cast": _records(suggestion_votes),
         "pending_reminders": _records(reminders),
         "guild_playlists_created": _records(playlists),
         "custom_commands_created": _records(custom_commands),

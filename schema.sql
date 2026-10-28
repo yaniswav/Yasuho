@@ -2229,3 +2229,43 @@ CREATE TABLE IF NOT EXISTS milestone_state (
     guild_id BIGINT PRIMARY KEY,
     last_milestone INTEGER NOT NULL DEFAULT 0 CHECK (last_milestone >= 0)
 );
+
+-- Suggestion box (cogs/community/suggestions). One row per suggestion posted in
+-- a guild's suggestions channel; the config (channel, staff role, custom
+-- statuses, digest) lives in guild_settings.settings->'suggestions'. The number
+-- is per guild (#1, #2, ...) and allocated under a per-guild advisory lock, so
+-- UNIQUE (guild_id, number) is a backstop and not the mechanism. Personal data
+-- (author_id, title, details): exported and erased by tools/privacy.py and
+-- purged with the guild by tools/retention.py.
+CREATE TABLE IF NOT EXISTS suggestions (
+    id            BIGSERIAL   PRIMARY KEY,
+    guild_id      BIGINT      NOT NULL,
+    number        INTEGER     NOT NULL CHECK (number > 0),
+    channel_id    BIGINT      NOT NULL,
+    message_id    BIGINT      NOT NULL,
+    thread_id     BIGINT,
+    author_id     BIGINT      NOT NULL,
+    title         TEXT        NOT NULL CHECK (char_length(title) BETWEEN 1 AND 100),
+    details       TEXT        NOT NULL CHECK (char_length(details) <= 1000),
+    status        TEXT        NOT NULL DEFAULT 'open' CHECK (char_length(status) BETWEEN 1 AND 40),
+    status_reason TEXT        CHECK (status_reason IS NULL OR char_length(status_reason) <= 200),
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (guild_id, number)
+);
+-- "every suggestion this user wrote": the /mydata export and erasure path.
+CREATE INDEX IF NOT EXISTS suggestions_author_idx ON suggestions (author_id);
+-- The weekly digest reads one guild's recent open suggestions.
+CREATE INDEX IF NOT EXISTS suggestions_guild_recent_idx ON suggestions (guild_id, created_at);
+CREATE TABLE IF NOT EXISTS suggestion_votes (
+    suggestion_id BIGINT   NOT NULL REFERENCES suggestions(id) ON DELETE CASCADE,
+    user_id       BIGINT   NOT NULL,
+    value         SMALLINT NOT NULL CHECK (value IN (-1, 1)),
+    PRIMARY KEY (suggestion_id, user_id)
+);
+-- "every vote this user cast": the /mydata export and erasure path.
+CREATE INDEX IF NOT EXISTS suggestion_votes_user_idx ON suggestion_votes (user_id);
+
+-- Per-guild timer lookups (event reminders, suggestion digest) filter on
+-- extra->>'guild_id'; without this every write scans all rows of that event.
+CREATE INDEX IF NOT EXISTS timers_event_guild_idx ON timers (event, (extra->>'guild_id'));

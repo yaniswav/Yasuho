@@ -280,6 +280,7 @@ EXCLUDED_GUILD_FIELDS = {
     "premium_badge": "cosmetic boolean, nothing to refuse",
     "milestones_custom": "binary capability refused at the modal; LIMIT-REACHED is its measure",
     "event_reminders_custom": "binary capability refused at the panel button; LIMIT-REACHED is its measure",
+    "suggestions_custom": "binary capability refused at the panel button; LIMIT-REACHED is its measure",
 }
 EXCLUDED_USER_FIELDS = {}
 

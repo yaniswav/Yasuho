@@ -756,6 +756,48 @@ CLASSIFIED: dict[str, tuple[str, str]] = {
         "client-side without ever sending the bot an interaction.'",
     ),
     # ---- Config -------------------------------------------------------------
+    "cogs.community.suggestions.panel.AddStatusModal": (
+        "GATED_FLOW_MODAL",
+        "Opened only from SuggestionsPanel._add_status, an AuthorView that "
+        "re-checks Manage Server on every click; on_submit re-checks Yasuho+ "
+        "(custom_allowed) before saving; accepted revocation-only residual.",
+    ),
+    "cogs.community.suggestions.views.ReasonModal": (
+        "GATED_FLOW_MODAL",
+        "Opened only from Suggestions.pick_status, reached through StatusPicker "
+        "(an AuthorView); pick_status AND apply_status (the submit) both re-read "
+        "is_staff against the live member and config.",
+    ),
+    "cogs.community.suggestions.views.StatusButton": (
+        "CALLBACK_CHECKS",
+        "callback -> Suggestions.open_status_menu, which re-checks is_staff "
+        "(Manage Server or the configured staff role) FRESH on every click; the "
+        "suggestion id in the custom_id is a content id, never an identity.",
+    ),
+    "cogs.community.suggestions.views.SuggestModal": (
+        "PUBLIC",
+        "Any member may suggest; Suggestions.submit files the suggestion under "
+        "interaction.user and re-checks the box config, the channel permissions "
+        "and the per-member cooldown.",
+    ),
+    "cogs.community.suggestions.views.SuggestionView": (
+        "DISPLAY_ONLY",
+        "Its only children are the three persistent DynamicItems (classified on "
+        "their own); dispatch never consults this view's check for a dynamic "
+        "item, so it has no actionable component of its own.",
+    ),
+    "cogs.community.suggestions.views.VoteDownButton": (
+        "PUBLIC",
+        "A member's own vote: Suggestions.vote writes (suggestion, "
+        "interaction.user.id) only, and the SQL pins the suggestion to the "
+        "interaction's guild and refuses a closed one.",
+    ),
+    "cogs.community.suggestions.views.VoteUpButton": (
+        "PUBLIC",
+        "A member's own vote: Suggestions.vote writes (suggestion, "
+        "interaction.user.id) only, and the SQL pins the suggestion to the "
+        "interaction's guild and refuses a closed one.",
+    ),
     "cogs.config.announcements.ScheduleModal": (
         "GATED_FLOW_MODAL",
         "Opened only from AnnouncePanel (announcements.py:206), an "

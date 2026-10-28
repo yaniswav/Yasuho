@@ -5,6 +5,7 @@ from discord.ext import commands
 
 from cogs.community import votes
 from cogs.community.profile import presence
+from cogs.community.suggestions import store as suggestion_store
 from tools import i18n, privacy, rendering, settings
 from tools import mangadex as md
 from tools.i18n import N_, _
@@ -255,6 +256,15 @@ class ProfileDeletionView(AuthorView):
             # `/profile clear` runs: this is the confirmed, one-way verb, and
             # the message above it names the vote record and the rank card it
             # also destroys.
+            # Where the suggestion messages live must be read BEFORE the rows go.
+            # Best effort: a failure here must never block the erasure itself.
+            try:
+                posted = await suggestion_store.message_refs(
+                    self.cog.bot.db_pool, self.author_id
+                )
+            except Exception:
+                log.warning("Could not list suggestion messages for erasure", exc_info=True)
+                posted = []
             await privacy.delete_user_data(
                 self.cog.bot.db_pool, self.author_id
             )
@@ -269,6 +279,11 @@ class ProfileDeletionView(AuthorView):
             # in-memory entry on the Leveling cog and would otherwise keep
             # boosting someone who just erased themselves.
             votes.forget_vote_boost(self.cog.bot, self.author_id)
+            # Last and isolated: one HTTP call per message, none may fail the erasure.
+            try:
+                await suggestion_store.delete_posted(self.cog.bot, posted)
+            except Exception:
+                log.warning("Could not remove posted suggestions", exc_info=True)
             self.stop()
             for child in self.children:
                 child.disabled = True
@@ -279,6 +294,8 @@ class ProfileDeletionView(AuthorView):
                 )
                 + "\n"
                 + _("Your scheduled announcements and their pending deliveries are gone.")
+                + "\n"
+                + _("Your suggestions and votes are gone, and I removed what I could of the posted messages.")
                 + "\n"
                 + _("Your top.gg vote record is gone too.")
                 + "\n"
@@ -766,6 +783,12 @@ class UserSettings(commands.Cog):
             + "\n"
             + _(
                 "Your scheduled announcements and their pending deliveries will be deleted."
+            )
+            + "\n"
+            + _(
+                "It also deletes your suggestions and your votes, and removes the "
+                "posted suggestion messages where I can. Their discussion threads "
+                "stay for the other members, renamed and locked."
             )
             + "\n"
             + _(

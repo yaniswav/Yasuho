@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-28 10:05+0000\n"
+"POT-Creation-Date: 2026-10-28 10:29+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -458,7 +458,7 @@ msgid "Edit"
 msgstr "Επεξεργασία"
 
 #: cogs/anilist/collection.py:381 cogs/anilist/feed_views.py:1308
-#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:456
+#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:473
 #: cogs/config/rooms_config.py:489 tools/views.py:80
 msgid "This panel isn't for you."
 msgstr "Αυτό το πάνελ δεν είναι για εσένα."
@@ -550,7 +550,8 @@ msgid "Keep current status"
 msgstr "Διατήρηση τρέχουσας κατάστασης"
 
 #: cogs/anilist/edit_forms.py:179 cogs/anilist/feed_views.py:1409
-#: cogs/anilist/media_view.py:396 cogs/config/event_reminders.py:259
+#: cogs/anilist/media_view.py:396 cogs/community/suggestions/panel.py:195
+#: cogs/community/suggestions/render.py:55 cogs/config/event_reminders.py:259
 #: cogs/config/milestones.py:246 cogs/config/twitch.py:439
 #: cogs/config/welcome.py:436 cogs/config/welcome.py:558
 msgid "Status"
@@ -1071,11 +1072,11 @@ msgstr "Τα μέλη μπορούν να μπουν: {state}"
 msgid "On"
 msgstr "Ενεργό"
 
-#: cogs/anilist/feed_views.py:284 cogs/config/welcome.py:152
-#: cogs/config/welcome.py:450 cogs/config/welcome.py:452
-#: cogs/config/welcome.py:454 cogs/config/welcome.py:566
-#: cogs/config/welcome.py:568 cogs/config/welcome.py:570
-#: cogs/music/views.py:514
+#: cogs/anilist/feed_views.py:284 cogs/community/suggestions/panel.py:214
+#: cogs/config/welcome.py:152 cogs/config/welcome.py:450
+#: cogs/config/welcome.py:452 cogs/config/welcome.py:454
+#: cogs/config/welcome.py:566 cogs/config/welcome.py:568
+#: cogs/config/welcome.py:570 cogs/music/views.py:514
 msgid "Off"
 msgstr "Ανενεργό"
 
@@ -1214,15 +1215,15 @@ msgstr[1] "{count} χρήστες σε σίγαση από {total} ακολου�
 msgid "Muted here ({count})"
 msgstr "Σε σίγαση εδώ ({count})"
 
-#: cogs/anilist/feed_views.py:1033 cogs/config/event_reminders.py:204
-#: cogs/config/milestones.py:201 cogs/config/twitch.py:321
-#: cogs/config/welcome.py:207
+#: cogs/anilist/feed_views.py:1033 cogs/community/suggestions/panel.py:138
+#: cogs/config/event_reminders.py:204 cogs/config/milestones.py:201
+#: cogs/config/twitch.py:321 cogs/config/welcome.py:207
 msgid "Disable"
 msgstr "Απενεργοποίηση"
 
-#: cogs/anilist/feed_views.py:1033 cogs/config/event_reminders.py:204
-#: cogs/config/milestones.py:201 cogs/config/twitch.py:321
-#: cogs/config/welcome.py:207
+#: cogs/anilist/feed_views.py:1033 cogs/community/suggestions/panel.py:138
+#: cogs/config/event_reminders.py:204 cogs/config/milestones.py:201
+#: cogs/config/twitch.py:321 cogs/config/welcome.py:207
 msgid "Enable"
 msgstr "Ενεργοποίηση"
 
@@ -1232,7 +1233,7 @@ msgstr "Διαγραφή"
 
 #: cogs/anilist/feed_views.py:1065 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
-#: cogs/community/usersettings.py:245 cogs/community/usersettings.py:336
+#: cogs/community/usersettings.py:246 cogs/community/usersettings.py:353
 #: cogs/config/tickets/lifecycle.py:280 cogs/system/arg_completion.py:286
 msgid "Cancel"
 msgstr "Ακύρωση"
@@ -1289,21 +1290,22 @@ msgstr "Ροή δραστηριότητας AniList"
 msgid "This server has no AniList feed yet. Pick a channel below to create one (up to {max} per server)."
 msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή AniList. Διάλεξε ένα κανάλι παρακάτω για να δημιουργήσεις μία (έως {max} ανά διακομιστή)."
 
-#: cogs/anilist/feed_views.py:1391 cogs/config/event_reminders.py:260
-#: cogs/config/milestones.py:247 cogs/config/settings.py:53
-#: cogs/config/tickets/panel.py:92 cogs/config/tickets/panel.py:489
-#: cogs/config/twitch.py:424 cogs/config/verification.py:111
-#: cogs/config/welcome.py:424 cogs/config/welcome.py:545
-#: cogs/moderation/modlog.py:276
+#: cogs/anilist/feed_views.py:1391 cogs/community/suggestions/panel.py:195
+#: cogs/config/event_reminders.py:260 cogs/config/milestones.py:247
+#: cogs/config/settings.py:53 cogs/config/tickets/panel.py:92
+#: cogs/config/tickets/panel.py:489 cogs/config/twitch.py:424
+#: cogs/config/verification.py:111 cogs/config/welcome.py:424
+#: cogs/config/welcome.py:545 cogs/moderation/modlog.py:276
 msgid "Enabled"
 msgstr "Ενεργοποιημένο"
 
-#: cogs/anilist/feed_views.py:1391 cogs/config/event_reminders.py:260
-#: cogs/config/milestones.py:247 cogs/config/settings.py:53
-#: cogs/config/tickets/panel.py:94 cogs/config/tickets/panel.py:491
-#: cogs/config/twitch.py:426 cogs/config/verification.py:113
-#: cogs/config/welcome.py:426 cogs/config/welcome.py:547
-#: cogs/config/welcome.py:801 cogs/moderation/modlog.py:278
+#: cogs/anilist/feed_views.py:1391 cogs/community/suggestions/panel.py:195
+#: cogs/config/event_reminders.py:260 cogs/config/milestones.py:247
+#: cogs/config/settings.py:53 cogs/config/tickets/panel.py:94
+#: cogs/config/tickets/panel.py:491 cogs/config/twitch.py:426
+#: cogs/config/verification.py:113 cogs/config/welcome.py:426
+#: cogs/config/welcome.py:547 cogs/config/welcome.py:801
+#: cogs/moderation/modlog.py:278
 msgid "Disabled"
 msgstr "Απενεργοποιημένο"
 
@@ -1316,12 +1318,13 @@ msgstr "{status} ({count} πρόσφατες αποτυχίες)"
 msgid "Configure how AniList activity is mirrored into this server. Every change saves instantly."
 msgstr "Ρύθμισε πώς η δραστηριότητα AniList αντικατοπτρίζεται σε αυτόν τον διακομιστή. Κάθε αλλαγή αποθηκεύεται αμέσως."
 
-#: cogs/anilist/feed_views.py:1407 cogs/config/announcements.py:315
-#: cogs/config/event_reminders.py:264 cogs/config/milestones.py:251
-#: cogs/config/rolemenus.py:686 cogs/config/starboard.py:284
-#: cogs/config/twitch.py:441 cogs/config/welcome.py:438
-#: cogs/config/welcome.py:560 cogs/config/welcome.py:780
-#: cogs/moderation/modlog.py:601 cogs/moderation/modlog.py:718
+#: cogs/anilist/feed_views.py:1407 cogs/community/suggestions/panel.py:197
+#: cogs/config/announcements.py:315 cogs/config/event_reminders.py:264
+#: cogs/config/milestones.py:251 cogs/config/rolemenus.py:686
+#: cogs/config/starboard.py:284 cogs/config/twitch.py:441
+#: cogs/config/welcome.py:438 cogs/config/welcome.py:560
+#: cogs/config/welcome.py:780 cogs/moderation/modlog.py:601
+#: cogs/moderation/modlog.py:718
 msgid "Channel"
 msgstr "Κανάλι"
 
@@ -1427,7 +1430,7 @@ msgstr "Δεν ήταν δυνατό το άνοιγμα της φόρμας κ�
 #: cogs/anilist/lookup.py:39 cogs/config/settings.py:52
 #: cogs/config/settings.py:173 cogs/config/settings.py:182
 #: cogs/config/settings.py:196 cogs/config/settings.py:204
-#: cogs/system/help.py:515 cogs/utility/info.py:36 cogs/utility/info.py:148
+#: cogs/system/help.py:516 cogs/utility/info.py:36 cogs/utility/info.py:148
 msgid "Unknown"
 msgstr "Άγνωστο"
 
@@ -2007,142 +2010,146 @@ msgstr "<@{author_id}>, {when}: {message}"
 msgid "Tap the button below to set a reminder."
 msgstr "Πάτησε το κουμπί παρακάτω για να ορίσεις μια υπενθύμιση."
 
-#: cogs/community/usersettings.py:88
+#: cogs/community/usersettings.py:89
 msgid "Level-up announcements"
 msgstr "Ανακοινώσεις ανόδου επιπέδου"
 
-#: cogs/community/usersettings.py:90
+#: cogs/community/usersettings.py:91
 msgid "Get pinged in chat when you reach a new level."
 msgstr "Λάβε ping στη συνομιλία όταν φτάνεις σε νέο επίπεδο."
 
-#: cogs/community/usersettings.py:99
+#: cogs/community/usersettings.py:100
 msgid "Level-up ping"
 msgstr "Ping ανόδου επιπέδου"
 
-#: cogs/community/usersettings.py:102
+#: cogs/community/usersettings.py:103
 msgid "Ping you by mention in level-up announcements. Turn off to be named without a ping."
 msgstr "Σε αναφέρει με mention στις ανακοινώσεις ανόδου. Απενεργοποίησέ το για να εμφανίζεσαι χωρίς ping."
 
-#: cogs/community/usersettings.py:109
+#: cogs/community/usersettings.py:110
 msgid "Expanded help"
 msgstr "Εκτεταμένη βοήθεια"
 
-#: cogs/community/usersettings.py:111
+#: cogs/community/usersettings.py:112
 msgid "Show every subcommand inline when you browse help."
 msgstr "Εμφάνιση κάθε υποεντολής inline όταν περιηγείσαι στη βοήθεια."
 
-#: cogs/community/usersettings.py:131
+#: cogs/community/usersettings.py:132
 msgid "Music autoplay"
 msgstr "Αυτόματη αναπαραγωγή μουσικής"
 
-#: cogs/community/usersettings.py:134
+#: cogs/community/usersettings.py:135
 msgid "Keep playing recommended tracks when your music queue runs out. Servers can set their own default, which applies until you pick here."
 msgstr "Συνεχίζει να παίζει προτεινόμενα κομμάτια όταν αδειάσει η ουρά μουσικής σου. Οι διακομιστές μπορούν να ορίσουν τη δική τους προεπιλογή, που ισχύει μέχρι να επιλέξεις εδώ."
 
-#: cogs/community/usersettings.py:146
+#: cogs/community/usersettings.py:147
 msgid "Play search picker"
 msgstr "Επιλογέας αναζήτησης στο play"
 
-#: cogs/community/usersettings.py:149
+#: cogs/community/usersettings.py:150
 msgid "On /play, choose from the top matches instead of instantly queuing the first."
 msgstr "Στο /play, διάλεξε ανάμεσα στα κορυφαία αποτελέσματα αντί να παίζει αμέσως το πρώτο."
 
-#: cogs/community/usersettings.py:156
+#: cogs/community/usersettings.py:157
 msgid "Avatar history tracking"
 msgstr "Παρακολούθηση ιστορικού avatar"
 
-#: cogs/community/usersettings.py:159
+#: cogs/community/usersettings.py:160
 msgid "Let Yasuho save future avatar and banner changes for public history."
 msgstr "Άφησε τη Yasuho να αποθηκεύει τις μελλοντικές αλλαγές avatar και banner για δημόσιο ιστορικό."
 
-#: cogs/community/usersettings.py:171
+#: cogs/community/usersettings.py:172
 msgid "Vote-again reminder"
 msgstr "Υπενθύμιση ψήφου"
 
-#: cogs/community/usersettings.py:174
+#: cogs/community/usersettings.py:175
 msgid "DM you once you can vote for Yasuho again (about 12h after your last vote)."
 msgstr "Σου στέλνει μήνυμα όταν μπορείς να ξαναψηφίσεις τη Yasuho (περίπου 12 ώρες μετά την τελευταία σου ψήφο)."
 
-#: cogs/community/usersettings.py:189
+#: cogs/community/usersettings.py:190
 msgid "Chapter alert language"
 msgstr "Γλώσσα ειδοποιήσεων κεφαλαίων"
 
-#: cogs/community/usersettings.py:192
+#: cogs/community/usersettings.py:193
 msgid "Which translation your new-chapter DMs link to, when it is out. Server posts follow the server language."
 msgstr "Η μετάφραση στην οποία συνδέονται τα DM νέων κεφαλαίων σου, όταν κυκλοφορήσει. Οι αναρτήσεις του διακομιστή ακολουθούν τη γλώσσα του διακομιστή."
 
-#: cogs/community/usersettings.py:197
+#: cogs/community/usersettings.py:198
 msgid "Pick a chapter language..."
 msgstr "Επιλέξτε γλώσσα κεφαλαίου..."
 
-#: cogs/community/usersettings.py:244
+#: cogs/community/usersettings.py:245
 msgid "Delete my profile"
 msgstr "Διαγραφή του προφίλ μου"
 
-#: cogs/community/usersettings.py:277
+#: cogs/community/usersettings.py:292
 msgid "Your profile is gone: fields, gaming IDs and every visibility choice."
 msgstr "Το προφίλ σου έχει εξαφανιστεί: πεδία, gaming IDs και κάθε επιλογή ορατότητας."
 
-#: cogs/community/usersettings.py:281
+#: cogs/community/usersettings.py:296
 msgid "Your scheduled announcements and their pending deliveries are gone."
 msgstr "Οι προγραμματισμένες ανακοινώσεις σου και οι εκκρεμείς αποστολές τους διαγράφηκαν."
 
-#: cogs/community/usersettings.py:283
+#: cogs/community/usersettings.py:298
+msgid "Your suggestions and votes are gone, and I removed what I could of the posted messages."
+msgstr "Οι προτάσεις και οι ψήφοι σου έχουν διαγραφεί, και έχω αφαιρέσει ό,τι μπορούσα από τα δημοσιευμένα μηνύματα."
+
+#: cogs/community/usersettings.py:300
 msgid "Your top.gg vote record is gone too."
 msgstr "Το ιστορικό ψήφων σου στο top.gg διαγράφηκε επίσης."
 
-#: cogs/community/usersettings.py:285
+#: cogs/community/usersettings.py:302
 msgid "So is your personal rank card."
 msgstr "Το ίδιο και η προσωπική σου κάρτα rank."
 
-#: cogs/community/usersettings.py:288
+#: cogs/community/usersettings.py:305
 msgid "Your AniList link is gone as well, and your episode and chapter alert opt-ins with it."
 msgstr "Ο σύνδεσμός σου με το AniList διαγράφηκε επίσης, και μαζί του οι εγγραφές σου στις ειδοποιήσεις επεισοδίων και κεφαλαίων."
 
-#: cogs/community/usersettings.py:293
+#: cogs/community/usersettings.py:310
 msgid "Your Pack Confort purchase record is gone from our database too (it comes back automatically if you still hold that purchase), and so is the note of your last premium offer reminder."
 msgstr "Η καταγραφή της αγοράς σου Pack Confort διαγράφηκε κι αυτή από τη βάση μας (επιστρέφει αυτόματα αν έχεις ακόμα αυτή την αγορά), όπως και η σημείωση της τελευταίας υπενθύμισης premium προσφοράς."
 
-#: cogs/community/usersettings.py:304
+#: cogs/community/usersettings.py:321
 msgid "Something went wrong deleting your profile."
 msgstr "Κάτι πήγε στραβά κατά τη διαγραφή του προφίλ σου."
 
-#: cogs/community/usersettings.py:314
+#: cogs/community/usersettings.py:331
 msgid "Profile deletion cancelled."
 msgstr "Η διαγραφή του προφίλ ακυρώθηκε."
 
-#: cogs/community/usersettings.py:335
+#: cogs/community/usersettings.py:352
 msgid "Delete my avatar history"
 msgstr "Διάγραψε το ιστορικό avatar μου"
 
-#: cogs/community/usersettings.py:356
+#: cogs/community/usersettings.py:373
 #, python-brace-format
 msgid "Deleted {count} saved image(s) ({size}). Future avatar tracking is now turned off."
 msgstr "Διαγράφηκαν {count} αποθηκευμένες εικόνες ({size}). Η μελλοντική παρακολούθηση avatar είναι πλέον απενεργοποιημένη."
 
-#: cogs/community/usersettings.py:367
+#: cogs/community/usersettings.py:384
 msgid "Something went wrong deleting your avatar history."
 msgstr "Κάτι πήγε στραβά κατά τη διαγραφή του ιστορικού avatar σου."
 
-#: cogs/community/usersettings.py:377
+#: cogs/community/usersettings.py:394
 msgid "Avatar history deletion cancelled."
 msgstr "Η διαγραφή ιστορικού avatar ακυρώθηκε."
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:392
+#: cogs/community/usersettings.py:409
 msgid "Turn off"
 msgstr "Απενεργοποίηση"
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:392
+#: cogs/community/usersettings.py:409
 msgid "Turn on"
 msgstr "Ενεργοποίηση"
 
-#: cogs/community/usersettings.py:476
+#: cogs/community/usersettings.py:493
 msgid "## Your preferences"
 msgstr "## Οι προτιμήσεις σου"
 
-#: cogs/community/usersettings.py:480
+#: cogs/community/usersettings.py:497
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
@@ -2150,15 +2157,15 @@ msgstr ""
 "Αυτές οι ρυθμίσεις επηρεάζουν μόνο **εσένα**, όπου κι αν με χρησιμοποιούν.\n"
 "Χρησιμοποίησε το κουμπί δίπλα σε μια προτίμηση για να την ενεργοποιήσεις ή να την απενεργοποιήσεις."
 
-#: cogs/community/usersettings.py:490
+#: cogs/community/usersettings.py:507
 msgid "ON"
 msgstr "ON"
 
-#: cogs/community/usersettings.py:490
+#: cogs/community/usersettings.py:507
 msgid "OFF"
 msgstr "OFF"
 
-#: cogs/community/usersettings.py:491
+#: cogs/community/usersettings.py:508
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
@@ -2167,7 +2174,7 @@ msgstr ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:513
+#: cogs/community/usersettings.py:530
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {value}\n"
@@ -2176,58 +2183,62 @@ msgstr ""
 "{emoji} **{label}** - {value}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:527
+#: cogs/community/usersettings.py:544
 msgid "-# Only you can use these controls."
 msgstr "-# Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου."
 
-#: cogs/community/usersettings.py:553 cogs/community/usersettings.py:573
-#: cogs/community/usersettings.py:593
+#: cogs/community/usersettings.py:570 cogs/community/usersettings.py:590
+#: cogs/community/usersettings.py:610
 msgid "Something went wrong updating that setting."
 msgstr "Κάτι πήγε στραβά κατά την ενημέρωση αυτής της ρύθμισης."
 
-#: cogs/community/usersettings.py:652
+#: cogs/community/usersettings.py:669
 #, python-brace-format
 msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
 msgstr "Χρησιμοποίησε `{prefix}mydata export` για να λάβεις τα δεδομένα σου, `{prefix}mydata deleteprofile` για να διαγράψεις το προφίλ σου, ή `{prefix}mydata deleteavatars` για να διαγράψεις τα αποθηκευμένα avatar."
 
-#: cogs/community/usersettings.py:725
+#: cogs/community/usersettings.py:742
 msgid "I sent your data export to you by direct message."
 msgstr "Σου έστειλα την εξαγωγή δεδομένων σου με άμεσο μήνυμα."
 
 #: cogs/community/profile/connectors/cog.py:280
-#: cogs/community/usersettings.py:729
+#: cogs/community/usersettings.py:746
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "Δεν κατάφερα να σου στείλω άμεσο μήνυμα. Ενεργοποίησε τα DMs, σε παρακαλώ."
 
-#: cogs/community/usersettings.py:734
+#: cogs/community/usersettings.py:751
 msgid "Something went wrong building your data export."
 msgstr "Κάτι πήγε στραβά κατά τη δημιουργία της εξαγωγής δεδομένων σου."
 
-#: cogs/community/usersettings.py:757
+#: cogs/community/usersettings.py:774
 msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
 msgstr "Αυτό διαγράφει μόνιμα το βιογραφικό σου, τις αντωνυμίες σου, το χρώμα τονισμού σου, τα προσαρμοσμένα πεδία σου, τα gaming IDs σου και κάθε επιλογή που έκανες σχετικά με το ποιος μπορούσε να τα δει. Αυτό δεν μπορεί να αναιρεθεί."
 
-#: cogs/community/usersettings.py:763
+#: cogs/community/usersettings.py:780
 msgid "It also deletes your top.gg vote record: your vote streak and your lifetime vote count start over from zero."
 msgstr "Διαγράφει επίσης το ιστορικό ψήφων σου στο top.gg: το σερί ψήφων και το συνολικό σου άθροισμα ξεκινούν πάλι από το μηδέν."
 
-#: cogs/community/usersettings.py:768
+#: cogs/community/usersettings.py:785
 msgid "Your scheduled announcements and their pending deliveries will be deleted."
 msgstr "Οι προγραμματισμένες ανακοινώσεις σου και οι εκκρεμείς αποστολές τους θα διαγραφούν."
 
-#: cogs/community/usersettings.py:772
+#: cogs/community/usersettings.py:789
+msgid "It also deletes your suggestions and your votes, and removes the posted suggestion messages where I can. Their discussion threads stay for the other members, renamed and locked."
+msgstr "Διαγράφει επίσης τις προτάσεις και τις ψήφους σου, και αφαιρεί τα δημοσιευμένα μηνύματα προτάσεων όπου μπορώ. Τα νήματα συζήτησής τους μένουν για τα υπόλοιπα μέλη, μετονομασμένα και κλειδωμένα."
+
+#: cogs/community/usersettings.py:795
 msgid "And your personal rank card: the background image you uploaded and the accent colour you picked."
 msgstr "Και η προσωπική σου κάρτα rank: η εικόνα φόντου που ανέβασες και το χρώμα έμφασης που διάλεξες."
 
-#: cogs/community/usersettings.py:777
+#: cogs/community/usersettings.py:800
 msgid "And your AniList link: the stored login is deleted, so relinking needs a fresh sign-in with AniList. Your episode and chapter alert opt-ins go with it."
 msgstr "Και ο σύνδεσμός σου με το AniList: η αποθηκευμένη σύνδεση διαγράφεται, οπότε η επανασύνδεση απαιτεί νέα είσοδο στο AniList. Οι εγγραφές σου στις ειδοποιήσεις επεισοδίων και κεφαλαίων φεύγουν μαζί."
 
-#: cogs/community/usersettings.py:783
+#: cogs/community/usersettings.py:806
 msgid "And your Pack Confort purchase record: it comes back on its own if you still hold that purchase, the next time we check with Discord. Also the note of when you last saw a premium offer reminder, so you may see one again sooner than usual."
 msgstr "Και η καταγραφή της αγοράς σου Pack Confort: επιστρέφει μόνη της στον επόμενο έλεγχο με το Discord αν έχεις ακόμα αυτή την αγορά. Επίσης η σημείωση για το πότε είδες τελευταία φορά μια υπενθύμιση premium προσφοράς, οπότε μπορεί να δεις μία ξανά νωρίτερα από το συνηθισμένο."
 
-#: cogs/community/usersettings.py:800
+#: cogs/community/usersettings.py:823
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "Αυτό διαγράφει οριστικά κάθε αποθηκευμένο γενικό avatar, avatar διακομιστή και banner για τον λογαριασμό σου. Απενεργοποιεί επίσης τη μελλοντική παρακολούθηση. Αυτή η ενέργεια δεν αναιρείται."
 
@@ -4002,6 +4013,273 @@ msgstr "Δραστηριότητα ({days} ημέρες)"
 msgid "Retention ({weeks} weeks)"
 msgstr "Διατήρηση ({weeks} εβδομάδες)"
 
+#: cogs/community/suggestions/cog.py:109
+msgid "Use the /suggest slash command to write a suggestion."
+msgstr "Χρησιμοποίησε την εντολή /suggest για να γράψεις μια πρόταση."
+
+#: cogs/community/suggestions/cog.py:113 cogs/community/suggestions/cog.py:143
+msgid "The suggestion box is not set up in this server."
+msgstr "Το κουτί προτάσεων δεν έχει ρυθμιστεί σε αυτόν τον διακομιστή."
+
+#: cogs/community/suggestions/cog.py:117 cogs/community/suggestions/cog.py:148
+msgid "Please wait a minute between suggestions."
+msgstr "Περίμενε ένα λεπτό ανάμεσα στις προτάσεις."
+
+#: cogs/community/suggestions/cog.py:137
+msgid "A suggestion needs a title and details."
+msgstr "Μια πρόταση χρειάζεται τίτλο και λεπτομέρειες."
+
+#: cogs/community/suggestions/cog.py:153
+msgid "I can't post in the suggestions channel. Ask a moderator to check my permissions."
+msgstr "Δεν μπορώ να γράψω στο κανάλι προτάσεων. Ζήτα από έναν συντονιστή να ελέγξει τα δικαιώματά μου."
+
+#: cogs/community/suggestions/cog.py:164
+msgid "I couldn't post your suggestion. Please try again later."
+msgstr "Δεν μπόρεσα να δημοσιεύσω την πρότασή σου. Δοκίμασε ξανά αργότερα."
+
+#: cogs/community/suggestions/cog.py:167
+#, python-brace-format
+msgid "Your suggestion was posted: {url}"
+msgstr "Η πρότασή σου δημοσιεύτηκε: {url}"
+
+#: cogs/community/suggestions/cog.py:212
+msgid "Your vote was recorded."
+msgstr "Η ψήφος σου καταγράφηκε."
+
+#: cogs/community/suggestions/cog.py:213
+msgid "Your vote was removed."
+msgstr "Η ψήφος σου αφαιρέθηκε."
+
+#: cogs/community/suggestions/cog.py:214
+msgid "Voting is closed on this suggestion."
+msgstr "Η ψηφοφορία είναι κλειστή για αυτή την πρόταση."
+
+#: cogs/community/suggestions/cog.py:215 cogs/community/suggestions/cog.py:307
+msgid "This suggestion no longer exists."
+msgstr "Αυτή η πρόταση δεν υπάρχει πια."
+
+#: cogs/community/suggestions/cog.py:269 cogs/community/suggestions/cog.py:300
+msgid "Only the server's staff can change a suggestion's status."
+msgstr "Μόνο το προσωπικό του διακομιστή μπορεί να αλλάξει την κατάσταση μιας πρότασης."
+
+#: cogs/community/suggestions/cog.py:281
+msgid "Choose the new status."
+msgstr "Επίλεξε τη νέα κατάσταση."
+
+#: cogs/community/suggestions/cog.py:290 cogs/community/suggestions/cog.py:303
+msgid "That status is not available."
+msgstr "Αυτή η κατάσταση δεν είναι διαθέσιμη."
+
+#: cogs/community/suggestions/cog.py:312
+#, python-brace-format
+msgid "Status set to {status}."
+msgstr "Η κατάσταση ορίστηκε σε {status}."
+
+#: cogs/community/suggestions/cog.py:449
+msgid "Top suggestions this week"
+msgstr "Κορυφαίες προτάσεις της εβδομάδας"
+
+#: cogs/community/suggestions/panel.py:20
+msgid "Monday"
+msgstr "Δευτέρα"
+
+#: cogs/community/suggestions/panel.py:20
+msgid "Tuesday"
+msgstr "Τρίτη"
+
+#: cogs/community/suggestions/panel.py:20
+msgid "Wednesday"
+msgstr "Τετάρτη"
+
+#: cogs/community/suggestions/panel.py:20
+msgid "Thursday"
+msgstr "Πέμπτη"
+
+#: cogs/community/suggestions/panel.py:21
+msgid "Friday"
+msgstr "Παρασκευή"
+
+#: cogs/community/suggestions/panel.py:21
+msgid "Saturday"
+msgstr "Σάββατο"
+
+#: cogs/community/suggestions/panel.py:21
+msgid "Sunday"
+msgstr "Κυριακή"
+
+#: cogs/community/suggestions/panel.py:30
+msgid "Suggestions channel..."
+msgstr "Κανάλι προτάσεων..."
+
+#: cogs/community/suggestions/panel.py:45
+msgid "Staff role (optional)..."
+msgstr "Ρόλος προσωπικού (προαιρετικό)..."
+
+#: cogs/community/suggestions/panel.py:60
+msgid "Remove a custom status..."
+msgstr "Αφαίρεση προσαρμοσμένης κατάστασης..."
+
+#: cogs/community/suggestions/panel.py:77
+msgid "Digest day (09:00 UTC)..."
+msgstr "Ημέρα σύνοψης (09:00 UTC)..."
+
+#: cogs/community/suggestions/panel.py:94
+msgid "Add a custom status"
+msgstr "Προσθήκη προσαρμοσμένης κατάστασης"
+
+#: cogs/community/suggestions/panel.py:97
+msgid "Label"
+msgstr "Ετικέτα"
+
+#: cogs/community/suggestions/panel.py:100
+msgid "Colour (#RRGGBB)"
+msgstr "Χρώμα (#RRGGBB)"
+
+#: cogs/community/suggestions/panel.py:114
+msgid "That colour is not valid. Use the form #RRGGBB."
+msgstr "Αυτό το χρώμα δεν είναι έγκυρο. Χρησιμοποίησε τη μορφή #RRGGBB."
+
+#: cogs/community/suggestions/panel.py:118
+#, python-brace-format
+msgid "Use a new label, and no more than {count} custom statuses."
+msgstr "Χρησιμοποίησε μια νέα ετικέτα και όχι περισσότερες από {count} προσαρμοσμένες καταστάσεις."
+
+#: cogs/community/suggestions/panel.py:144 cogs/config/event_reminders.py:216
+#: cogs/config/milestones.py:213
+msgid "Customize"
+msgstr "Προσαρμογή"
+
+#: cogs/community/suggestions/panel.py:155
+msgid "Add status"
+msgstr "Προσθήκη κατάστασης"
+
+#: cogs/community/suggestions/panel.py:159
+msgid "Disable digest"
+msgstr "Απενεργοποίηση σύνοψης"
+
+#: cogs/community/suggestions/panel.py:159
+msgid "Enable digest"
+msgstr "Ενεργοποίηση σύνοψης"
+
+#: cogs/community/suggestions/panel.py:182 cogs/config/announcements.py:601
+#: cogs/config/event_reminders.py:243 cogs/config/milestones.py:231
+msgid "You need the Manage Server permission for this."
+msgstr "Χρειάζεσαι την άδεια Διαχείριση διακομιστή για αυτό."
+
+#: cogs/community/suggestions/panel.py:191
+msgid "Suggestion box"
+msgstr "Κουτί προτάσεων"
+
+#: cogs/community/suggestions/panel.py:192
+msgid "Members post suggestions with /suggest and everyone votes on them."
+msgstr "Τα μέλη γράφουν προτάσεις με /suggest, και όλοι ψηφίζουν σε αυτές."
+
+#: cogs/community/suggestions/panel.py:198 cogs/config/announcements.py:316
+#: cogs/config/buttonroles.py:550 cogs/config/event_reminders.py:265
+#: cogs/config/milestones.py:252 cogs/config/rolemenus.py:679
+#: cogs/config/tickets/panel.py:157 cogs/config/twitch.py:420
+#: cogs/config/verification.py:118 cogs/config/welcome.py:422
+#: cogs/config/welcome.py:543 cogs/moderation/modlog.py:274
+msgid "*Not set.*"
+msgstr "*Δεν έχει οριστεί.*"
+
+#: cogs/community/suggestions/panel.py:201
+msgid "Staff role"
+msgstr "Ρόλος προσωπικού"
+
+#: cogs/community/suggestions/panel.py:202
+#: cogs/community/suggestions/panel.py:207 cogs/config/event_reminders.py:275
+msgid "*None.*"
+msgstr "*Κανένας.*"
+
+#: cogs/community/suggestions/panel.py:206
+msgid "Custom statuses"
+msgstr "Προσαρμοσμένες καταστάσεις"
+
+#: cogs/community/suggestions/panel.py:211
+msgid "Weekly digest"
+msgstr "Εβδομαδιαία σύνοψη"
+
+#: cogs/community/suggestions/panel.py:212
+#, python-brace-format
+msgid "On, {day} 09:00 UTC"
+msgstr "Ενεργό, {day} 09:00 UTC"
+
+#: cogs/community/suggestions/panel.py:217
+msgid "Yasuho+ unlocks custom statuses and a weekly digest."
+msgstr "Το Yasuho+ ξεκλειδώνει προσαρμοσμένες καταστάσεις και μια εβδομαδιαία σύνοψη."
+
+#: cogs/community/suggestions/panel.py:242
+msgid "I can't post suggestions in that channel. Give me View Channel, Send Messages and Embed Links there first."
+msgstr "Δεν μπορώ να δημοσιεύσω προτάσεις σε αυτό το κανάλι. Δώσε μου πρώτα τα δικαιώματα Προβολή καναλιού, Αποστολή μηνυμάτων και Ενσωμάτωση συνδέσμων εκεί."
+
+#: cogs/community/suggestions/panel.py:253
+msgid "Pick a real role, not @everyone."
+msgstr "Επίλεξε έναν πραγματικό ρόλο, όχι @everyone."
+
+#: cogs/community/suggestions/panel.py:261
+msgid "Pick a suggestions channel first."
+msgstr "Επίλεξε πρώτα ένα κανάλι προτάσεων."
+
+#: cogs/community/suggestions/panel.py:295
+msgid "Custom statuses and the weekly digest are a Yasuho+ feature."
+msgstr "Οι προσαρμοσμένες καταστάσεις και η εβδομαδιαία σύνοψη είναι λειτουργία του Yasuho+."
+
+#: cogs/community/suggestions/render.py:29
+msgid "Approved"
+msgstr "Εγκεκριμένη"
+
+#: cogs/community/suggestions/render.py:31
+msgid "Rejected"
+msgstr "Απορριφθείσα"
+
+#: cogs/community/suggestions/render.py:33
+msgid "Implemented"
+msgstr "Υλοποιημένη"
+
+#: cogs/community/suggestions/render.py:34
+msgid "Open"
+msgstr "Ανοιχτή"
+
+#: cogs/community/suggestions/render.py:56
+msgid "Votes"
+msgstr "Ψήφοι"
+
+#: cogs/community/suggestions/render.py:59 cogs/moderation/moderation.py:479
+#: cogs/moderation/moderation.py:696 cogs/moderation/moderation.py:773
+msgid "Reason"
+msgstr "Λόγος"
+
+#: cogs/community/suggestions/views.py:29
+msgid "Suggestions are unavailable right now."
+msgstr "Οι προτάσεις δεν είναι διαθέσιμες αυτή τη στιγμή."
+
+#: cogs/community/suggestions/views.py:93
+#: cogs/community/suggestions/views.py:153
+msgid "Set status"
+msgstr "Ορισμός κατάστασης"
+
+#: cogs/community/suggestions/views.py:125
+msgid "Choose a status..."
+msgstr "Επίλεξε κατάσταση..."
+
+#: cogs/community/suggestions/views.py:158
+msgid "Reason (optional)"
+msgstr "Αιτιολογία (προαιρετικό)"
+
+#: cogs/community/suggestions/views.py:175
+msgid "New suggestion"
+msgstr "Νέα πρόταση"
+
+#: cogs/community/suggestions/views.py:178 cogs/config/rolemenus.py:314
+#: tools/embed_creator.py:431
+msgid "Title"
+msgstr "Τίτλος"
+
+#: cogs/community/suggestions/views.py:181
+msgid "Details"
+msgstr "Λεπτομέρειες"
+
 #: cogs/config/announcements.py:81
 msgid "Target channel..."
 msgstr "Κανάλι προορισμού..."
@@ -4099,15 +4377,6 @@ msgstr "Δημιουργός ανακοινώσεων"
 #: cogs/config/announcements.py:307
 msgid "Compose the embed with the menu, pick a channel (and optionally a role to ping), then **Send**. Preview shows it only to you."
 msgstr "Σύνθεσε το embed με το μενού, διάλεξε ένα κανάλι (και προαιρετικά έναν ρόλο για ping) και μετά πάτησε **Αποστολή**. Η προεπισκόπηση το δείχνει μόνο σε εσένα."
-
-#: cogs/config/announcements.py:316 cogs/config/buttonroles.py:550
-#: cogs/config/event_reminders.py:265 cogs/config/milestones.py:252
-#: cogs/config/rolemenus.py:679 cogs/config/tickets/panel.py:157
-#: cogs/config/twitch.py:420 cogs/config/verification.py:118
-#: cogs/config/welcome.py:422 cogs/config/welcome.py:543
-#: cogs/moderation/modlog.py:274
-msgid "*Not set.*"
-msgstr "*Δεν έχει οριστεί.*"
 
 #: cogs/config/announcements.py:320 cogs/config/welcome.py:453
 #: cogs/config/welcome.py:479 cogs/config/welcome.py:569
@@ -4213,11 +4482,6 @@ msgstr "Προγραμματισμένες ανακοινώσεις"
 #: cogs/config/announcements.py:582
 msgid "Nothing scheduled. Build one with `/announce`, then press **Schedule**."
 msgstr "Τίποτα προγραμματισμένο. Φτιάξε μία με `/announce` και πάτα **Προγραμματισμός**."
-
-#: cogs/config/announcements.py:601 cogs/config/event_reminders.py:243
-#: cogs/config/milestones.py:231
-msgid "You need the Manage Server permission for this."
-msgstr "Χρειάζεσαι την άδεια Διαχείριση διακομιστή για αυτό."
 
 #: cogs/config/announcements.py:631
 #, python-brace-format
@@ -4718,10 +4982,6 @@ msgstr "Πότε να γίνει υπενθύμιση..."
 msgid "Role to ping (optional)..."
 msgstr "Ρόλος για αναφορά (προαιρετικό)..."
 
-#: cogs/config/event_reminders.py:216 cogs/config/milestones.py:213
-msgid "Customize"
-msgstr "Προσαρμογή"
-
 #: cogs/config/event_reminders.py:252
 msgid "Event reminders"
 msgstr "Υπενθυμίσεις εκδηλώσεων"
@@ -4737,10 +4997,6 @@ msgstr "Υπενθυμίσεις"
 #: cogs/config/event_reminders.py:274
 msgid "Role to ping"
 msgstr "Ρόλος για αναφορά"
-
-#: cogs/config/event_reminders.py:275
-msgid "*None.*"
-msgstr "*Κανένας.*"
 
 #: cogs/config/event_reminders.py:279
 msgid "Yasuho+ unlocks the reminder times and a role ping."
@@ -4931,10 +5187,6 @@ msgstr "Καμία αλλαγή."
 #: cogs/config/rolemenus.py:311
 msgid "Menu header"
 msgstr "Επικεφαλίδα μενού"
-
-#: cogs/config/rolemenus.py:314 tools/embed_creator.py:431
-msgid "Title"
-msgstr "Τίτλος"
 
 #: cogs/config/rolemenus.py:320 tools/embed_creator.py:455
 msgid "Description"
@@ -7109,11 +7361,6 @@ msgstr "Επιβεβαίωση ban"
 #, python-brace-format
 msgid "Are you sure you want to ban {target} (`{id}`)?"
 msgstr "Είσαι σίγουρος ότι θέλεις να κάνεις ban τον/την {target} (`{id}`);"
-
-#: cogs/moderation/moderation.py:479 cogs/moderation/moderation.py:696
-#: cogs/moderation/moderation.py:773
-msgid "Reason"
-msgstr "Λόγος"
 
 #: cogs/moderation/moderation.py:484
 msgid "Ban cancelled"
@@ -9668,56 +9915,56 @@ msgstr "Kicks, bans, προειδοποιήσεις, automod και αρχεία
 msgid "Welcome messages, starboard, custom commands and more."
 msgstr "Μηνύματα καλωσορίσματος, starboard, προσαρμοσμένες εντολές και άλλα."
 
-#: cogs/system/help.py:138
+#: cogs/system/help.py:139
 msgid "Reaction roles, role menus, button roles and verification."
 msgstr "Ρόλοι με αντίδραση, μενού ρόλων, ρόλοι με κουμπιά και επαλήθευση."
 
-#: cogs/system/help.py:146
+#: cogs/system/help.py:147
 msgid "Anything not yet sorted into a category."
 msgstr "Ο,τι δεν έχει ακόμα ταξινομηθεί σε κατηγορία."
 
-#: cogs/system/help.py:248 cogs/system/help.py:295 cogs/system/help.py:308
-#: cogs/system/help.py:788
+#: cogs/system/help.py:249 cogs/system/help.py:296 cogs/system/help.py:309
+#: cogs/system/help.py:789
 msgid "No description provided."
 msgstr "Δεν δόθηκε περιγραφή."
 
-#: cogs/system/help.py:300 cogs/system/help.py:792
+#: cogs/system/help.py:301 cogs/system/help.py:793
 msgid "Aliases"
 msgstr "Συνώνυμα"
 
-#: cogs/system/help.py:313
+#: cogs/system/help.py:314
 #, python-brace-format
 msgid "This command has {count}. Toggle expansion in /preferences, or use `{prefix}help {group} <subcommand>`."
 msgstr "Αυτή η εντολή έχει {count}. Εναλλάξε την ανάπτυξη στο /preferences ή χρησιμοποίησε `{prefix}help {group} <subcommand>`."
 
-#: cogs/system/help.py:318
+#: cogs/system/help.py:319
 #, python-brace-format
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
 msgstr[0] "{n} υποεντολή"
 msgstr[1] "{n} υποεντολές"
 
-#: cogs/system/help.py:323
+#: cogs/system/help.py:324
 msgid "Subcommands"
 msgstr "Υποεντολές"
 
-#: cogs/system/help.py:352
+#: cogs/system/help.py:353
 msgid "Jump to a category..."
 msgstr "Μετάβαση σε κατηγορία..."
 
-#: cogs/system/help.py:421 cogs/system/help.py:550 cogs/system/help.py:569
+#: cogs/system/help.py:422 cogs/system/help.py:551 cogs/system/help.py:570
 #, python-brace-format
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] "{n} εντολή"
 msgstr[1] "{n} εντολές"
 
-#: cogs/system/help.py:482
+#: cogs/system/help.py:483
 #, python-brace-format
 msgid "{bot} • Help"
 msgstr "{bot} • Βοήθεια"
 
-#: cogs/system/help.py:484
+#: cogs/system/help.py:485
 #, python-brace-format
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
@@ -9728,19 +9975,19 @@ msgstr ""
 "\n"
 "Χρησιμοποίησε το μενού για να μεταβείς σε μια κατηγορία, τα βέλη για περιήγηση, ή `{prefix}help <command>` για μια συγκεκριμένη εντολή."
 
-#: cogs/system/help.py:510
+#: cogs/system/help.py:511
 msgid "Enabled ✅"
 msgstr "Ενεργοποιημένο ✅"
 
-#: cogs/system/help.py:510
+#: cogs/system/help.py:511
 msgid "Disabled ❌"
 msgstr "Απενεργοποιημένο ❌"
 
-#: cogs/system/help.py:518
+#: cogs/system/help.py:519
 msgid "🏠 Server"
 msgstr "🏠 Διακομιστής"
 
-#: cogs/system/help.py:521
+#: cogs/system/help.py:522
 #, python-brace-format
 msgid ""
 "Prefix: `{prefix}`\n"
@@ -9751,66 +9998,66 @@ msgstr ""
 "Μέλη: **{members}**\n"
 "Επίπεδα: {leveling}"
 
-#: cogs/system/help.py:533
+#: cogs/system/help.py:534
 msgid "🏠 Direct Messages"
 msgstr "🏠 Προσωπικά μηνύματα"
 
-#: cogs/system/help.py:535
+#: cogs/system/help.py:536
 #, python-brace-format
 msgid "Default prefix: `{prefix}`"
 msgstr "Προεπιλεγμένο πρόθεμα: `{prefix}`"
 
-#: cogs/system/help.py:561
+#: cogs/system/help.py:562
 msgid "📚 Categories"
 msgstr "📚 Κατηγορίες"
 
-#: cogs/system/help.py:567
+#: cogs/system/help.py:568
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
 msgstr "{commands} σε {categories} • Χρησιμοποίησε το μενού ή τα βέλη για εξερεύνηση"
 
-#: cogs/system/help.py:573
+#: cogs/system/help.py:574
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] "{n} κατηγορία"
 msgstr[1] "{n} κατηγορίες"
 
-#: cogs/system/help.py:582
+#: cogs/system/help.py:583
 #, python-brace-format
 msgid "Category {current}/{total} • {prefix}help <command> for details"
 msgstr "Κατηγορία {current}/{total} • {prefix}help <command> για λεπτομέρειες"
 
-#: cogs/system/help.py:588
+#: cogs/system/help.py:589
 #, python-brace-format
 msgid "...more commands available. Use `{prefix}help <command>` to see them."
 msgstr "...υπάρχουν περισσότερες εντολές. Χρησιμοποίησε `{prefix}help <command>` για να τις δεις."
 
-#: cogs/system/help.py:605
+#: cogs/system/help.py:606
 msgid "No commands available."
 msgstr "Δεν υπάρχουν διαθέσιμες εντολές."
 
-#: cogs/system/help.py:670
+#: cogs/system/help.py:671
 msgid "Something went wrong opening the help menu."
 msgstr "Κάτι πήγε στραβά κατά το άνοιγμα του μενού βοήθειας."
 
-#: cogs/system/help.py:739
+#: cogs/system/help.py:740
 msgid "Collapse subcommands"
 msgstr "Σύμπτυξη υποεντολών"
 
-#: cogs/system/help.py:739
+#: cogs/system/help.py:740
 msgid "Expand subcommands"
 msgstr "Ανάπτυξη υποεντολών"
 
-#: cogs/system/help.py:756
+#: cogs/system/help.py:757
 msgid "Something went wrong updating that preference."
 msgstr "Κάτι πήγε στραβά κατά την ενημέρωση αυτής της προτίμησης."
 
-#: cogs/system/help.py:772 cogs/system/help.py:812
+#: cogs/system/help.py:773 cogs/system/help.py:813
 msgid "Help"
 msgstr "Βοήθεια"
 
-#: cogs/system/help.py:774
+#: cogs/system/help.py:775
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
 msgstr "Χρησιμοποίησε `{prefix}help <command>` για περισσότερες πληροφορίες σχετικά με μια εντολή."
@@ -10038,8 +10285,8 @@ msgstr "Το Yasuho μένει στο φωνητικό σου κανάλι, ακ
 msgid "**Extended server playlists**"
 msgstr "**Εκτεταμένες λίστες διακομιστή**"
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:153
-#: tests/cogs/test_premium_panel.py:157
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:154
+#: tests/cogs/test_premium_panel.py:158
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr "Έως {count} λίστες των {tracks} κομματιών."

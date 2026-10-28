@@ -119,6 +119,13 @@ channel, an optional role to mention, the timezone and the schedule) are kept
 until a manager deletes them or the server's data is purged, and are erased with
 the data of the manager who created them.
 
+**Suggestions** (per server, only where a server enables the suggestion box):
+the suggestions you post with `/suggest` (title, details, number, status and the
+reason the server's staff may give, and the IDs of the posted message and its
+discussion thread) and your up or down votes. Other members see vote counts,
+never who voted. They are kept until the server's data is purged, or until you
+delete them with `/mydata deleteprofile`.
+
 **Command usage**: anonymous aggregate counters (command name x day). No user
 ID, no server ID.
 
@@ -135,9 +142,10 @@ ID, no server ID.
   configures without reading messages. The only text we keep is text
   explicitly given to a command for that purpose, all listed above: reminder
   texts, AFK status messages, moderation case reasons, and custom command
-  replies and scheduled announcements written by server managers. Our own
-  technical logs never contain message text; mod-log and ticket-log channels
-  are Discord channels that belong to the server, not logs we keep.
+  replies and scheduled announcements written by server managers, and
+  suggestions. Our own technical logs never contain message text; mod-log and
+  ticket-log channels are Discord channels that belong to the server, not logs
+  we keep.
 - We do not use any data to train machine learning or AI models.
 - We do not sell or share data with third parties. External services are only
   contacted to render a feature you asked for, and only with what that feature
@@ -251,11 +259,14 @@ complaint with the French data protection authority, the CNIL
 - `/mydata deleteprofile` - permanently delete your profile, gaming IDs, linked
   accounts, visibility choices, collected presence data, your top.gg vote
   record, your personal rank card, your AniList link (the stored OAuth token),
-  your AniList / MangaDex alert opt-ins, your limit notes and our copy of your
-  own premium purchases. A purchase that is still active on Discord is copied
-  again at the next check, because the perk depends on it. A gift the bot owner
-  gave you stays in the owner's record of gifts until it is deleted on the
-  schedule above.
+  your AniList / MangaDex alert opt-ins, your limit notes, your suggestions and
+  votes (with the votes cast on your suggestions) and our copy of your own
+  premium purchases. The posted suggestion messages are removed where the bot
+  can; their discussion threads hold other members' replies, so they stay,
+  renamed to the suggestion number and locked. A purchase that is still active
+  on Discord is copied again at the next check, because the perk depends on it.
+  A gift the bot owner gave you stays in the owner's record of gifts until it is
+  deleted on the schedule above.
 - `/mydata deleteavatars` - permanently delete your avatar history and disable
   future tracking.
 - `/connections unlink` - unlink an external account (removes its data and
