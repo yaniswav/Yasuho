@@ -201,6 +201,8 @@ class Birthdays(commands.Cog):
         The slot is the first one strictly after ``after``. A replacing write looks
         back LATE_WINDOW, so a slot that passed a moment ago still fires (the per-day
         claim in _daily prevents a second celebration).
+
+        Returns the planned slot, or None when the feature is off.
         """
         now = discord.utils.utcnow()
         wanted = config["enabled"] and config["channel_id"]
@@ -231,10 +233,11 @@ class Birthdays(commands.Cog):
         reminder = self.bot.get_cog("Reminder")
         if reminder is not None:
             reminder._have_data.set()
+        return planned if wanted else None
 
     async def reconcile(self, guild_id):
         """After a panel save: move the pending row to the new config."""
-        await self._write_timer(guild_id, await self.config_for(guild_id), replace=True)
+        return await self._write_timer(guild_id, await self.config_for(guild_id), replace=True)
 
     @commands.Cog.listener()
     async def on_ready(self):

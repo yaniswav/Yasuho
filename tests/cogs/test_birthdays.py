@@ -481,3 +481,20 @@ async def test_panel_strips_the_previous_role_on_disable_or_change():
     holder.remove_roles.assert_awaited_once()
     source = inspect.getsource(panel.BirthdayPanel.save_and_rerender)
     assert "strip_role" in source and "live_role_id" in inspect.getsource(panel.BirthdayPanel.__init__)
+
+
+async def test_the_dashboard_reconcile_action_returns_the_next_run():
+    from cogs.system import dashboard_actions
+
+    cog = make_cog(guild=object())
+    cog.bot.get_cog = lambda name: cog if name == "Birthdays" else None
+    cog._write_timer = AsyncMock(return_value=None)
+    run = dashboard_actions._EXECUTORS["birthdays_reconcile"]
+    cog.config_for = AsyncMock(return_value=store.normalise(CONFIG))
+    when = datetime.datetime(2030, 1, 1, 9, tzinfo=datetime.timezone.utc)
+    cog._write_timer.return_value = when
+    assert await run(cog.bot, 1, {}) == {"ok": True, "next_run": when.isoformat()}
+    cog._write_timer.return_value = None
+    assert await run(cog.bot, 1, {}) == {"ok": True, "next_run": None}
+    cog.bot.get_guild = lambda gid: None
+    assert await run(cog.bot, 1, {}) == {"ok": False, "error": "guild_unavailable"}
