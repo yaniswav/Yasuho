@@ -417,11 +417,13 @@ def test_join_within_budget_truncates_and_counts_the_rest():
 
 
 async def test_check_never_sends_a_field_value_past_discords_limit(
-    fake_pool, make_context
+    fake_pool, make_context, monkeypatch
 ):
     """A long reason, repeated across many active grants, must never make it
     past the 1024-character field-value budget - the regression this guard
     protects against (Discord's API rejecting the send outright)."""
+    # fake_pool answers every fetch with grant rows; no SKU keeps the entitlement query out of it.
+    monkeypatch.setattr(premium_cog.premium, "YASUHO_PLUS_SKU", None)
     fake_pool.fetch_return = [
         {
             "id": i,

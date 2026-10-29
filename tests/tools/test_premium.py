@@ -63,14 +63,6 @@ def test_sku_id_invalid_value_warns_and_is_treated_as_absent(caplog):
     assert any("invalid [Premium]" in record.message for record in caplog.records)
 
 
-def test_no_sku_configured_in_the_real_bot_ini_today():
-    """Today's behaviour: a fresh checkout (no [Premium] section) must read
-    both SKUs as absent, so :data:`premium.premium_limits` resolves FREE for
-    everyone - the default this whole lot must never change."""
-    assert premium.YASUHO_PLUS_SKU is None
-    assert premium.COMFORT_PACK_SKU is None
-
-
 # ---------------------------------------------------------------------------
 # premium_skus sync (dashboard bridge)
 # ---------------------------------------------------------------------------

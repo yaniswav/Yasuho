@@ -477,7 +477,12 @@ async def test_panel_strips_the_previous_role_on_disable_or_change():
     guild, role = make_guild({10: holder})
     holder.roles.append(role)
     cog = make_cog(pool=pool, guild=guild)
-    await cog.strip_role(guild, 5, store.normalise(CONFIG))
+    orig = discord.utils.utcnow
+    discord.utils.utcnow = lambda: datetime.datetime(2026, 10, 28, 15, 0, tzinfo=UTC)
+    try:
+        await cog.strip_role(guild, 5, store.normalise(CONFIG))
+    finally:
+        discord.utils.utcnow = orig
     holder.remove_roles.assert_awaited_once()
     source = inspect.getsource(panel.BirthdayPanel.save_and_rerender)
     assert "strip_role" in source and "live_role_id" in inspect.getsource(panel.BirthdayPanel.__init__)
