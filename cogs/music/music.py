@@ -38,6 +38,7 @@ from cogs.music.player import (
     seed_needs_youtube_resolution,  # noqa: F401
     youtube_seed_query,  # noqa: F401
 )
+from cogs.music.playlist_sync import PlaylistSyncMixin
 from cogs.music.playlists_shared import (
     NO_PINGS,
     ServerPlaylistMixin,
@@ -1200,7 +1201,7 @@ def is_bot_channel_move(
     )
 
 
-class Music(RequestPanelMixin, ServerPlaylistMixin, commands.Cog):
+class Music(RequestPanelMixin, ServerPlaylistMixin, PlaylistSyncMixin, commands.Cog):
     """Music playback commands powered by sonolink (Lavalink v4)."""
 
     # True once the startup restore (and its 24/7 bare joins) has finished: the
@@ -1274,6 +1275,10 @@ class Music(RequestPanelMixin, ServerPlaylistMixin, commands.Cog):
         # now instead of leaving it shut until the next restart.
         self._restore_done = self.bot.is_ready()
         self.bot.add_dynamic_items(RequestButton)
+        # A reload while the bot is up: the sweep timer may have fired into the
+        # unloaded cog, so re-arm it (idempotent; on_ready covers a fresh start).
+        if self.bot.is_ready():
+            await self._ensure_sync_timer()
 
     def cog_unload(self) -> None:
         self.bot.remove_dynamic_items(RequestButton)
@@ -2626,6 +2631,9 @@ class Music(RequestPanelMixin, ServerPlaylistMixin, commands.Cog):
                 stats = self.quotas.stats()
                 if effects.stats_are_nonzero(stats):
                     log.info("Music quota stats: %s", effects.format_quota_stats(stats))
+            # Safety net for the linked-playlist sweep series (hourly, one cheap
+            # idempotent statement): see PlaylistSyncMixin._rearm_with_retry.
+            await self._ensure_sync_timer_hourly(now)
         except Exception:
             log.exception("idle-timeout loop iteration failed")
 

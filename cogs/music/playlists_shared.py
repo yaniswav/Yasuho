@@ -55,21 +55,23 @@ deleted. Two independent ways a playlist ends up archived:
 
 from __future__ import annotations
 
+import datetime
 import logging
+import random
 import typing
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 
-from cogs.music import always_on, safetext
+from cogs.music import always_on, playlist_sync, safetext
 from cogs.music.player import VoiceConnectFailed, connect_player
 from tools import premium, premium_upsell
 from tools.formats import random_colour
 from tools.i18n import _, ngettext
 from tools.premium_archive import ArchivalResult
 from tools.premium_archive import classify as classify_archival
-from tools.views import LocaleLayoutView
+from tools.views import AuthorView, LocaleLayoutView
 
 log = logging.getLogger(__name__)
 
@@ -258,6 +260,47 @@ def can_manage(actor: typing.Any, creator_id: int, has_manage_guild: bool) -> bo
     return bool(has_manage_guild) or getattr(actor, "id", None) == creator_id
 
 
+# Discord caps the TEXT of a Components V2 message at 4000 characters in total
+# (all TextDisplays together); the heading, the "more" footer and a long guild
+# name need room, so the playlist lines get 3400.
+LIST_TEXT_BUDGET = 3400
+
+
+def fit_blocks(
+    blocks: typing.Sequence[str], budget: int
+) -> typing.Tuple[typing.List[str], int]:
+    """``(shown, hidden_count)``: the leading blocks that fit ``budget`` chars.
+
+    Blocks are joined by one newline; the first block always shows (a single
+    row is far below any budget). Reserves 80 characters for the footer line.
+    """
+    shown: typing.List[str] = []
+    used = 0
+    for index, block in enumerate(blocks):
+        cost = len(block) + 1
+        if shown and used + cost > budget - 80:
+            return shown, len(blocks) - index
+        shown.append(block)
+        used += cost
+    return shown, 0
+
+
+def link_line(row: typing.Mapping) -> typing.Optional[str]:
+    """The "linked to <domain>" info line of a playlist row (``None`` if unlinked)."""
+    url = row.get("source_url")
+    if not url:
+        return None
+    domain = playlist_sync.source_domain(url)
+    if playlist_sync.is_paused(url, row.get("next_sync_at")):
+        return _("-# linked to {domain} - sync paused").format(domain=domain)
+    synced = row.get("synced_at")
+    if synced is None:
+        return _("-# linked to {domain}").format(domain=domain)
+    return _("-# linked to {domain} - last synced {when}").format(
+        domain=domain, when=f"<t:{int(synced.timestamp())}:R>"
+    )
+
+
 def _like_prefix(term: str) -> str:
     """Escape LIKE wildcards in ``term`` and append ``%`` for a prefix match.
 
@@ -291,7 +334,7 @@ class _PlaylistListCard(LocaleLayoutView):
                 )
             )
         )
-        lines: typing.List[str] = []
+        blocks: typing.List[str] = []
         for row in rows:
             count = int(row["count"])
             head = ngettext(
@@ -314,9 +357,110 @@ class _PlaylistListCard(LocaleLayoutView):
                 creator=f"<@{row['creator_id']}>",
                 date=f"<t:{row['created_ts']}:D>",
             )
-            lines.append(head + "\n" + meta)
+            link = row.get("link")
+            if link:
+                meta += "\n" + link
+            blocks.append(head + "\n" + meta)
+        lines, hidden = fit_blocks(blocks, LIST_TEXT_BUDGET)
+        if hidden:
+            lines.append(
+                ngettext(
+                    "... and {count} more playlist",
+                    "... and {count} more playlists",
+                    hidden,
+                ).format(count=hidden)
+            )
         container.add_item(discord.ui.TextDisplay("\n".join(lines)))
         self.add_item(container)
+
+
+class _ReplaceImportView(AuthorView):
+    """Replace/Cancel prompt before an import overwrites an existing playlist.
+
+    Author-gated. The tracks were already loaded (and clipped) when the prompt
+    was built, so the click only writes; the buttons are built in ``__init__``
+    so their labels follow the invoker's locale.
+    """
+
+    def __init__(self, cog, author, guild_id, norm, plan, *, timeout=60):
+        super().__init__(
+            author.id, timeout=timeout, deny_message="This prompt isn't for you."
+        )
+        self.author = author
+        self.cog = cog
+        self.guild_id = guild_id
+        self.norm = norm
+        self.plan = plan
+        confirm = discord.ui.Button(
+            label=_("Replace"), style=discord.ButtonStyle.danger
+        )
+        confirm.callback = self._confirm
+        cancel = discord.ui.Button(
+            label=_("Cancel"), style=discord.ButtonStyle.secondary
+        )
+        cancel.callback = self._cancel
+        self.add_item(confirm)
+        self.add_item(cancel)
+
+    async def _confirm(self, interaction):
+        try:
+            text = await self._replace()
+            await interaction.response.edit_message(
+                content=text, embed=None, view=None, allowed_mentions=NO_PINGS
+            )
+        except Exception:
+            log.exception("Playlist import replace failed")
+            try:
+                await interaction.response.edit_message(
+                    content=_("Something went wrong."),
+                    embed=None,
+                    view=None,
+                    allowed_mentions=NO_PINGS,
+                )
+            except discord.HTTPException:
+                pass
+        finally:
+            self.stop()
+
+    async def _replace(self) -> str:
+        """Re-check the row against what the prompt showed, then write."""
+        cog, plan = self.cog, self.plan
+        row = await cog._fetch_guild_playlist(self.guild_id, self.norm)
+        if row is None:
+            return _("That playlist no longer exists.")
+        changed = _("That playlist changed, nothing was replaced.")
+        if (
+            row["creator_id"] != plan["expect_creator"]
+            or row["created_at"] != plan["expect_created"]
+        ):
+            return changed
+        if not can_manage(
+            self.author, row["creator_id"], cog._has_manage_guild(self.author)
+        ):
+            return _("Only the playlist's creator or a moderator can do that.")
+        limits = cog.bot.premium.for_guild(self.guild_id)
+        archival = await cog._guild_playlist_archival(
+            self.guild_id, limits.max_guild_playlists
+        )
+        if playlist_is_archived(
+            row["track_count"], limits.max_playlist_tracks, archival.is_active(self.norm)
+        ):
+            return changed
+        result = await cog._replace_playlist(self.guild_id, self.norm, **plan)
+        return {
+            "replaced": _("Replaced the tracks of the playlist."),
+            "link_full": _("This server already has the maximum of linked playlists."),
+            "changed": changed,
+        }.get(result, _("That playlist no longer exists."))
+
+    async def _cancel(self, interaction):
+        await interaction.response.edit_message(
+            content=_("Cancelled - the playlist was not changed."),
+            embed=None,
+            view=None,
+            allowed_mentions=NO_PINGS,
+        )
+        self.stop()
 
 
 # ---------------------------------------------------------------------------
@@ -439,7 +583,8 @@ class ServerPlaylistMixin:
         """Fetch one playlist row by its normalised name (or ``None``)."""
         return await self.bot.db_pool.fetchrow(
             """
-            SELECT name, creator_id, tracks, track_count, total_ms, created_at
+            SELECT name, creator_id, tracks, track_count, total_ms, created_at,
+                   source_url, synced_at, next_sync_at
             FROM guild_playlists
             WHERE guild_id = $1 AND name_norm = $2
             """,
@@ -470,7 +615,8 @@ class ServerPlaylistMixin:
         """
         return await self.bot.db_pool.fetch(
             """
-            SELECT name, name_norm, creator_id, track_count, total_ms, created_at
+            SELECT name, name_norm, creator_id, track_count, total_ms, created_at,
+                   source_url, synced_at, next_sync_at
             FROM guild_playlists
             WHERE guild_id = $1
             ORDER BY created_at DESC
@@ -577,6 +723,149 @@ class ServerPlaylistMixin:
                     )
         if new_norm != old_norm:
             self.always_on.retarget_radio(guild_id, old_norm, new_norm)
+
+    async def _linked_count(self, guild_id: int) -> int:
+        """How many of a guild's playlists are linked to a source."""
+        value = await self.bot.db_pool.fetchval(
+            "SELECT COUNT(*) FROM guild_playlists "
+            "WHERE guild_id = $1 AND source_url IS NOT NULL",
+            guild_id,
+        )
+        return int(value or 0)
+
+    async def _import_new_playlist(
+        self,
+        guild_id: int,
+        display: str,
+        norm: str,
+        creator_id: int,
+        tracks: typing.Sequence[str],
+        total_ms: int,
+        max_guild_playlists: int,
+        *,
+        source_url: typing.Optional[str] = None,
+        next_sync_at: typing.Optional[datetime.datetime] = None,
+        max_linked: int = 0,
+    ) -> str:
+        """Insert an imported playlist; the same cap guards as ``_save_guild_playlist``
+        plus the linked-playlist cap, all inside the statement.
+
+        Returns ``"saved"``, ``"exists"``, ``"link_full"`` (the LINKED cap is what
+        blocked it) or ``"full"``.
+        """
+        status = await self.bot.db_pool.execute(
+            """
+            INSERT INTO guild_playlists
+                (guild_id, name, name_norm, creator_id, tracks, track_count,
+                 total_ms, source_url, synced_at, next_sync_at)
+            SELECT $1, $2, $3, $4, $5, $6, $7, $8::text,
+                   CASE WHEN $8::text IS NULL THEN NULL ELSE now() END, $9
+            WHERE (SELECT COUNT(*) FROM guild_playlists WHERE guild_id = $1) < $10
+              AND ($8::text IS NULL OR
+                   (SELECT COUNT(*) FROM guild_playlists
+                    WHERE guild_id = $1 AND source_url IS NOT NULL) < $11)
+            ON CONFLICT (guild_id, name_norm) DO NOTHING
+            """,
+            guild_id,
+            display,
+            norm,
+            creator_id,
+            list(tracks),
+            len(tracks),
+            int(total_ms),
+            source_url,
+            next_sync_at,
+            int(max_guild_playlists),
+            int(max_linked),
+        )
+        if status.rsplit(" ", 1)[-1] == "1":
+            return "saved"
+        exists = await self.bot.db_pool.fetchval(
+            "SELECT 1 FROM guild_playlists WHERE guild_id = $1 AND name_norm = $2",
+            guild_id,
+            norm,
+        )
+        if exists:
+            return "exists"
+        if source_url and await self._linked_count(guild_id) >= int(max_linked):
+            return "link_full"
+        return "full"
+
+    async def _replace_playlist(
+        self,
+        guild_id: int,
+        norm: str,
+        *,
+        tracks: typing.Sequence[str],
+        total_ms: int,
+        source_url: typing.Optional[str] = None,
+        next_sync_at: typing.Optional[datetime.datetime] = None,
+        max_linked: int = 0,
+        expect_creator: typing.Optional[int] = None,
+        expect_created: typing.Optional[datetime.datetime] = None,
+    ) -> str:
+        """Overwrite an existing playlist's tracks (and its link) in place.
+
+        Name, creator and created_at are kept (archival order must not move).
+        ``source_url=None`` UNLINKS. ``expect_creator``/``expect_created`` pin
+        the row the prompt was about: if it was deleted and recreated meanwhile
+        the write matches nothing. Returns ``"replaced"``, ``"link_full"``,
+        ``"changed"`` or ``"gone"``.
+        """
+        status = await self.bot.db_pool.execute(
+            """
+            UPDATE guild_playlists
+            SET tracks = $3, track_count = $4, total_ms = $5,
+                source_url = $6::text,
+                synced_at = CASE WHEN $6::text IS NULL THEN NULL ELSE now() END,
+                next_sync_at = $7, sync_failures = 0, sync_error = NULL
+            WHERE guild_id = $1 AND name_norm = $2
+              AND ($9::bigint IS NULL OR creator_id = $9)
+              AND ($10::timestamptz IS NULL OR created_at = $10)
+              AND ($6::text IS NULL OR source_url IS NOT NULL OR
+                   (SELECT COUNT(*) FROM guild_playlists
+                    WHERE guild_id = $1 AND source_url IS NOT NULL) < $8)
+            """,
+            guild_id,
+            norm,
+            list(tracks),
+            len(tracks),
+            int(total_ms),
+            source_url,
+            next_sync_at,
+            int(max_linked),
+            expect_creator,
+            expect_created,
+        )
+        if status.rsplit(" ", 1)[-1] == "1":
+            return "replaced"
+        row = await self.bot.db_pool.fetchrow(
+            "SELECT creator_id, created_at FROM guild_playlists "
+            "WHERE guild_id = $1 AND name_norm = $2",
+            guild_id,
+            norm,
+        )
+        if row is None:
+            return "gone"
+        if (expect_creator is not None and row["creator_id"] != expect_creator) or (
+            expect_created is not None and row["created_at"] != expect_created
+        ):
+            return "changed"
+        return "link_full"
+
+    async def _unlink_playlist(self, guild_id: int, norm: str) -> bool:
+        """Drop a playlist's link (tracks stay); True when it was linked."""
+        status = await self.bot.db_pool.execute(
+            """
+            UPDATE guild_playlists
+            SET source_url = NULL, synced_at = NULL, next_sync_at = NULL,
+                sync_failures = 0, sync_error = NULL
+            WHERE guild_id = $1 AND name_norm = $2 AND source_url IS NOT NULL
+            """,
+            guild_id,
+            norm,
+        )
+        return status.rsplit(" ", 1)[-1] == "1"
 
     # -- Shared command helpers -------------------------------------------
 
@@ -943,6 +1232,7 @@ class ServerPlaylistMixin:
                     limits.max_playlist_tracks,
                     archival.is_active(row["name_norm"]),
                 ),
+                "link": link_line(row),
             }
             for row in rows
         ]
@@ -1104,4 +1394,323 @@ class ServerPlaylistMixin:
         self, interaction: discord.Interaction, current: str
     ) -> typing.List[app_commands.Choice[str]]:
         """Reuse the play autocomplete for the rename ``old`` argument."""
+        return await self._serverplaylist_play_autocomplete(interaction, current)
+
+    # -- Import from a link / unlink --------------------------------------
+
+    def _import_summary(
+        self, display: str, count: int, total_ms: int, over: int, linked_domain
+    ) -> str:
+        """The success line of an import: counts, the clipped tail, the link."""
+        from cogs.music.music import format_clock
+
+        text = ngettext(
+            "Imported **{name}** with {count} track ({duration}).",
+            "Imported **{name}** with {count} tracks ({duration}).",
+            count,
+        ).format(
+            name=echo_name(display), count=count, duration=format_clock(total_ms)
+        )
+        if over:
+            text += ngettext(
+                " {over} track was over the playlist limit and left out.",
+                " {over} tracks were over the playlist limit and left out.",
+                over,
+            ).format(over=over)
+        if linked_domain:
+            text += " " + _(
+                "It is linked to {domain} and refreshes every week."
+            ).format(domain=linked_domain)
+        return text
+
+    @serverplaylist.command(name="import")
+    @commands.guild_only()
+    @app_commands.describe(
+        url="A public playlist link (YouTube, Spotify, Deezer, Apple Music...).",
+        name="A name for the server playlist.",
+        keep_synced="Yasuho+: refresh the playlist from the link every week.",
+    )
+    async def serverplaylist_import(
+        self,
+        ctx: commands.Context,
+        url: str,
+        *,
+        name: str,
+        keep_synced: bool = False,
+    ) -> None:
+        """Save a playlist link as a server playlist (optionally kept in sync).
+
+        ``keep_synced`` is declared AFTER the consume-rest ``name``: on the
+        prefix surface it is never parsed and keeps its default, exactly like
+        ``remind``'s ``repeat``.
+        """
+        # Every import is a Lavalink (and maybe Spotify) load: rate-limit per
+        # user and per guild BEFORE spending anything, refusing privately.
+        quotas = self.quotas
+        if not quotas.import_user.check(ctx.author.id):
+            delay = self._format_retry_delay(quotas.import_user.retry_after(ctx.author.id))
+            await ctx.send(
+                _("You're importing too fast. Try again in {delay}.").format(delay=delay),
+                ephemeral=True,
+            )
+            return
+        if not quotas.import_guild.check(ctx.guild.id):
+            delay = self._format_retry_delay(quotas.import_guild.retry_after(ctx.guild.id))
+            await ctx.send(
+                _("This server has imported too many playlists lately. Try again in {delay}.").format(
+                    delay=delay
+                ),
+                ephemeral=True,
+            )
+            return
+
+        # A Lavalink load can take seconds: acknowledge before anything slow.
+        await ctx.defer()
+
+        display = clean_name(name)
+        problem = name_error(display)
+        if problem == "empty":
+            await ctx.send(_("Give the playlist a name."))
+            return
+        if problem == "too_long":
+            await ctx.send(
+                _("Keep the playlist name under {max} characters.").format(
+                    max=MAX_NAME_LEN
+                )
+            )
+            return
+        norm = normalize_name(display)
+        limits = self.bot.premium.for_guild(ctx.guild.id)
+
+        if keep_synced:
+            if not self._has_manage_guild(ctx.author):
+                await ctx.send(
+                    _("Only moderators can keep a playlist synced with a link.")
+                )
+                return
+            if limits.max_linked_playlists <= 0:
+                await self._refuse_with_upsell(
+                    ctx,
+                    _(
+                        "Keeping a playlist synced with its link is a Yasuho+ "
+                        "feature. You can still import it without `keep_synced`."
+                    ),
+                    limit_key="linked_playlists",
+                    benefit=str(premium.GUILD_PREMIUM.max_linked_playlists),
+                    kind="unlock",
+                )
+                return
+
+        if not self._nodes_available():
+            await ctx.send(
+                _("Music is currently unavailable - no Lavalink node is connected.")
+            )
+            return
+
+        row = await self._fetch_guild_playlist(ctx.guild.id, norm)
+        if row is not None:
+            if not can_manage(
+                ctx.author, row["creator_id"], self._has_manage_guild(ctx.author)
+            ):
+                await ctx.send(
+                    _("Only the playlist's creator or a moderator can do that.")
+                )
+                return
+            archival = await self._guild_playlist_archival(
+                ctx.guild.id, limits.max_guild_playlists
+            )
+            if playlist_is_archived(
+                row["track_count"], limits.max_playlist_tracks, archival.is_active(norm)
+            ):
+                await self._refuse_with_upsell(
+                    ctx,
+                    _(
+                        "**{name}** is archived - this server is over its current "
+                        "playlist limit. It can be deleted, but not replaced. See "
+                        "/premium for options."
+                    ).format(name=echo_name(row["name"])),
+                    limit_key="guild_playlists",
+                    benefit=str(premium.GUILD_PREMIUM.max_guild_playlists),
+                    allowed_mentions=NO_PINGS,
+                )
+                return
+        elif guild_cap_reached(
+            await self._guild_playlist_count(ctx.guild.id), limits.max_guild_playlists
+        ):
+            await self._refuse_with_upsell(
+                ctx,
+                _(
+                    "This server already has the maximum of {max} playlists. "
+                    "Delete one first."
+                ).format(max=limits.max_guild_playlists),
+                limit_key="guild_playlists",
+                benefit=str(premium.GUILD_PREMIUM.max_guild_playlists),
+            )
+            return
+
+        if keep_synced:
+            already = 1 if (row is not None and row["source_url"]) else 0
+            if await self._linked_count(ctx.guild.id) - already >= (
+                limits.max_linked_playlists
+            ):
+                await self._refuse_with_upsell(
+                    ctx,
+                    _(
+                        "This server already has the maximum of {max} linked "
+                        "playlists. Unlink one first."
+                    ).format(max=limits.max_linked_playlists),
+                    limit_key="linked_playlists",
+                    benefit=str(premium.GUILD_PREMIUM.max_linked_playlists),
+                )
+                return
+
+        # Charge both axes for the load we are about to make (a failing link
+        # still costs the node a round trip).
+        quotas.import_user.hit(ctx.author.id)
+        quotas.import_guild.hit(ctx.guild.id)
+        source = await self._fetch_source_tracks(url)
+        refusal = {
+            playlist_sync.BLOCKED: _(
+                "I can only play public links - I can't reach that one."
+            ),
+            playlist_sync.BAD: _("That link isn't a playlist I can import."),
+            playlist_sync.NOT_PLAYLIST: _("That link isn't a playlist I can import."),
+            playlist_sync.UNAVAILABLE: _(
+                "Music is currently unavailable - no Lavalink node is connected."
+            ),
+            playlist_sync.EMPTY: _("That playlist has no tracks I can import."),
+            playlist_sync.LOAD_FAILED: _(
+                "I couldn't load that link - it may be private or unavailable."
+            ),
+            playlist_sync.TRANSIENT: _(
+                "I couldn't load that link - it may be private or unavailable."
+            ),
+        }.get(source.status)
+        if refusal is not None:
+            await ctx.send(refusal)
+            return
+
+        source, over = playlist_sync.clip_result(source, limits.max_playlist_tracks)
+        source_url = url.strip() if keep_synced else None
+        next_sync_at = (
+            playlist_sync.next_due(discord.utils.utcnow(), jitter=random.random())
+            if keep_synced
+            else None
+        )
+        domain = playlist_sync.source_domain(source_url) if keep_synced else None
+        count = len(source.blobs)
+        summary = self._import_summary(display, count, source.total_ms, over, domain)
+
+        if row is None:
+            result = await self._import_new_playlist(
+                ctx.guild.id,
+                display,
+                norm,
+                ctx.author.id,
+                source.blobs,
+                source.total_ms,
+                limits.max_guild_playlists,
+                source_url=source_url,
+                next_sync_at=next_sync_at,
+                max_linked=limits.max_linked_playlists,
+            )
+            if result == "exists":
+                await ctx.send(
+                    _(
+                        "A playlist called **{name}** already exists here. Pick "
+                        "another name or delete it first."
+                    ).format(name=echo_name(display)),
+                    allowed_mentions=NO_PINGS,
+                )
+            elif result == "link_full":
+                await self._refuse_with_upsell(
+                    ctx,
+                    _(
+                        "This server already has the maximum of {max} linked "
+                        "playlists. Unlink one first."
+                    ).format(max=limits.max_linked_playlists),
+                    limit_key="linked_playlists",
+                    benefit=str(premium.GUILD_PREMIUM.max_linked_playlists),
+                )
+            elif result == "full":
+                await self._refuse_with_upsell(
+                    ctx,
+                    _(
+                        "This server already has the maximum of {max} playlists. "
+                        "Delete one first."
+                    ).format(max=limits.max_guild_playlists),
+                    limit_key="guild_playlists",
+                    benefit=str(premium.GUILD_PREMIUM.max_guild_playlists),
+                )
+            else:
+                await ctx.send(summary, allowed_mentions=NO_PINGS)
+            return
+
+        # The name is taken: replacing it is destructive, so ask first.
+        plan = {
+            "tracks": source.blobs,
+            "total_ms": source.total_ms,
+            "source_url": source_url,
+            "next_sync_at": next_sync_at,
+            "max_linked": limits.max_linked_playlists,
+            "expect_creator": row["creator_id"],
+            "expect_created": row["created_at"],
+        }
+        view = _ReplaceImportView(self, ctx.author, ctx.guild.id, norm, plan)
+        view.message = await ctx.send(
+            ngettext(
+                "**{name}** already exists. Replace it with the {count} track "
+                "from this link?",
+                "**{name}** already exists. Replace it with the {count} tracks "
+                "from this link?",
+                count,
+            ).format(name=echo_name(row["name"]), count=count),
+            view=view,
+            allowed_mentions=NO_PINGS,
+        )
+
+    @serverplaylist.command(name="unlink")
+    @commands.guild_only()
+    @app_commands.describe(name="Which linked server playlist to unlink.")
+    async def serverplaylist_unlink(
+        self, ctx: commands.Context, *, name: str
+    ) -> None:
+        """Stop syncing a playlist with its link (its tracks are kept)."""
+        norm = normalize_name(name)
+        row = await self._fetch_guild_playlist(ctx.guild.id, norm)
+        if row is None:
+            await ctx.send(
+                _("There's no server playlist called **{name}**.").format(
+                    name=echo_name(name)
+                ),
+                allowed_mentions=NO_PINGS,
+            )
+            return
+        if not can_manage(
+            ctx.author, row["creator_id"], self._has_manage_guild(ctx.author)
+        ):
+            await ctx.send(
+                _("Only the playlist's creator or a moderator can do that.")
+            )
+            return
+        if not await self._unlink_playlist(ctx.guild.id, norm):
+            await ctx.send(
+                _("**{name}** isn't linked to a source.").format(
+                    name=echo_name(row["name"])
+                ),
+                allowed_mentions=NO_PINGS,
+            )
+            return
+        await ctx.send(
+            _("**{name}** is no longer linked; it keeps its current tracks.").format(
+                name=echo_name(row["name"])
+            ),
+            allowed_mentions=NO_PINGS,
+        )
+
+    @serverplaylist_unlink.autocomplete("name")
+    async def _serverplaylist_unlink_autocomplete(
+        self, interaction: discord.Interaction, current: str
+    ) -> typing.List[app_commands.Choice[str]]:
+        """Reuse the play autocomplete for the unlink name argument."""
         return await self._serverplaylist_play_autocomplete(interaction, current)

@@ -99,6 +99,7 @@ def _synthetic_guild_plus():
         premium_welcome_card=True,
         music_saved_effects=True,
         max_request_panels=3,
+        max_linked_playlists=10,
         music_queue_controls=True,
     )
 

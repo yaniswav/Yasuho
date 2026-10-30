@@ -320,6 +320,8 @@ def test_registry_stats_folds_every_member():
         "effects_guild",
         "lyrics_user",
         "lyrics_guild",
+        "import_user",
+        "import_guild",
         "filtered_players",
         "synced_lyrics",
     }

@@ -286,6 +286,7 @@ EXCLUDED_GUILD_FIELDS = {
     "premium_welcome_card": "binary capability refused at the panel button; LIMIT-REACHED is its measure",
     "music_saved_effects": "binary capability refused at the save seam; LIMIT-REACHED is its measure",
     "max_request_panels": "panels live in the guild_settings blob, not a countable table; LIMIT-REACHED is its measure",
+    "max_linked_playlists": "FREE is 0 (a capability gate, no 80%-of-free reading); LIMIT-REACHED is its measure",
     "music_queue_controls": "binary capability gated at READ time (a lapsed server's stored value is ignored), nothing to refuse",
 }
 EXCLUDED_USER_FIELDS = {}

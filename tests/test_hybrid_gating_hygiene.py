@@ -147,6 +147,14 @@ EXEMPT = {
         "shared state, but gated IN-BODY by can_manage(author, creator_id, "
         "manage_guild): creator or moderator only"
     ),
+    "serverplaylist import": (
+        "any member may create a shared playlist by design; replacing one is "
+        "gated IN-BODY by can_manage and keep_synced by Manage Server + Yasuho+"
+    ),
+    "serverplaylist unlink": (
+        "shared state, but gated IN-BODY by can_manage(author, creator_id, "
+        "manage_guild): creator or moderator only"
+    ),
     # -- playback surface for every listener (music group) -------------------
     # "music" moved OUT of EXEMPT_GROUPS (M4b): it now mixes these public
     # playback subcommands with the privileged "alwayson" config subgroup

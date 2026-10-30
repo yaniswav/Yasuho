@@ -239,6 +239,9 @@ FREE_MUSIC_SAVED_EFFECTS = False
 # Music request panels (cogs/music/requests): one persistent "Request a song"
 # panel per server is free; Yasuho+ may post several (several channels).
 FREE_MAX_REQUEST_PANELS = 1
+# Linked server playlists (cogs/music/playlist_sync): a playlist imported with
+# keep_synced is re-imported weekly from its source link. Yasuho+ only.
+FREE_MAX_LINKED_PLAYLISTS = 0
 # Fair-queue extras (cogs/music/fairqueue): DJ priority and the per-member cap
 # on queued tracks are Yasuho+; the fair queue itself is free.
 FREE_MUSIC_QUEUE_CONTROLS = False
@@ -284,6 +287,7 @@ GUILD_CEILINGS = {
     "serverstats_retention_days": 365,
     "max_scheduled_announcements": 50,
     "max_request_panels": 10,
+    "max_linked_playlists": 25,
 }
 
 USER_CEILINGS = {
@@ -319,6 +323,7 @@ class GuildLimits:
     premium_welcome_card: bool
     music_saved_effects: bool
     max_request_panels: int
+    max_linked_playlists: int
     music_queue_controls: bool
 
     def __post_init__(self):
@@ -368,6 +373,7 @@ GUILD_FREE = GuildLimits(
     premium_welcome_card=FREE_PREMIUM_WELCOME_CARD,
     music_saved_effects=FREE_MUSIC_SAVED_EFFECTS,
     max_request_panels=FREE_MAX_REQUEST_PANELS,
+    max_linked_playlists=FREE_MAX_LINKED_PLAYLISTS,
     music_queue_controls=FREE_MUSIC_QUEUE_CONTROLS,
 )
 
@@ -396,6 +402,7 @@ GUILD_PREMIUM = GuildLimits(
     premium_welcome_card=True,
     music_saved_effects=True,
     max_request_panels=3,
+    max_linked_playlists=10,
     music_queue_controls=True,
 )
 

@@ -804,6 +804,18 @@ CREATE TABLE IF NOT EXISTS guild_playlists (
     PRIMARY KEY (guild_id, name_norm)
 );
 CREATE INDEX IF NOT EXISTS guild_playlists_guild_idx ON guild_playlists (guild_id, created_at DESC);
+-- Linked playlists (Yasuho+, cogs/music/playlist_sync.py): source_url is the
+-- public link the tracks were imported from; the weekly sweep re-imports it.
+-- next_sync_at is the row's own schedule (NULL = never due: unlinked or PAUSED
+-- after 3 consecutive failures); sync_failures/sync_error are the last streak.
+-- Additive and nullable, so every pre-existing playlist is simply "not linked".
+ALTER TABLE guild_playlists ADD COLUMN IF NOT EXISTS source_url TEXT;
+ALTER TABLE guild_playlists ADD COLUMN IF NOT EXISTS synced_at TIMESTAMPTZ;
+ALTER TABLE guild_playlists ADD COLUMN IF NOT EXISTS next_sync_at TIMESTAMPTZ;
+ALTER TABLE guild_playlists ADD COLUMN IF NOT EXISTS sync_failures INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE guild_playlists ADD COLUMN IF NOT EXISTS sync_error TEXT;
+CREATE INDEX IF NOT EXISTS guild_playlists_sync_due_idx
+    ON guild_playlists (next_sync_at) WHERE source_url IS NOT NULL AND next_sync_at IS NOT NULL;
 
 -- Live player state, persisted so playback survives a (fast) bot restart.
 -- One row per guild with an active player; cleared on disconnect/stop. Tracks

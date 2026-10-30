@@ -62,6 +62,14 @@ LYRICS_USER_WINDOW = 3600.0  # 1 h
 LYRICS_GUILD_LIMIT = 60
 LYRICS_GUILD_WINDOW = 3600.0  # 1 h
 
+# Playlist import (V3b): every import is a Lavalink load (and, for Spotify, a
+# shared-app API call), so it is rate-limited per user and per guild - the
+# weekly resync has its own global cap (cogs/music/playlist_sync.py).
+IMPORT_USER_LIMIT = 1
+IMPORT_USER_WINDOW = 30.0
+IMPORT_GUILD_LIMIT = 5
+IMPORT_GUILD_WINDOW = 600.0  # 10 min
+
 # Process-wide concurrency ceilings (no time axis). These bound how many of a
 # resource can be live across the WHOLE process at once, independent of guild.
 FILTERED_PLAYERS_CAP = 40  # simultaneously filtered players (lot P4)
@@ -306,6 +314,12 @@ class QuotaRegistry:
         self.lyrics_guild = SlidingWindowQuota(
             LYRICS_GUILD_LIMIT, LYRICS_GUILD_WINDOW, clock=clock
         )
+        self.import_user = SlidingWindowQuota(
+            IMPORT_USER_LIMIT, IMPORT_USER_WINDOW, clock=clock
+        )
+        self.import_guild = SlidingWindowQuota(
+            IMPORT_GUILD_LIMIT, IMPORT_GUILD_WINDOW, clock=clock
+        )
         self.filtered_players = GlobalCeiling(FILTERED_PLAYERS_CAP)
         self.synced_lyrics = GlobalCeiling(SYNCED_LYRICS_CAP)
 
@@ -315,6 +329,8 @@ class QuotaRegistry:
             "effects_guild": self.effects_guild.stats(),
             "lyrics_user": self.lyrics_user.stats(),
             "lyrics_guild": self.lyrics_guild.stats(),
+            "import_user": self.import_user.stats(),
+            "import_guild": self.import_guild.stats(),
             "filtered_players": self.filtered_players.stats(),
             "synced_lyrics": self.synced_lyrics.stats(),
         }
