@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-30 11:17+0000\n"
+"POT-Creation-Date: 2026-10-30 12:09+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -458,7 +458,7 @@ msgid "Edit"
 msgstr "Editar"
 
 #: cogs/anilist/collection.py:381 cogs/anilist/feed_views.py:1308
-#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:475
+#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:477
 #: cogs/config/rooms_config.py:489 tools/views.py:80
 msgid "This panel isn't for you."
 msgstr "Este panel no es para ti."
@@ -1237,7 +1237,7 @@ msgstr "Eliminar"
 
 #: cogs/anilist/feed_views.py:1065 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
-#: cogs/community/usersettings.py:246 cogs/community/usersettings.py:355
+#: cogs/community/usersettings.py:246 cogs/community/usersettings.py:357
 #: cogs/config/tickets/lifecycle.py:280 cogs/music/playlists_shared.py:399
 #: cogs/system/arg_completion.py:286
 msgid "Cancel"
@@ -1327,7 +1327,7 @@ msgstr "Configura cómo se refleja la actividad de AniList en este servidor. Cad
 #: cogs/anilist/feed_views.py:1407 cogs/community/birthdays/panel.py:172
 #: cogs/community/suggestions/panel.py:197 cogs/config/announcements.py:315
 #: cogs/config/event_reminders.py:264 cogs/config/milestones.py:251
-#: cogs/config/rolemenus.py:686 cogs/config/starboard.py:284
+#: cogs/config/rolemenus.py:686 cogs/config/starboard.py:357
 #: cogs/config/twitch.py:441 cogs/config/welcome.py:571
 #: cogs/config/welcome.py:695 cogs/config/welcome.py:950
 #: cogs/moderation/modlog.py:601 cogs/moderation/modlog.py:718
@@ -2105,61 +2105,65 @@ msgid "Your shared birthdays are gone, in every server."
 msgstr "Tus cumpleaños compartidos se han borrado, en todos los servidores."
 
 #: cogs/community/usersettings.py:302
+msgid "Your temporary-role records are gone."
+msgstr "Tus registros de roles temporales han desaparecido."
+
+#: cogs/community/usersettings.py:304
 msgid "Your top.gg vote record is gone too."
 msgstr "Tu historial de votos de top.gg también se ha borrado."
 
-#: cogs/community/usersettings.py:304
+#: cogs/community/usersettings.py:306
 msgid "So is your personal rank card."
 msgstr "También lo es tu tarjeta de rango personal."
 
-#: cogs/community/usersettings.py:307
+#: cogs/community/usersettings.py:309
 msgid "Your AniList link is gone as well, and your episode and chapter alert opt-ins with it."
 msgstr "Tu vínculo de AniList también se ha borrado, y con él tus suscripciones a las alertas de episodios y capítulos."
 
-#: cogs/community/usersettings.py:312
+#: cogs/community/usersettings.py:314
 msgid "Your Pack Confort purchase record is gone from our database too (it comes back automatically if you still hold that purchase), and so is the note of your last premium offer reminder."
 msgstr "Tu registro de compra del Pack Confort también se ha borrado de nuestra base de datos (vuelve automáticamente si todavía tienes esa compra), igual que la nota de tu último aviso de oferta premium."
 
-#: cogs/community/usersettings.py:323
+#: cogs/community/usersettings.py:325
 msgid "Something went wrong deleting your profile."
 msgstr "Algo salió mal al eliminar tu perfil."
 
-#: cogs/community/usersettings.py:333
+#: cogs/community/usersettings.py:335
 msgid "Profile deletion cancelled."
 msgstr "Eliminación del perfil cancelada."
 
-#: cogs/community/usersettings.py:354
+#: cogs/community/usersettings.py:356
 msgid "Delete my avatar history"
 msgstr "Eliminar mi historial de avatares"
 
-#: cogs/community/usersettings.py:375
+#: cogs/community/usersettings.py:377
 #, python-brace-format
 msgid "Deleted {count} saved image(s) ({size}). Future avatar tracking is now turned off."
 msgstr "Se eliminaron {count} imagen(es) guardada(s) ({size}). El seguimiento de avatares se ha desactivado a partir de ahora."
 
-#: cogs/community/usersettings.py:386
+#: cogs/community/usersettings.py:388
 msgid "Something went wrong deleting your avatar history."
 msgstr "Algo salió mal al eliminar tu historial de avatares."
 
-#: cogs/community/usersettings.py:396
+#: cogs/community/usersettings.py:398
 msgid "Avatar history deletion cancelled."
 msgstr "Eliminación del historial de avatares cancelada."
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:411
+#: cogs/community/usersettings.py:413
 msgid "Turn off"
 msgstr "Desactivar"
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:411
+#: cogs/community/usersettings.py:413
 msgid "Turn on"
 msgstr "Activar"
 
-#: cogs/community/usersettings.py:495
+#: cogs/community/usersettings.py:497
 msgid "## Your preferences"
 msgstr "## Tus preferencias"
 
-#: cogs/community/usersettings.py:499
+#: cogs/community/usersettings.py:501
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
@@ -2167,15 +2171,15 @@ msgstr ""
 "Estos ajustes solo te afectan a **ti**, en todos los lugares donde me usan.\n"
 "Usa el botón junto a cada preferencia para activarla o desactivarla."
 
-#: cogs/community/usersettings.py:509
+#: cogs/community/usersettings.py:511
 msgid "ON"
 msgstr "ACTIVADO"
 
-#: cogs/community/usersettings.py:509
+#: cogs/community/usersettings.py:511
 msgid "OFF"
 msgstr "DESACTIVADO"
 
-#: cogs/community/usersettings.py:510
+#: cogs/community/usersettings.py:512
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
@@ -2184,7 +2188,7 @@ msgstr ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:532
+#: cogs/community/usersettings.py:534
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {value}\n"
@@ -2193,66 +2197,70 @@ msgstr ""
 "{emoji} **{label}** - {value}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:546
+#: cogs/community/usersettings.py:548
 msgid "-# Only you can use these controls."
 msgstr "-# Solo tú puedes usar estos controles."
 
-#: cogs/community/usersettings.py:572 cogs/community/usersettings.py:592
-#: cogs/community/usersettings.py:612
+#: cogs/community/usersettings.py:574 cogs/community/usersettings.py:594
+#: cogs/community/usersettings.py:614
 msgid "Something went wrong updating that setting."
 msgstr "Algo salió mal al actualizar ese ajuste."
 
-#: cogs/community/usersettings.py:671
+#: cogs/community/usersettings.py:673
 #, python-brace-format
 msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
 msgstr "Usa `{prefix}mydata export` para recibir tus datos, `{prefix}mydata deleteprofile` para borrar tu perfil, o `{prefix}mydata deleteavatars` para borrar los avatares guardados."
 
-#: cogs/community/usersettings.py:744
+#: cogs/community/usersettings.py:746
 msgid "I sent your data export to you by direct message."
 msgstr "Te envié tu exportación de datos por mensaje directo."
 
 #: cogs/community/profile/connectors/cog.py:280
-#: cogs/community/usersettings.py:748
+#: cogs/community/usersettings.py:750
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "No pude enviarte un mensaje directo. Por favor, activa los MD."
 
-#: cogs/community/usersettings.py:753
+#: cogs/community/usersettings.py:755
 msgid "Something went wrong building your data export."
 msgstr "Algo salió mal al preparar tu exportación de datos."
 
-#: cogs/community/usersettings.py:776
+#: cogs/community/usersettings.py:778
 msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
 msgstr "Esto elimina permanentemente tu biografía, tus pronombres, tu color de acento, tus campos personalizados, tus IDs de juego y todas las decisiones que tomaste sobre quién podía verlos. Esto no se puede deshacer."
 
-#: cogs/community/usersettings.py:782
+#: cogs/community/usersettings.py:784
 msgid "It also deletes your top.gg vote record: your vote streak and your lifetime vote count start over from zero."
 msgstr "También elimina tu historial de votos de top.gg: tu racha de votos y tu total acumulado vuelven a empezar desde cero."
 
-#: cogs/community/usersettings.py:787
+#: cogs/community/usersettings.py:789
 msgid "Your scheduled announcements and their pending deliveries will be deleted."
 msgstr "Tus anuncios programados y sus envíos pendientes se borrarán."
 
-#: cogs/community/usersettings.py:791
+#: cogs/community/usersettings.py:793
 msgid "It also deletes your suggestions and your votes, and removes the posted suggestion messages where I can. Their discussion threads stay for the other members, renamed and locked."
 msgstr "También borra tus sugerencias y tus votos, y quita los mensajes de sugerencia publicados donde puedo. Sus hilos de discusión se quedan para los demás miembros, renombrados y bloqueados."
 
-#: cogs/community/usersettings.py:796
+#: cogs/community/usersettings.py:798
 msgid "It also deletes your shared birthdays, in every server."
 msgstr "También borra tus cumpleaños compartidos, en todos los servidores."
 
-#: cogs/community/usersettings.py:799
+#: cogs/community/usersettings.py:801
+msgid "It also forgets your temporary roles; the scheduled removal is kept until it runs (at most 90 days)."
+msgstr "También olvida tus roles temporales; la retirada programada se conserva hasta que se ejecute (como máximo 90 días)."
+
+#: cogs/community/usersettings.py:806
 msgid "And your personal rank card: the background image you uploaded and the accent colour you picked."
 msgstr "Y tu tarjeta de rango personal: la imagen de fondo que subiste y el color de acento que elegiste."
 
-#: cogs/community/usersettings.py:804
+#: cogs/community/usersettings.py:811
 msgid "And your AniList link: the stored login is deleted, so relinking needs a fresh sign-in with AniList. Your episode and chapter alert opt-ins go with it."
 msgstr "Y tu vínculo de AniList: el inicio de sesión guardado se elimina, así que volver a vincularlo requiere autenticarse de nuevo con AniList. Tus suscripciones a las alertas de episodios y capítulos se van con él."
 
-#: cogs/community/usersettings.py:810
+#: cogs/community/usersettings.py:817
 msgid "And your Pack Confort purchase record: it comes back on its own if you still hold that purchase, the next time we check with Discord. Also the note of when you last saw a premium offer reminder, so you may see one again sooner than usual."
 msgstr "Y tu registro de compra del Pack Confort: vuelve solo en la próxima comprobación con Discord si todavía tienes esa compra. También la nota de la última vez que viste un aviso de oferta premium, así que podrías ver otro antes de lo habitual."
 
-#: cogs/community/usersettings.py:827
+#: cogs/community/usersettings.py:834
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "Esto elimina permanentemente todos los avatares globales, avatares de servidor y banners guardados de tu cuenta. También desactiva el seguimiento futuro. Esto no se puede deshacer."
 
@@ -4539,7 +4547,7 @@ msgid "Preview"
 msgstr "Vista previa"
 
 #: cogs/config/announcements.py:135 cogs/config/announcements.py:368
-#: cogs/config/customcommands.py:364
+#: cogs/config/customcommands.py:375
 msgid "Add some content to the embed first."
 msgstr "Añade primero algo de contenido al embed."
 
@@ -4609,7 +4617,7 @@ msgstr "Programar"
 msgid "Edit the announcement embed..."
 msgstr "Edita el embed del anuncio..."
 
-#: cogs/config/announcements.py:281 cogs/config/customcommands.py:329
+#: cogs/config/announcements.py:281 cogs/config/customcommands.py:340
 #: cogs/config/twitch.py:278
 msgid "Placeholders"
 msgstr "Marcadores"
@@ -4996,199 +5004,246 @@ msgstr "Ese nombre ya es uno de mis comandos integrados."
 msgid "This server already has a custom command with that name."
 msgstr "Este servidor ya tiene un comando personalizado con ese nombre."
 
-#: cogs/config/customcommands.py:103
+#: cogs/config/customcommands.py:110
 msgid "Custom seconds"
 msgstr "Segundos personalizados"
 
-#: cogs/config/customcommands.py:111
+#: cogs/config/customcommands.py:118
 msgid "Cooldown seconds (optional)"
 msgstr "Segundos de espera (opcional)"
 
-#: cogs/config/customcommands.py:113 cogs/config/rolemenus.py:386
+#: cogs/config/customcommands.py:120 cogs/config/rolemenus.py:386
 msgid "Pick one, or type a custom value below to override."
 msgstr "Elige una, o escribe abajo un valor personalizado para sobrescribirla."
 
-#: cogs/config/customcommands.py:135
+#: cogs/config/customcommands.py:142
 msgid "New text command"
 msgstr "Nuevo comando de texto"
 
-#: cogs/config/customcommands.py:138 cogs/config/customcommands.py:252
+#: cogs/config/customcommands.py:145 cogs/config/customcommands.py:263
 msgid "Command name"
 msgstr "Nombre del comando"
 
-#: cogs/config/customcommands.py:139
+#: cogs/config/customcommands.py:146
 msgid "e.g. rules (no prefix, no spaces)"
 msgstr "p. ej. rules (sin prefijo, sin espacios)"
 
-#: cogs/config/customcommands.py:144 cogs/config/customcommands.py:199
+#: cogs/config/customcommands.py:151 cogs/config/customcommands.py:207
 msgid "Response text"
 msgstr "Texto de respuesta"
 
-#: cogs/config/customcommands.py:151 cogs/config/customcommands.py:207
-#: cogs/config/customcommands.py:258
+#: cogs/config/customcommands.py:158 cogs/config/customcommands.py:215
+#: cogs/config/customcommands.py:269
 msgid "Aliases (optional)"
 msgstr "Alias (opcional)"
 
-#: cogs/config/customcommands.py:152 cogs/config/customcommands.py:209
-#: cogs/config/customcommands.py:259
+#: cogs/config/customcommands.py:159 cogs/config/customcommands.py:217
+#: cogs/config/customcommands.py:270
 msgid "other names, space or comma separated"
 msgstr "otros nombres, separados por espacio o coma"
 
-#: cogs/config/customcommands.py:195
+#: cogs/config/customcommands.py:202
 #, python-brace-format
 msgid "Edit: {name}"
 msgstr "Editar: {name}"
 
-#: cogs/config/customcommands.py:249
+#: cogs/config/customcommands.py:260
 msgid "New embed command"
 msgstr "Nuevo comando de embed"
 
-#: cogs/config/customcommands.py:253
+#: cogs/config/customcommands.py:264
 msgid "e.g. welcome (no prefix, no spaces)"
 msgstr "p. ej. welcome (sin prefijo, sin espacios)"
 
-#: cogs/config/customcommands.py:302
+#: cogs/config/customcommands.py:313
 msgid "Save command"
 msgstr "Guardar comando"
 
-#: cogs/config/customcommands.py:324
+#: cogs/config/customcommands.py:335
 msgid "Edit the response embed..."
 msgstr "Edita el embed de respuesta..."
 
-#: cogs/config/customcommands.py:346
+#: cogs/config/customcommands.py:357
 #, python-brace-format
 msgid "Embed command: {name}"
 msgstr "Comando de embed: {name}"
 
-#: cogs/config/customcommands.py:348
+#: cogs/config/customcommands.py:359
 #, python-brace-format
 msgid "Design the embed this command will reply with, then **Save**. Placeholders: {placeholders}"
 msgstr "Diseña el embed con el que responderá este comando y luego pulsa **Guardar**. Marcadores: {placeholders}"
 
-#: cogs/config/customcommands.py:354
+#: cogs/config/customcommands.py:365
 msgid "Preview summary"
 msgstr "Resumen de vista previa"
 
-#: cogs/config/customcommands.py:385
+#: cogs/config/customcommands.py:379
+#, python-brace-format
+msgid "The embed is too long: Discord allows {n} characters in total."
+msgstr "El embed es demasiado largo: Discord permite {n} caracteres en total."
+
+#: cogs/config/customcommands.py:406
 #, python-brace-format
 msgid "Saved the `{name}` command."
 msgstr "Comando `{name}` guardado."
 
-#: cogs/config/customcommands.py:401 cogs/config/customcommands.py:548
+#: cogs/config/customcommands.py:422 cogs/config/customcommands.py:659
 msgid "embed"
 msgstr "embed"
 
-#: cogs/config/customcommands.py:401 cogs/config/customcommands.py:548
+#: cogs/config/customcommands.py:422 cogs/config/customcommands.py:659
 msgid "text"
 msgstr "texto"
 
-#: cogs/config/customcommands.py:411
+#: cogs/config/customcommands.py:432
 msgid "Pick a command..."
 msgstr "Elige un comando..."
 
-#: cogs/config/customcommands.py:414
+#: cogs/config/customcommands.py:435
 msgid "(none yet)"
 msgstr "(ninguno todavía)"
 
-#: cogs/config/customcommands.py:430
+#: cogs/config/customcommands.py:451
 msgid "Add text"
 msgstr "Añadir texto"
 
-#: cogs/config/customcommands.py:435 cogs/config/customcommands.py:451
+#: cogs/config/customcommands.py:456 cogs/config/customcommands.py:472
 #, python-brace-format
 msgid "This server already has the maximum of {n} custom commands."
 msgstr "Este servidor ya tiene el máximo de {n} comandos personalizados."
 
-#: cogs/config/customcommands.py:446
+#: cogs/config/customcommands.py:467
 msgid "Add embed"
 msgstr "Añadir embed"
 
-#: cogs/config/customcommands.py:463
+#: cogs/config/customcommands.py:484
 msgid "Edit selected"
 msgstr "Editar seleccionado"
 
-#: cogs/config/customcommands.py:473
+#: cogs/config/customcommands.py:494
 msgid "Pick a command first."
 msgstr "Elige primero un comando."
 
-#: cogs/config/customcommands.py:502
+#: cogs/config/customcommands.py:521
+#, python-brace-format
+msgid "At most {n} buttons."
+msgstr "Como máximo {n} botones."
+
+#: cogs/config/customcommands.py:522
+msgid "Write each button as: label | https://link"
+msgstr "Escribe cada botón así: texto | https://enlace"
+
+#: cogs/config/customcommands.py:523
+#, python-brace-format
+msgid "A button label must be 1 to {n} characters."
+msgstr "El texto del botón debe tener de 1 a {n} caracteres."
+
+#: cogs/config/customcommands.py:526
+msgid "A button link must be a valid https:// address."
+msgstr "El enlace del botón debe ser una dirección https:// válida."
+
+#: cogs/config/customcommands.py:534
+#, python-brace-format
+msgid "Buttons: {name}"
+msgstr "Botones: {name}"
+
+#: cogs/config/customcommands.py:542
+msgid "Link buttons (one per line)"
+msgstr "Botones de enlace (uno por línea)"
+
+#: cogs/config/customcommands.py:584
+msgid "Buttons"
+msgstr "Botones"
+
+#: cogs/config/customcommands.py:612
 msgid "Delete selected"
 msgstr "Eliminar seleccionado"
 
-#: cogs/config/customcommands.py:536
+#: cogs/config/customcommands.py:647
 msgid "Custom commands"
 msgstr "Comandos personalizados"
 
-#: cogs/config/customcommands.py:538
+#: cogs/config/customcommands.py:649
 msgid "Commands members run with `/custom` or by mentioning me (`@me name`). Add a text or embed reply, or pick one to inspect and delete."
 msgstr "Comandos que los miembros ejecutan con `/custom` o mencionándome (`@yo nombre`). Añade una respuesta de texto o embed, o elige una para revisarla y borrarla."
 
-#: cogs/config/customcommands.py:546
+#: cogs/config/customcommands.py:657
 #, python-brace-format
 msgid "`{name}` - {kind}"
 msgstr "`{name}` - {kind}"
 
-#: cogs/config/customcommands.py:553
+#: cogs/config/customcommands.py:664
 #, python-brace-format
 msgid "{count} command(s)"
 msgstr "{count} comando(s)"
 
-#: cogs/config/customcommands.py:559
+#: cogs/config/customcommands.py:670
 msgid "None yet"
 msgstr "Ninguno todavía"
 
-#: cogs/config/customcommands.py:560
+#: cogs/config/customcommands.py:671
 msgid "Use **Add text** or **Add embed** to create one."
 msgstr "Usa **Añadir texto** o **Añadir embed** para crear uno."
 
-#: cogs/config/customcommands.py:567
+#: cogs/config/customcommands.py:678
 msgid "An embed reply."
 msgstr "Una respuesta de embed."
 
-#: cogs/config/customcommands.py:570
+#: cogs/config/customcommands.py:681
 msgid "*empty*"
 msgstr "*vacío*"
 
-#: cogs/config/customcommands.py:574
+#: cogs/config/customcommands.py:685
 #, python-brace-format
 msgid "used {count}x"
 msgstr "usado {count} veces"
 
-#: cogs/config/customcommands.py:578
+#: cogs/config/customcommands.py:689
 #, python-brace-format
 msgid "aliases: {list}"
 msgstr "alias: {list}"
 
-#: cogs/config/customcommands.py:584
+#: cogs/config/customcommands.py:695
 #, python-brace-format
 msgid "cooldown: {sec}s"
 msgstr "tiempo de espera: {sec}s"
 
-#: cogs/config/customcommands.py:588
+#: cogs/config/customcommands.py:699
+#, python-brace-format
+msgid "{count} button"
+msgid_plural "{count} buttons"
+msgstr[0] "{count} botón"
+msgstr[1] "{count} botones"
+
+#: cogs/config/customcommands.py:706
 #, python-brace-format
 msgid "Selected: {name}"
 msgstr "Seleccionado: {name}"
 
-#: cogs/config/customcommands.py:592
+#: cogs/config/customcommands.py:710
 #, python-brace-format
 msgid "Placeholders: {placeholders}"
 msgstr "Marcadores: {placeholders}"
 
-#: cogs/config/customcommands.py:670
+#: cogs/config/customcommands.py:788
 #, python-brace-format
 msgid "Alias `{alias}` is not usable: {why}"
 msgstr "El alias `{alias}` no se puede usar: {why}"
 
-#: cogs/config/customcommands.py:749
+#: cogs/config/customcommands.py:808
+msgid "Link buttons under a command's reply are a Yasuho+ feature."
+msgstr "Los botones de enlace bajo la respuesta de un comando son una función de Yasuho+."
+
+#: cogs/config/customcommands.py:892
 #, python-brace-format
 msgid "This server has no custom command called `{name}`."
 msgstr "Este servidor no tiene ningún comando personalizado llamado `{name}`."
 
-#: cogs/config/customcommands.py:757
+#: cogs/config/customcommands.py:900
 msgid "That command is on cooldown, try again in a moment."
 msgstr "Ese comando está en enfriamiento, inténtalo de nuevo en un momento."
 
-#: cogs/config/customcommands.py:763
+#: cogs/config/customcommands.py:906
 msgid "That command has nothing to say."
 msgstr "Ese comando no tiene nada que decir."
 
@@ -6051,13 +6106,13 @@ msgid "Open the mod-log control panel"
 msgstr "Abrir el panel de control del registro de moderación"
 
 #: cogs/config/settings.py:119 cogs/config/settings.py:221
-#: cogs/config/starboard.py:283 cogs/config/starboard.py:320
-#: cogs/config/starboard.py:351 cogs/config/starboard.py:372
+#: cogs/config/starboard.py:356 cogs/config/starboard.py:393
+#: cogs/config/starboard.py:430 cogs/config/starboard.py:455
 msgid "Starboard"
 msgstr "Starboard"
 
-#: cogs/config/settings.py:122 cogs/config/starboard.py:136
-#: cogs/config/starboard.py:218
+#: cogs/config/settings.py:122 cogs/config/starboard.py:175
+#: cogs/config/starboard.py:257
 msgid "Configure the starboard"
 msgstr "Configurar el starboard"
 
@@ -6135,75 +6190,140 @@ msgstr "El auto-rol ha sido eliminado del servidor"
 msgid "Current auto-role"
 msgstr "Auto-rol actual"
 
-#: cogs/config/starboard.py:142
+#: cogs/config/starboard.py:181
 msgid "Pick the starboard channel"
 msgstr "Elige el canal de starboard"
 
-#: cogs/config/starboard.py:148
+#: cogs/config/starboard.py:187
 msgid "Starboard channel"
 msgstr "Canal de starboard"
 
-#: cogs/config/starboard.py:154
+#: cogs/config/starboard.py:193
 msgid "How many stars a message needs"
 msgstr "Cuántas estrellas necesita un mensaje"
 
-#: cogs/config/starboard.py:161
+#: cogs/config/starboard.py:200
 msgid "Star threshold"
 msgstr "Umbral de estrellas"
 
-#: cogs/config/starboard.py:175
+#: cogs/config/starboard.py:214 cogs/config/starboard.py:487
+#: cogs/config/starboard.py:559
 msgid "The star threshold must be a positive whole number."
 msgstr "El umbral de estrellas debe ser un número entero positivo."
 
-#: cogs/config/starboard.py:181
+#: cogs/config/starboard.py:220
 msgid "Please pick a starboard channel."
 msgstr "Por favor, elige un canal de starboard."
 
-#: cogs/config/starboard.py:200
+#: cogs/config/starboard.py:239
 msgid "Starboard configured!"
 msgstr "¡Starboard configurado!"
 
-#: cogs/config/starboard.py:285
+#: cogs/config/starboard.py:358
 msgid "Threshold"
 msgstr "Umbral"
 
-#: cogs/config/starboard.py:322
+#: cogs/config/starboard.py:395
 msgid "Use the button below to pick the channel where starred messages should be posted and set the star threshold."
 msgstr "Usa el botón de abajo para elegir el canal donde se publicarán los mensajes destacados y define el umbral de estrellas."
 
-#: cogs/config/starboard.py:327
+#: cogs/config/starboard.py:400
 msgid "Only you can use this menu."
 msgstr "Solo tú puedes usar este menú."
 
-#: cogs/config/starboard.py:354
+#: cogs/config/starboard.py:433
 msgid "Threshold has been set to:"
 msgstr "El umbral se ha establecido en:"
 
-#: cogs/config/starboard.py:375
+#: cogs/config/starboard.py:458
 msgid "Starboard has been disabled for this guild"
 msgstr "El starboard ha sido desactivado para este servidor"
 
-#: cogs/config/starboard.py:398 cogs/config/starboard.py:430
+#: cogs/config/starboard.py:491
+#, python-brace-format
+msgid "Pick a different emoji: a real emoji that is not {star}."
+msgstr "Elige otro emoji: un emoji real que no sea {star}."
+
+#: cogs/config/starboard.py:495
+msgid "Set up the main starboard first with `/starboard set`."
+msgstr "Configura primero el starboard principal con `/starboard set`."
+
+#: cogs/config/starboard.py:499
+msgid "Another board already uses that emoji."
+msgstr "Otro tablero ya usa ese emoji."
+
+#: cogs/config/starboard.py:507
+#, python-brace-format
+msgid "This server already has the maximum of {n} starboard."
+msgid_plural "This server already has the maximum of {n} starboards."
+msgstr[0] "Este servidor ya tiene el máximo de {n} starboard."
+msgstr[1] "Este servidor ya tiene el máximo de {n} starboards."
+
+#: cogs/config/starboard.py:522
+msgid "Something changed meanwhile, please try again."
+msgstr "Algo cambió mientras tanto, inténtalo de nuevo."
+
+#: cogs/config/starboard.py:526
+#, python-brace-format
+msgid "Board {slot} added: {emoji} in {channel}, from {threshold} reaction."
+msgid_plural "Board {slot} added: {emoji} in {channel}, from {threshold} reactions."
+msgstr[0] "Tablero {slot} añadido: {emoji} en {channel}, desde {threshold} reacción."
+msgstr[1] "Tablero {slot} añadido: {emoji} en {channel}, desde {threshold} reacciones."
+
+#: cogs/config/starboard.py:548 cogs/config/starboard.py:568
+msgid "There is no extra board with that number."
+msgstr "No hay ningún tablero adicional con ese número."
+
+#: cogs/config/starboard.py:555
+#, python-brace-format
+msgid "Board {slot} removed."
+msgstr "Tablero {slot} eliminado."
+
+#: cogs/config/starboard.py:572
+#, python-brace-format
+msgid "Board {slot} now needs {threshold} reaction."
+msgid_plural "Board {slot} now needs {threshold} reactions."
+msgstr[0] "El tablero {slot} ahora necesita {threshold} reacción."
+msgstr[1] "El tablero {slot} ahora necesita {threshold} reacciones."
+
+#: cogs/config/starboard.py:586
+msgid "No starboard is set up yet."
+msgstr "Todavía no hay ningún starboard configurado."
+
+#: cogs/config/starboard.py:594
+#, python-brace-format
+msgid "`{slot}` {emoji} in <#{channel}>, from {threshold}"
+msgstr "`{slot}` {emoji} en <#{channel}>, desde {threshold}"
+
+#: cogs/config/starboard.py:598
+msgid "inactive (Yasuho+ needed)"
+msgstr "inactivo (se necesita Yasuho+)"
+
+#: cogs/config/starboard.py:601
+msgid "Starboards"
+msgstr "Starboards"
+
+#: cogs/config/starboard.py:624 cogs/config/starboard.py:656
 #, python-brace-format
 msgid "Starboard top | {guild}"
 msgstr "Top del starboard | {guild}"
 
-#: cogs/config/starboard.py:399
+#: cogs/config/starboard.py:625
 msgid "No starred messages yet."
 msgstr "Aún no hay mensajes destacados."
 
-#: cogs/config/starboard.py:424 cogs/config/starboard.py:561
+#: cogs/config/starboard.py:650 cogs/config/starboard.py:809
 #: cogs/utility/extras.py:64
 #, python-brace-format
 msgid "[Jump]({url})"
 msgstr "[Ir]({url})"
 
-#: cogs/config/starboard.py:550
+#: cogs/config/starboard.py:798
 #, python-brace-format
 msgid "A message in {channel} got starred."
 msgstr "Un mensaje en {channel} ha recibido estrellas."
 
-#: cogs/config/starboard.py:560
+#: cogs/config/starboard.py:808
 msgid "Source"
 msgstr "Fuente"
 
@@ -7980,6 +8100,77 @@ msgstr "Después"
 #, python-brace-format
 msgid "[Go to message]({url})"
 msgstr "[Ir al mensaje]({url})"
+
+#: cogs/moderation/temprole.py:159
+msgid "The duration must be at least one minute."
+msgstr "La duración debe ser de al menos un minuto."
+
+#: cogs/moderation/temprole.py:161
+#, python-brace-format
+msgid "The duration can't be longer than {days} days."
+msgstr "La duración no puede superar los {days} días."
+
+#: cogs/moderation/temprole.py:168
+msgid "I can't hand out that role: it is @everyone or managed by an integration."
+msgstr "No puedo asignar ese rol: es @everyone o lo gestiona una integración."
+
+#: cogs/moderation/temprole.py:228
+msgid "That role carries powerful permissions, so I won't hand it out automatically."
+msgstr "Ese rol tiene permisos poderosos, así que no voy a entregarlo automáticamente."
+
+#: cogs/moderation/temprole.py:242
+msgid "That member already has that role, so I won't make it temporary."
+msgstr "Ese miembro ya tiene ese rol, así que no voy a hacerlo temporal."
+
+#: cogs/moderation/temprole.py:253
+#, python-brace-format
+msgid "This server already has the maximum of {n} active temporary roles."
+msgstr "Este servidor ya tiene el máximo de {n} roles temporales activos."
+
+#: cogs/moderation/temprole.py:258
+#, python-brace-format
+msgid "Temporary role by {mod}"
+msgstr "Rol temporal por {mod}"
+
+#: cogs/moderation/temprole.py:270
+msgid "I couldn't give that role. Check my permissions and role order."
+msgstr "No pude dar ese rol. Revisa mis permisos y el orden de los roles."
+
+#: cogs/moderation/temprole.py:274
+#, python-brace-format
+msgid "{member} has {role} until {time}."
+msgstr "{member} tiene {role} hasta {time}."
+
+#: cogs/moderation/temprole.py:295
+msgid "That member has no temporary grant of that role."
+msgstr "Ese miembro no tiene ninguna asignación temporal de ese rol."
+
+#: cogs/moderation/temprole.py:299
+#, python-brace-format
+msgid "Temporary role ended by {mod}"
+msgstr "Rol temporal retirado por {mod}"
+
+#: cogs/moderation/temprole.py:302
+msgid "I forgot the grant but couldn't remove the role. Check my permissions."
+msgstr "Olvidé la asignación, pero no pude quitar el rol. Revisa mis permisos."
+
+#: cogs/moderation/temprole.py:306
+#, python-brace-format
+msgid "{role} was taken back from {member}."
+msgstr "Se le quitó el rol {role} a {member}."
+
+#: cogs/moderation/temprole.py:321
+#, python-brace-format
+msgid "Temporary roles | {guild}"
+msgstr "Roles temporales | {guild}"
+
+#: cogs/moderation/temprole.py:325
+msgid "No active temporary roles."
+msgstr "No hay roles temporales activos."
+
+#: cogs/moderation/temprole.py:371
+msgid "Temporary role expired"
+msgstr "Rol temporal caducado"
 
 #: cogs/moderation/warn_config.py:54
 msgid "Time the member out (default 10 minutes, up to 28 days)."
@@ -10812,8 +11003,8 @@ msgstr "Yasuho se queda en tu canal de voz, incluso cuando la cola está vacía.
 msgid "**Extended server playlists**"
 msgstr "**Playlists del servidor ampliadas**"
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:163
-#: tests/cogs/test_premium_panel.py:167
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:166
+#: tests/cogs/test_premium_panel.py:170
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr "Hasta {count} playlists de {tracks} canciones."

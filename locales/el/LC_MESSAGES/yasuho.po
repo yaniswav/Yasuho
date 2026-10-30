@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-30 11:17+0000\n"
+"POT-Creation-Date: 2026-10-30 12:09+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -458,7 +458,7 @@ msgid "Edit"
 msgstr "Επεξεργασία"
 
 #: cogs/anilist/collection.py:381 cogs/anilist/feed_views.py:1308
-#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:475
+#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:477
 #: cogs/config/rooms_config.py:489 tools/views.py:80
 msgid "This panel isn't for you."
 msgstr "Αυτό το πάνελ δεν είναι για εσένα."
@@ -1237,7 +1237,7 @@ msgstr "Διαγραφή"
 
 #: cogs/anilist/feed_views.py:1065 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
-#: cogs/community/usersettings.py:246 cogs/community/usersettings.py:355
+#: cogs/community/usersettings.py:246 cogs/community/usersettings.py:357
 #: cogs/config/tickets/lifecycle.py:280 cogs/music/playlists_shared.py:399
 #: cogs/system/arg_completion.py:286
 msgid "Cancel"
@@ -1327,7 +1327,7 @@ msgstr "Ρύθμισε πώς η δραστηριότητα AniList αντικα
 #: cogs/anilist/feed_views.py:1407 cogs/community/birthdays/panel.py:172
 #: cogs/community/suggestions/panel.py:197 cogs/config/announcements.py:315
 #: cogs/config/event_reminders.py:264 cogs/config/milestones.py:251
-#: cogs/config/rolemenus.py:686 cogs/config/starboard.py:284
+#: cogs/config/rolemenus.py:686 cogs/config/starboard.py:357
 #: cogs/config/twitch.py:441 cogs/config/welcome.py:571
 #: cogs/config/welcome.py:695 cogs/config/welcome.py:950
 #: cogs/moderation/modlog.py:601 cogs/moderation/modlog.py:718
@@ -2105,61 +2105,65 @@ msgid "Your shared birthdays are gone, in every server."
 msgstr "Τα κοινοποιημένα γενέθλιά σου διαγράφηκαν, σε όλους τους διακομιστές."
 
 #: cogs/community/usersettings.py:302
+msgid "Your temporary-role records are gone."
+msgstr "Τα αρχεία των προσωρινών ρόλων σας έχουν διαγραφεί."
+
+#: cogs/community/usersettings.py:304
 msgid "Your top.gg vote record is gone too."
 msgstr "Το ιστορικό ψήφων σου στο top.gg διαγράφηκε επίσης."
 
-#: cogs/community/usersettings.py:304
+#: cogs/community/usersettings.py:306
 msgid "So is your personal rank card."
 msgstr "Το ίδιο και η προσωπική σου κάρτα rank."
 
-#: cogs/community/usersettings.py:307
+#: cogs/community/usersettings.py:309
 msgid "Your AniList link is gone as well, and your episode and chapter alert opt-ins with it."
 msgstr "Ο σύνδεσμός σου με το AniList διαγράφηκε επίσης, και μαζί του οι εγγραφές σου στις ειδοποιήσεις επεισοδίων και κεφαλαίων."
 
-#: cogs/community/usersettings.py:312
+#: cogs/community/usersettings.py:314
 msgid "Your Pack Confort purchase record is gone from our database too (it comes back automatically if you still hold that purchase), and so is the note of your last premium offer reminder."
 msgstr "Η καταγραφή της αγοράς σου Pack Confort διαγράφηκε κι αυτή από τη βάση μας (επιστρέφει αυτόματα αν έχεις ακόμα αυτή την αγορά), όπως και η σημείωση της τελευταίας υπενθύμισης premium προσφοράς."
 
-#: cogs/community/usersettings.py:323
+#: cogs/community/usersettings.py:325
 msgid "Something went wrong deleting your profile."
 msgstr "Κάτι πήγε στραβά κατά τη διαγραφή του προφίλ σου."
 
-#: cogs/community/usersettings.py:333
+#: cogs/community/usersettings.py:335
 msgid "Profile deletion cancelled."
 msgstr "Η διαγραφή του προφίλ ακυρώθηκε."
 
-#: cogs/community/usersettings.py:354
+#: cogs/community/usersettings.py:356
 msgid "Delete my avatar history"
 msgstr "Διάγραψε το ιστορικό avatar μου"
 
-#: cogs/community/usersettings.py:375
+#: cogs/community/usersettings.py:377
 #, python-brace-format
 msgid "Deleted {count} saved image(s) ({size}). Future avatar tracking is now turned off."
 msgstr "Διαγράφηκαν {count} αποθηκευμένες εικόνες ({size}). Η μελλοντική παρακολούθηση avatar είναι πλέον απενεργοποιημένη."
 
-#: cogs/community/usersettings.py:386
+#: cogs/community/usersettings.py:388
 msgid "Something went wrong deleting your avatar history."
 msgstr "Κάτι πήγε στραβά κατά τη διαγραφή του ιστορικού avatar σου."
 
-#: cogs/community/usersettings.py:396
+#: cogs/community/usersettings.py:398
 msgid "Avatar history deletion cancelled."
 msgstr "Η διαγραφή ιστορικού avatar ακυρώθηκε."
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:411
+#: cogs/community/usersettings.py:413
 msgid "Turn off"
 msgstr "Απενεργοποίηση"
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:411
+#: cogs/community/usersettings.py:413
 msgid "Turn on"
 msgstr "Ενεργοποίηση"
 
-#: cogs/community/usersettings.py:495
+#: cogs/community/usersettings.py:497
 msgid "## Your preferences"
 msgstr "## Οι προτιμήσεις σου"
 
-#: cogs/community/usersettings.py:499
+#: cogs/community/usersettings.py:501
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
@@ -2167,15 +2171,15 @@ msgstr ""
 "Αυτές οι ρυθμίσεις επηρεάζουν μόνο **εσένα**, όπου κι αν με χρησιμοποιούν.\n"
 "Χρησιμοποίησε το κουμπί δίπλα σε μια προτίμηση για να την ενεργοποιήσεις ή να την απενεργοποιήσεις."
 
-#: cogs/community/usersettings.py:509
+#: cogs/community/usersettings.py:511
 msgid "ON"
 msgstr "ON"
 
-#: cogs/community/usersettings.py:509
+#: cogs/community/usersettings.py:511
 msgid "OFF"
 msgstr "OFF"
 
-#: cogs/community/usersettings.py:510
+#: cogs/community/usersettings.py:512
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
@@ -2184,7 +2188,7 @@ msgstr ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:532
+#: cogs/community/usersettings.py:534
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {value}\n"
@@ -2193,66 +2197,70 @@ msgstr ""
 "{emoji} **{label}** - {value}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:546
+#: cogs/community/usersettings.py:548
 msgid "-# Only you can use these controls."
 msgstr "-# Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου."
 
-#: cogs/community/usersettings.py:572 cogs/community/usersettings.py:592
-#: cogs/community/usersettings.py:612
+#: cogs/community/usersettings.py:574 cogs/community/usersettings.py:594
+#: cogs/community/usersettings.py:614
 msgid "Something went wrong updating that setting."
 msgstr "Κάτι πήγε στραβά κατά την ενημέρωση αυτής της ρύθμισης."
 
-#: cogs/community/usersettings.py:671
+#: cogs/community/usersettings.py:673
 #, python-brace-format
 msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
 msgstr "Χρησιμοποίησε `{prefix}mydata export` για να λάβεις τα δεδομένα σου, `{prefix}mydata deleteprofile` για να διαγράψεις το προφίλ σου, ή `{prefix}mydata deleteavatars` για να διαγράψεις τα αποθηκευμένα avatar."
 
-#: cogs/community/usersettings.py:744
+#: cogs/community/usersettings.py:746
 msgid "I sent your data export to you by direct message."
 msgstr "Σου έστειλα την εξαγωγή δεδομένων σου με άμεσο μήνυμα."
 
 #: cogs/community/profile/connectors/cog.py:280
-#: cogs/community/usersettings.py:748
+#: cogs/community/usersettings.py:750
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "Δεν κατάφερα να σου στείλω άμεσο μήνυμα. Ενεργοποίησε τα DMs, σε παρακαλώ."
 
-#: cogs/community/usersettings.py:753
+#: cogs/community/usersettings.py:755
 msgid "Something went wrong building your data export."
 msgstr "Κάτι πήγε στραβά κατά τη δημιουργία της εξαγωγής δεδομένων σου."
 
-#: cogs/community/usersettings.py:776
+#: cogs/community/usersettings.py:778
 msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
 msgstr "Αυτό διαγράφει μόνιμα το βιογραφικό σου, τις αντωνυμίες σου, το χρώμα τονισμού σου, τα προσαρμοσμένα πεδία σου, τα gaming IDs σου και κάθε επιλογή που έκανες σχετικά με το ποιος μπορούσε να τα δει. Αυτό δεν μπορεί να αναιρεθεί."
 
-#: cogs/community/usersettings.py:782
+#: cogs/community/usersettings.py:784
 msgid "It also deletes your top.gg vote record: your vote streak and your lifetime vote count start over from zero."
 msgstr "Διαγράφει επίσης το ιστορικό ψήφων σου στο top.gg: το σερί ψήφων και το συνολικό σου άθροισμα ξεκινούν πάλι από το μηδέν."
 
-#: cogs/community/usersettings.py:787
+#: cogs/community/usersettings.py:789
 msgid "Your scheduled announcements and their pending deliveries will be deleted."
 msgstr "Οι προγραμματισμένες ανακοινώσεις σου και οι εκκρεμείς αποστολές τους θα διαγραφούν."
 
-#: cogs/community/usersettings.py:791
+#: cogs/community/usersettings.py:793
 msgid "It also deletes your suggestions and your votes, and removes the posted suggestion messages where I can. Their discussion threads stay for the other members, renamed and locked."
 msgstr "Διαγράφει επίσης τις προτάσεις και τις ψήφους σου, και αφαιρεί τα δημοσιευμένα μηνύματα προτάσεων όπου μπορώ. Τα νήματα συζήτησής τους μένουν για τα υπόλοιπα μέλη, μετονομασμένα και κλειδωμένα."
 
-#: cogs/community/usersettings.py:796
+#: cogs/community/usersettings.py:798
 msgid "It also deletes your shared birthdays, in every server."
 msgstr "Διαγράφει επίσης τα κοινοποιημένα γενέθλιά σου, σε όλους τους διακομιστές."
 
-#: cogs/community/usersettings.py:799
+#: cogs/community/usersettings.py:801
+msgid "It also forgets your temporary roles; the scheduled removal is kept until it runs (at most 90 days)."
+msgstr "Ξεχνά επίσης τους προσωρινούς ρόλους σας· η προγραμματισμένη αφαίρεση διατηρείται έως ότου εκτελεστεί (το πολύ 90 ημέρες)."
+
+#: cogs/community/usersettings.py:806
 msgid "And your personal rank card: the background image you uploaded and the accent colour you picked."
 msgstr "Και η προσωπική σου κάρτα rank: η εικόνα φόντου που ανέβασες και το χρώμα έμφασης που διάλεξες."
 
-#: cogs/community/usersettings.py:804
+#: cogs/community/usersettings.py:811
 msgid "And your AniList link: the stored login is deleted, so relinking needs a fresh sign-in with AniList. Your episode and chapter alert opt-ins go with it."
 msgstr "Και ο σύνδεσμός σου με το AniList: η αποθηκευμένη σύνδεση διαγράφεται, οπότε η επανασύνδεση απαιτεί νέα είσοδο στο AniList. Οι εγγραφές σου στις ειδοποιήσεις επεισοδίων και κεφαλαίων φεύγουν μαζί."
 
-#: cogs/community/usersettings.py:810
+#: cogs/community/usersettings.py:817
 msgid "And your Pack Confort purchase record: it comes back on its own if you still hold that purchase, the next time we check with Discord. Also the note of when you last saw a premium offer reminder, so you may see one again sooner than usual."
 msgstr "Και η καταγραφή της αγοράς σου Pack Confort: επιστρέφει μόνη της στον επόμενο έλεγχο με το Discord αν έχεις ακόμα αυτή την αγορά. Επίσης η σημείωση για το πότε είδες τελευταία φορά μια υπενθύμιση premium προσφοράς, οπότε μπορεί να δεις μία ξανά νωρίτερα από το συνηθισμένο."
 
-#: cogs/community/usersettings.py:827
+#: cogs/community/usersettings.py:834
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "Αυτό διαγράφει οριστικά κάθε αποθηκευμένο γενικό avatar, avatar διακομιστή και banner για τον λογαριασμό σου. Απενεργοποιεί επίσης τη μελλοντική παρακολούθηση. Αυτή η ενέργεια δεν αναιρείται."
 
@@ -4539,7 +4547,7 @@ msgid "Preview"
 msgstr "Προεπισκόπηση"
 
 #: cogs/config/announcements.py:135 cogs/config/announcements.py:368
-#: cogs/config/customcommands.py:364
+#: cogs/config/customcommands.py:375
 msgid "Add some content to the embed first."
 msgstr "Πρόσθεσε πρώτα κάποιο περιεχόμενο στο embed."
 
@@ -4609,7 +4617,7 @@ msgstr "Προγραμματισμός"
 msgid "Edit the announcement embed..."
 msgstr "Επεξεργασία του embed της ανακοίνωσης..."
 
-#: cogs/config/announcements.py:281 cogs/config/customcommands.py:329
+#: cogs/config/announcements.py:281 cogs/config/customcommands.py:340
 #: cogs/config/twitch.py:278
 msgid "Placeholders"
 msgstr "Placeholders"
@@ -4996,199 +5004,246 @@ msgstr "Αυτό το όνομα είναι ήδη μία από τις ενσω
 msgid "This server already has a custom command with that name."
 msgstr "Αυτός ο διακομιστής έχει ήδη μια προσαρμοσμένη εντολή με αυτό το όνομα."
 
-#: cogs/config/customcommands.py:103
+#: cogs/config/customcommands.py:110
 msgid "Custom seconds"
 msgstr "Προσαρμοσμένα δευτερόλεπτα"
 
-#: cogs/config/customcommands.py:111
+#: cogs/config/customcommands.py:118
 msgid "Cooldown seconds (optional)"
 msgstr "Δευτερόλεπτα cooldown (προαιρετικό)"
 
-#: cogs/config/customcommands.py:113 cogs/config/rolemenus.py:386
+#: cogs/config/customcommands.py:120 cogs/config/rolemenus.py:386
 msgid "Pick one, or type a custom value below to override."
 msgstr "Διάλεξε ένα ή πληκτρολόγησε μια προσαρμοσμένη τιμή παρακάτω για να το παρακάμψεις."
 
-#: cogs/config/customcommands.py:135
+#: cogs/config/customcommands.py:142
 msgid "New text command"
 msgstr "Νέα εντολή κειμένου"
 
-#: cogs/config/customcommands.py:138 cogs/config/customcommands.py:252
+#: cogs/config/customcommands.py:145 cogs/config/customcommands.py:263
 msgid "Command name"
 msgstr "Όνομα εντολής"
 
-#: cogs/config/customcommands.py:139
+#: cogs/config/customcommands.py:146
 msgid "e.g. rules (no prefix, no spaces)"
 msgstr "π.χ. rules (χωρίς πρόθεμα, χωρίς κενά)"
 
-#: cogs/config/customcommands.py:144 cogs/config/customcommands.py:199
+#: cogs/config/customcommands.py:151 cogs/config/customcommands.py:207
 msgid "Response text"
 msgstr "Κείμενο απάντησης"
 
-#: cogs/config/customcommands.py:151 cogs/config/customcommands.py:207
-#: cogs/config/customcommands.py:258
+#: cogs/config/customcommands.py:158 cogs/config/customcommands.py:215
+#: cogs/config/customcommands.py:269
 msgid "Aliases (optional)"
 msgstr "Συνώνυμα (προαιρετικό)"
 
-#: cogs/config/customcommands.py:152 cogs/config/customcommands.py:209
-#: cogs/config/customcommands.py:259
+#: cogs/config/customcommands.py:159 cogs/config/customcommands.py:217
+#: cogs/config/customcommands.py:270
 msgid "other names, space or comma separated"
 msgstr "άλλα ονόματα, χωρισμένα με κενό ή κόμμα"
 
-#: cogs/config/customcommands.py:195
+#: cogs/config/customcommands.py:202
 #, python-brace-format
 msgid "Edit: {name}"
 msgstr "Επεξεργασία: {name}"
 
-#: cogs/config/customcommands.py:249
+#: cogs/config/customcommands.py:260
 msgid "New embed command"
 msgstr "Νέα εντολή embed"
 
-#: cogs/config/customcommands.py:253
+#: cogs/config/customcommands.py:264
 msgid "e.g. welcome (no prefix, no spaces)"
 msgstr "π.χ. welcome (χωρίς πρόθεμα, χωρίς κενά)"
 
-#: cogs/config/customcommands.py:302
+#: cogs/config/customcommands.py:313
 msgid "Save command"
 msgstr "Αποθήκευση εντολής"
 
-#: cogs/config/customcommands.py:324
+#: cogs/config/customcommands.py:335
 msgid "Edit the response embed..."
 msgstr "Επεξεργασία του embed απάντησης..."
 
-#: cogs/config/customcommands.py:346
+#: cogs/config/customcommands.py:357
 #, python-brace-format
 msgid "Embed command: {name}"
 msgstr "Εντολή embed: {name}"
 
-#: cogs/config/customcommands.py:348
+#: cogs/config/customcommands.py:359
 #, python-brace-format
 msgid "Design the embed this command will reply with, then **Save**. Placeholders: {placeholders}"
 msgstr "Σχεδίασε το embed με το οποίο θα απαντά αυτή η εντολή και μετά πάτησε **Αποθήκευση**. Placeholders: {placeholders}"
 
-#: cogs/config/customcommands.py:354
+#: cogs/config/customcommands.py:365
 msgid "Preview summary"
 msgstr "Σύνοψη προεπισκόπησης"
 
-#: cogs/config/customcommands.py:385
+#: cogs/config/customcommands.py:379
+#, python-brace-format
+msgid "The embed is too long: Discord allows {n} characters in total."
+msgstr "Το embed είναι πολύ μεγάλο: το Discord επιτρέπει συνολικά {n} χαρακτήρες."
+
+#: cogs/config/customcommands.py:406
 #, python-brace-format
 msgid "Saved the `{name}` command."
 msgstr "Αποθηκεύτηκε η εντολή `{name}`."
 
-#: cogs/config/customcommands.py:401 cogs/config/customcommands.py:548
+#: cogs/config/customcommands.py:422 cogs/config/customcommands.py:659
 msgid "embed"
 msgstr "embed"
 
-#: cogs/config/customcommands.py:401 cogs/config/customcommands.py:548
+#: cogs/config/customcommands.py:422 cogs/config/customcommands.py:659
 msgid "text"
 msgstr "κείμενο"
 
-#: cogs/config/customcommands.py:411
+#: cogs/config/customcommands.py:432
 msgid "Pick a command..."
 msgstr "Διάλεξε μια εντολή..."
 
-#: cogs/config/customcommands.py:414
+#: cogs/config/customcommands.py:435
 msgid "(none yet)"
 msgstr "(καμία ακόμη)"
 
-#: cogs/config/customcommands.py:430
+#: cogs/config/customcommands.py:451
 msgid "Add text"
 msgstr "Προσθήκη κειμένου"
 
-#: cogs/config/customcommands.py:435 cogs/config/customcommands.py:451
+#: cogs/config/customcommands.py:456 cogs/config/customcommands.py:472
 #, python-brace-format
 msgid "This server already has the maximum of {n} custom commands."
 msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {n} προσαρμοσμένων εντολών."
 
-#: cogs/config/customcommands.py:446
+#: cogs/config/customcommands.py:467
 msgid "Add embed"
 msgstr "Προσθήκη embed"
 
-#: cogs/config/customcommands.py:463
+#: cogs/config/customcommands.py:484
 msgid "Edit selected"
 msgstr "Επεξεργασία επιλεγμένου"
 
-#: cogs/config/customcommands.py:473
+#: cogs/config/customcommands.py:494
 msgid "Pick a command first."
 msgstr "Διάλεξε πρώτα μια εντολή."
 
-#: cogs/config/customcommands.py:502
+#: cogs/config/customcommands.py:521
+#, python-brace-format
+msgid "At most {n} buttons."
+msgstr "Το πολύ {n} κουμπιά."
+
+#: cogs/config/customcommands.py:522
+msgid "Write each button as: label | https://link"
+msgstr "Γράψτε κάθε κουμπί ως εξής: ετικέτα | https://σύνδεσμος"
+
+#: cogs/config/customcommands.py:523
+#, python-brace-format
+msgid "A button label must be 1 to {n} characters."
+msgstr "Το κείμενο ενός κουμπιού πρέπει να έχει από 1 έως {n} χαρακτήρες."
+
+#: cogs/config/customcommands.py:526
+msgid "A button link must be a valid https:// address."
+msgstr "Ο σύνδεσμος ενός κουμπιού πρέπει να είναι έγκυρη διεύθυνση https://."
+
+#: cogs/config/customcommands.py:534
+#, python-brace-format
+msgid "Buttons: {name}"
+msgstr "Κουμπιά: {name}"
+
+#: cogs/config/customcommands.py:542
+msgid "Link buttons (one per line)"
+msgstr "Κουμπιά συνδέσμου (ένα ανά γραμμή)"
+
+#: cogs/config/customcommands.py:584
+msgid "Buttons"
+msgstr "Κουμπιά"
+
+#: cogs/config/customcommands.py:612
 msgid "Delete selected"
 msgstr "Διαγραφή επιλεγμένου"
 
-#: cogs/config/customcommands.py:536
+#: cogs/config/customcommands.py:647
 msgid "Custom commands"
 msgstr "Προσαρμοσμένες εντολές"
 
-#: cogs/config/customcommands.py:538
+#: cogs/config/customcommands.py:649
 msgid "Commands members run with `/custom` or by mentioning me (`@me name`). Add a text or embed reply, or pick one to inspect and delete."
 msgstr "Εντολές που τα μέλη εκτελούν με `/custom` ή κάνοντάς μου mention (`@εγώ όνομα`). Πρόσθεσε απάντηση κειμένου ή embed, ή διάλεξε μία για έλεγχο και διαγραφή."
 
-#: cogs/config/customcommands.py:546
+#: cogs/config/customcommands.py:657
 #, python-brace-format
 msgid "`{name}` - {kind}"
 msgstr "`{name}` - {kind}"
 
-#: cogs/config/customcommands.py:553
+#: cogs/config/customcommands.py:664
 #, python-brace-format
 msgid "{count} command(s)"
 msgstr "{count} εντολή/ές"
 
-#: cogs/config/customcommands.py:559
+#: cogs/config/customcommands.py:670
 msgid "None yet"
 msgstr "Καμία ακόμη"
 
-#: cogs/config/customcommands.py:560
+#: cogs/config/customcommands.py:671
 msgid "Use **Add text** or **Add embed** to create one."
 msgstr "Χρησιμοποίησε **Προσθήκη κειμένου** ή **Προσθήκη embed** για να δημιουργήσεις μία."
 
-#: cogs/config/customcommands.py:567
+#: cogs/config/customcommands.py:678
 msgid "An embed reply."
 msgstr "Μια απάντηση embed."
 
-#: cogs/config/customcommands.py:570
+#: cogs/config/customcommands.py:681
 msgid "*empty*"
 msgstr "*κενό*"
 
-#: cogs/config/customcommands.py:574
+#: cogs/config/customcommands.py:685
 #, python-brace-format
 msgid "used {count}x"
 msgstr "χρησιμοποιήθηκε {count}x"
 
-#: cogs/config/customcommands.py:578
+#: cogs/config/customcommands.py:689
 #, python-brace-format
 msgid "aliases: {list}"
 msgstr "συνώνυμα: {list}"
 
-#: cogs/config/customcommands.py:584
+#: cogs/config/customcommands.py:695
 #, python-brace-format
 msgid "cooldown: {sec}s"
 msgstr "cooldown: {sec}s"
 
-#: cogs/config/customcommands.py:588
+#: cogs/config/customcommands.py:699
+#, python-brace-format
+msgid "{count} button"
+msgid_plural "{count} buttons"
+msgstr[0] "{count} κουμπί"
+msgstr[1] "{count} κουμπιά"
+
+#: cogs/config/customcommands.py:706
 #, python-brace-format
 msgid "Selected: {name}"
 msgstr "Επιλέχθηκε: {name}"
 
-#: cogs/config/customcommands.py:592
+#: cogs/config/customcommands.py:710
 #, python-brace-format
 msgid "Placeholders: {placeholders}"
 msgstr "Placeholders: {placeholders}"
 
-#: cogs/config/customcommands.py:670
+#: cogs/config/customcommands.py:788
 #, python-brace-format
 msgid "Alias `{alias}` is not usable: {why}"
 msgstr "Το συνώνυμο `{alias}` δεν μπορεί να χρησιμοποιηθεί: {why}"
 
-#: cogs/config/customcommands.py:749
+#: cogs/config/customcommands.py:808
+msgid "Link buttons under a command's reply are a Yasuho+ feature."
+msgstr "Τα κουμπιά συνδέσμου κάτω από την απάντηση μιας εντολής είναι λειτουργία του Yasuho+."
+
+#: cogs/config/customcommands.py:892
 #, python-brace-format
 msgid "This server has no custom command called `{name}`."
 msgstr "Αυτός ο διακομιστής δεν έχει προσαρμοσμένη εντολή με όνομα `{name}`."
 
-#: cogs/config/customcommands.py:757
+#: cogs/config/customcommands.py:900
 msgid "That command is on cooldown, try again in a moment."
 msgstr "Αυτή η εντολή είναι σε αναμονή, δοκίμασε ξανά σε λίγο."
 
-#: cogs/config/customcommands.py:763
+#: cogs/config/customcommands.py:906
 msgid "That command has nothing to say."
 msgstr "Αυτή η εντολή δεν έχει τίποτα να πει."
 
@@ -6051,13 +6106,13 @@ msgid "Open the mod-log control panel"
 msgstr "Άνοιξε το πάνελ ελέγχου mod-log"
 
 #: cogs/config/settings.py:119 cogs/config/settings.py:221
-#: cogs/config/starboard.py:283 cogs/config/starboard.py:320
-#: cogs/config/starboard.py:351 cogs/config/starboard.py:372
+#: cogs/config/starboard.py:356 cogs/config/starboard.py:393
+#: cogs/config/starboard.py:430 cogs/config/starboard.py:455
 msgid "Starboard"
 msgstr "Starboard"
 
-#: cogs/config/settings.py:122 cogs/config/starboard.py:136
-#: cogs/config/starboard.py:218
+#: cogs/config/settings.py:122 cogs/config/starboard.py:175
+#: cogs/config/starboard.py:257
 msgid "Configure the starboard"
 msgstr "Ρύθμισε το starboard"
 
@@ -6135,75 +6190,140 @@ msgstr "Ο αυτόματος ρόλος αφαιρέθηκε από τον δι
 msgid "Current auto-role"
 msgstr "Τρέχων αυτόματος ρόλος"
 
-#: cogs/config/starboard.py:142
+#: cogs/config/starboard.py:181
 msgid "Pick the starboard channel"
 msgstr "Διάλεξε το κανάλι starboard"
 
-#: cogs/config/starboard.py:148
+#: cogs/config/starboard.py:187
 msgid "Starboard channel"
 msgstr "Κανάλι starboard"
 
-#: cogs/config/starboard.py:154
+#: cogs/config/starboard.py:193
 msgid "How many stars a message needs"
 msgstr "Πόσα αστέρια χρειάζεται ένα μήνυμα"
 
-#: cogs/config/starboard.py:161
+#: cogs/config/starboard.py:200
 msgid "Star threshold"
 msgstr "Όριο αστεριών"
 
-#: cogs/config/starboard.py:175
+#: cogs/config/starboard.py:214 cogs/config/starboard.py:487
+#: cogs/config/starboard.py:559
 msgid "The star threshold must be a positive whole number."
 msgstr "Το όριο αστεριών πρέπει να είναι θετικός ακέραιος αριθμός."
 
-#: cogs/config/starboard.py:181
+#: cogs/config/starboard.py:220
 msgid "Please pick a starboard channel."
 msgstr "Διάλεξε ένα κανάλι starboard."
 
-#: cogs/config/starboard.py:200
+#: cogs/config/starboard.py:239
 msgid "Starboard configured!"
 msgstr "Το starboard ρυθμίστηκε!"
 
-#: cogs/config/starboard.py:285
+#: cogs/config/starboard.py:358
 msgid "Threshold"
 msgstr "Όριο"
 
-#: cogs/config/starboard.py:322
+#: cogs/config/starboard.py:395
 msgid "Use the button below to pick the channel where starred messages should be posted and set the star threshold."
 msgstr "Χρησιμοποίησε το κουμπί παρακάτω για να διαλέξεις το κανάλι όπου θα δημοσιεύονται τα μηνύματα με αστέρι και για να ορίσεις το όριο αστεριών."
 
-#: cogs/config/starboard.py:327
+#: cogs/config/starboard.py:400
 msgid "Only you can use this menu."
 msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτό το μενού."
 
-#: cogs/config/starboard.py:354
+#: cogs/config/starboard.py:433
 msgid "Threshold has been set to:"
 msgstr "Το όριο ορίστηκε σε:"
 
-#: cogs/config/starboard.py:375
+#: cogs/config/starboard.py:458
 msgid "Starboard has been disabled for this guild"
 msgstr "Το starboard απενεργοποιήθηκε για αυτόν τον διακομιστή"
 
-#: cogs/config/starboard.py:398 cogs/config/starboard.py:430
+#: cogs/config/starboard.py:491
+#, python-brace-format
+msgid "Pick a different emoji: a real emoji that is not {star}."
+msgstr "Επιλέξτε διαφορετικό emoji: ένα πραγματικό emoji που δεν είναι το {star}."
+
+#: cogs/config/starboard.py:495
+msgid "Set up the main starboard first with `/starboard set`."
+msgstr "Ρυθμίστε πρώτα τον κύριο starboard με την εντολή `/starboard set`."
+
+#: cogs/config/starboard.py:499
+msgid "Another board already uses that emoji."
+msgstr "Ένας άλλος πίνακας χρησιμοποιεί ήδη αυτό το emoji."
+
+#: cogs/config/starboard.py:507
+#, python-brace-format
+msgid "This server already has the maximum of {n} starboard."
+msgid_plural "This server already has the maximum of {n} starboards."
+msgstr[0] "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {n} starboard."
+msgstr[1] "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {n} starboards."
+
+#: cogs/config/starboard.py:522
+msgid "Something changed meanwhile, please try again."
+msgstr "Κάτι άλλαξε στο μεταξύ, δοκιμάστε ξανά."
+
+#: cogs/config/starboard.py:526
+#, python-brace-format
+msgid "Board {slot} added: {emoji} in {channel}, from {threshold} reaction."
+msgid_plural "Board {slot} added: {emoji} in {channel}, from {threshold} reactions."
+msgstr[0] "Ο πίνακας {slot} προστέθηκε: {emoji} στο {channel}, από {threshold} αντίδραση."
+msgstr[1] "Ο πίνακας {slot} προστέθηκε: {emoji} στο {channel}, από {threshold} αντιδράσεις."
+
+#: cogs/config/starboard.py:548 cogs/config/starboard.py:568
+msgid "There is no extra board with that number."
+msgstr "Δεν υπάρχει επιπλέον πίνακας με αυτόν τον αριθμό."
+
+#: cogs/config/starboard.py:555
+#, python-brace-format
+msgid "Board {slot} removed."
+msgstr "Ο πίνακας {slot} αφαιρέθηκε."
+
+#: cogs/config/starboard.py:572
+#, python-brace-format
+msgid "Board {slot} now needs {threshold} reaction."
+msgid_plural "Board {slot} now needs {threshold} reactions."
+msgstr[0] "Ο πίνακας {slot} χρειάζεται τώρα {threshold} αντίδραση."
+msgstr[1] "Ο πίνακας {slot} χρειάζεται τώρα {threshold} αντιδράσεις."
+
+#: cogs/config/starboard.py:586
+msgid "No starboard is set up yet."
+msgstr "Δεν έχει ρυθμιστεί ακόμη κάποιο starboard."
+
+#: cogs/config/starboard.py:594
+#, python-brace-format
+msgid "`{slot}` {emoji} in <#{channel}>, from {threshold}"
+msgstr "`{slot}` {emoji} στο <#{channel}>, από {threshold}"
+
+#: cogs/config/starboard.py:598
+msgid "inactive (Yasuho+ needed)"
+msgstr "ανενεργό (απαιτείται Yasuho+)"
+
+#: cogs/config/starboard.py:601
+msgid "Starboards"
+msgstr "Starboards"
+
+#: cogs/config/starboard.py:624 cogs/config/starboard.py:656
 #, python-brace-format
 msgid "Starboard top | {guild}"
 msgstr "Κορυφαία starboard | {guild}"
 
-#: cogs/config/starboard.py:399
+#: cogs/config/starboard.py:625
 msgid "No starred messages yet."
 msgstr "Δεν υπάρχουν ακόμη μηνύματα με αστέρι."
 
-#: cogs/config/starboard.py:424 cogs/config/starboard.py:561
+#: cogs/config/starboard.py:650 cogs/config/starboard.py:809
 #: cogs/utility/extras.py:64
 #, python-brace-format
 msgid "[Jump]({url})"
 msgstr "[Μετάβαση]({url})"
 
-#: cogs/config/starboard.py:550
+#: cogs/config/starboard.py:798
 #, python-brace-format
 msgid "A message in {channel} got starred."
 msgstr "Ένα μήνυμα στο {channel} πήρε αστέρια."
 
-#: cogs/config/starboard.py:560
+#: cogs/config/starboard.py:808
 msgid "Source"
 msgstr "Πηγή"
 
@@ -7980,6 +8100,77 @@ msgstr "Μετά"
 #, python-brace-format
 msgid "[Go to message]({url})"
 msgstr "[Μετάβαση στο μήνυμα]({url})"
+
+#: cogs/moderation/temprole.py:159
+msgid "The duration must be at least one minute."
+msgstr "Η διάρκεια πρέπει να είναι τουλάχιστον ένα λεπτό."
+
+#: cogs/moderation/temprole.py:161
+#, python-brace-format
+msgid "The duration can't be longer than {days} days."
+msgstr "Η διάρκεια δεν μπορεί να υπερβαίνει τις {days} ημέρες."
+
+#: cogs/moderation/temprole.py:168
+msgid "I can't hand out that role: it is @everyone or managed by an integration."
+msgstr "Δεν μπορώ να δώσω αυτόν τον ρόλο: είναι ο @everyone ή τον διαχειρίζεται μια ενσωμάτωση."
+
+#: cogs/moderation/temprole.py:228
+msgid "That role carries powerful permissions, so I won't hand it out automatically."
+msgstr "Ο ρόλος αυτός έχει ισχυρά δικαιώματα, γι' αυτό δεν θα τον δώσω αυτόματα."
+
+#: cogs/moderation/temprole.py:242
+msgid "That member already has that role, so I won't make it temporary."
+msgstr "Το μέλος έχει ήδη αυτόν τον ρόλο, γι' αυτό δεν θα τον κάνω προσωρινό."
+
+#: cogs/moderation/temprole.py:253
+#, python-brace-format
+msgid "This server already has the maximum of {n} active temporary roles."
+msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {n} ενεργών προσωρινών ρόλων."
+
+#: cogs/moderation/temprole.py:258
+#, python-brace-format
+msgid "Temporary role by {mod}"
+msgstr "Προσωρινός ρόλος από {mod}"
+
+#: cogs/moderation/temprole.py:270
+msgid "I couldn't give that role. Check my permissions and role order."
+msgstr "Δεν μπόρεσα να δώσω αυτόν τον ρόλο. Ελέγξτε τα δικαιώματά μου και τη σειρά των ρόλων."
+
+#: cogs/moderation/temprole.py:274
+#, python-brace-format
+msgid "{member} has {role} until {time}."
+msgstr "Το μέλος {member} έχει τον ρόλο {role} έως {time}."
+
+#: cogs/moderation/temprole.py:295
+msgid "That member has no temporary grant of that role."
+msgstr "Το μέλος δεν έχει καμία προσωρινή ανάθεση αυτού του ρόλου."
+
+#: cogs/moderation/temprole.py:299
+#, python-brace-format
+msgid "Temporary role ended by {mod}"
+msgstr "Ο προσωρινός ρόλος τερματίστηκε από {mod}"
+
+#: cogs/moderation/temprole.py:302
+msgid "I forgot the grant but couldn't remove the role. Check my permissions."
+msgstr "Ξέχασα την ανάθεση, αλλά δεν μπόρεσα να αφαιρέσω τον ρόλο. Ελέγξτε τα δικαιώματά μου."
+
+#: cogs/moderation/temprole.py:306
+#, python-brace-format
+msgid "{role} was taken back from {member}."
+msgstr "Ο ρόλος {role} αφαιρέθηκε από {member}."
+
+#: cogs/moderation/temprole.py:321
+#, python-brace-format
+msgid "Temporary roles | {guild}"
+msgstr "Προσωρινοί ρόλοι | {guild}"
+
+#: cogs/moderation/temprole.py:325
+msgid "No active temporary roles."
+msgstr "Δεν υπάρχουν ενεργοί προσωρινοί ρόλοι."
+
+#: cogs/moderation/temprole.py:371
+msgid "Temporary role expired"
+msgstr "Ο προσωρινός ρόλος έληξε"
 
 #: cogs/moderation/warn_config.py:54
 msgid "Time the member out (default 10 minutes, up to 28 days)."
@@ -10812,8 +11003,8 @@ msgstr "Το Yasuho μένει στο φωνητικό σου κανάλι, ακ
 msgid "**Extended server playlists**"
 msgstr "**Εκτεταμένες λίστες διακομιστή**"
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:163
-#: tests/cogs/test_premium_panel.py:167
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:166
+#: tests/cogs/test_premium_panel.py:170
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr "Έως {count} λίστες των {tracks} κομματιών."
