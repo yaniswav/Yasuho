@@ -44,9 +44,15 @@ from cogs.music.player import (
     seed_needs_youtube_resolution,  # noqa: F401
     youtube_seed_query,  # noqa: F401
 )
-from cogs.music.playlists_shared import ServerPlaylistMixin, account_decoded
+from cogs.music.playlists_shared import (
+    NO_PINGS,
+    ServerPlaylistMixin,
+    account_decoded,
+    echo_name,
+    normalize_name,
+)
 from tools import i18n, music_state, premium, premium_upsell, settings
-from tools.i18n import _, ngettext
+from tools.i18n import N_, _, ngettext
 from tools.premium import resolve_guild_limits
 from tools.premium_archive import ArchivalResult
 from tools.premium_archive import classify as classify_archival
@@ -203,6 +209,15 @@ EFFECT_CHOICES = [
     app_commands.Choice(name=f"{preset.emoji} {preset.label}", value=preset.key)
     for preset in effects.PRESET_CATALOG
 ]
+
+
+# /music alwayson radio: the order choices (slash value -> shuffle flag) and the
+# words the status line and the confirmation show for each.
+RADIO_ORDER_CHOICES = [
+    app_commands.Choice(name="Shuffle", value="shuffle"),
+    app_commands.Choice(name="In order", value="order"),
+]
+_RADIO_ORDER_WORDS = {True: N_("shuffle"), False: N_("in order")}
 
 
 def format_clock(total_ms: int) -> str:
@@ -4527,6 +4542,27 @@ class Music(ServerPlaylistMixin, commands.Cog):
         if ctx.invoked_subcommand is None:
             await self._send_alwayson_status(ctx)
 
+    async def _send_247_upsell(self, ctx: commands.Context) -> None:
+        """The 24/7 "part of Yasuho+" refusal with its upsell riding along."""
+        text = _("24/7 music is part of Yasuho+. See /premium for options.")
+        # Both callers sit behind has_permissions(manage_guild=True), so the
+        # invoker always has Manage Server here - is_admin is never False.
+        upsell = await premium_upsell.for_guild_refusal(
+            self.bot,
+            limit_key="music_247",
+            guild_id=ctx.guild.id,
+            person_id=ctx.author.id,
+            is_admin=True,
+            already_top_tier=False,
+            kind="unlock",
+            allow_button=premium_upsell.is_slash_context(ctx),
+        )
+        view = None
+        if upsell is not None:
+            text = text + "\n" + upsell.line
+            view = upsell.view()
+        await ctx.send(text, ephemeral=True, view=view)
+
     @alwayson.command(name="enable")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
@@ -4539,25 +4575,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         """Turn on 24/7 music in a voice channel (Yasuho+)."""
         limits = resolve_guild_limits(self.bot, ctx.guild.id)
         if not limits.music_247:
-            text = _("24/7 music is part of Yasuho+. See /premium for options.")
-            # @commands.has_permissions(manage_guild=True) above already gated
-            # entry, so the invoker always has Manage Server here - is_admin
-            # is never False on this path.
-            upsell = await premium_upsell.for_guild_refusal(
-                self.bot,
-                limit_key="music_247",
-                guild_id=ctx.guild.id,
-                person_id=ctx.author.id,
-                is_admin=True,
-                already_top_tier=False,
-                kind="unlock",
-                allow_button=premium_upsell.is_slash_context(ctx),
-            )
-            view = None
-            if upsell is not None:
-                text = text + "\n" + upsell.line
-                view = upsell.view()
-            await ctx.send(text, ephemeral=True, view=view)
+            await self._send_247_upsell(ctx)
             return
 
         if not _bot_can_join(ctx.guild, channel):
@@ -4667,6 +4685,102 @@ class Music(ServerPlaylistMixin, commands.Cog):
             )
         )
 
+    async def _set_radio_playlist(
+        self, guild_id: int, playlist: typing.Optional[str], shuffle: bool
+    ) -> typing.Tuple[str, typing.Optional[str]]:
+        """Pick (or with ``playlist=None`` clear) the 24/7 playlist; return
+        ``(code, display_name)``.
+
+        THE one seam behind ``/music alwayson radio`` and the dashboard action;
+        callers own the who-may-do-it gate. ``playlist`` is a name or a
+        ``name_norm`` (normalisation is idempotent). Codes: ``set`` / ``off`` /
+        ``not_premium`` / ``not_247`` / ``playlist_not_found``. Clearing is never
+        premium-gated: a lapsed server must be able to unset it.
+        """
+        row = None
+        if playlist is not None:
+            if not resolve_guild_limits(self.bot, guild_id).music_247:
+                return "not_premium", None
+        await self.always_on.ensure_loaded(self.bot.db_pool)
+        if not self.always_on.is_enabled(guild_id):
+            return "not_247", None
+        norm = None
+        if playlist is not None:
+            norm = normalize_name(playlist)
+            row = await self._fetch_guild_playlist(guild_id, norm)
+            if row is None:
+                return "playlist_not_found", None
+        if not await self.always_on.set_radio(
+            self.bot.db_pool, guild_id, norm, shuffle
+        ):
+            return "not_247", None
+        self.radio247_refresh(guild_id)
+        if row is None:
+            return "off", None
+        return "set", row["name"]
+
+    @alwayson.command(name="radio")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @app_commands.describe(
+        playlist="The server playlist to loop 24/7. Leave empty to turn it off.",
+        order="Play it shuffled or in order.",
+    )
+    @app_commands.choices(order=RADIO_ORDER_CHOICES)
+    async def alwayson_radio(
+        self,
+        ctx: commands.Context,
+        playlist: typing.Optional[str] = None,
+        order: str = "shuffle",
+    ) -> None:
+        """Loop a server playlist on the 24/7 player (Yasuho+)."""
+        await ctx.defer(ephemeral=True)
+        shuffle = order != "order"
+        code, name = await self._set_radio_playlist(ctx.guild.id, playlist, shuffle)
+        if code == "not_premium":
+            await self._send_247_upsell(ctx)
+        elif code == "not_247":
+            await ctx.send(
+                _("24/7 is not on yet. Use /music alwayson enable first."),
+                ephemeral=True,
+            )
+        elif code == "playlist_not_found":
+            await ctx.send(
+                _("There's no server playlist called **{name}**.").format(
+                    name=echo_name(playlist)
+                ),
+                ephemeral=True,
+                allowed_mentions=NO_PINGS,
+            )
+        elif code == "off":
+            await ctx.send(_("The 24/7 playlist is off."), ephemeral=True)
+        else:
+            await ctx.send(
+                _("The 24/7 playlist is now **{name}** ({order}).").format(
+                    name=echo_name(name), order=_(_RADIO_ORDER_WORDS[shuffle])
+                ),
+                ephemeral=True,
+                allowed_mentions=NO_PINGS,
+            )
+
+    @alwayson_radio.autocomplete("playlist")
+    async def _alwayson_radio_autocomplete(
+        self, interaction: discord.Interaction, current: str
+    ) -> typing.List[app_commands.Choice[str]]:
+        return await self._serverplaylist_play_autocomplete(interaction, current)
+
+    async def _radio_status_line(self, guild_id: int) -> str:
+        """The status line for the 24/7 playlist (display name, not name_norm)."""
+        radio = self.always_on.radio(guild_id)
+        if radio is None:
+            return _("24/7 playlist: off")
+        norm, shuffle = radio
+        row = await self._fetch_guild_playlist(guild_id, norm)
+        name = row["name"] if row is not None else norm
+        return _("24/7 playlist: **{name}** ({order})").format(
+            name=echo_name(name), order=_(_RADIO_ORDER_WORDS[shuffle])
+        )
+
     @alwayson.command(name="status")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
@@ -4689,12 +4803,15 @@ class Music(ServerPlaylistMixin, commands.Cog):
             channel.mention if channel is not None else _("an unknown channel")
         )
         limits = resolve_guild_limits(self.bot, ctx.guild.id)
+        radio_line = await self._radio_status_line(ctx.guild.id)
         if not limits.music_247:
             await ctx.send(
                 _(
                     "24/7 is configured for {channel} (inactive - needs "
                     "Yasuho+)."
                 ).format(channel=channel_text)
+                + "\n"
+                + radio_line
             )
             return
         if self.always_on.is_suspended(ctx.guild.id):
@@ -4703,9 +4820,15 @@ class Music(ServerPlaylistMixin, commands.Cog):
                     "24/7 is configured for {channel}, but paused until the "
                     "next /play or restart (someone disconnected me)."
                 ).format(channel=channel_text)
+                + "\n"
+                + radio_line
             )
             return
-        await ctx.send(_("24/7 is on for {channel}.").format(channel=channel_text))
+        await ctx.send(
+            _("24/7 is on for {channel}.").format(channel=channel_text)
+            + "\n"
+            + radio_line
+        )
 
     # ------------------------------------------------------------------
     # Audio effects

@@ -472,6 +472,32 @@ async def _exec_music_default_effect_set(bot, guild_id, payload):
     return {"ok": False, "reason": code}
 
 
+async def _exec_music_247_radio_set(bot, guild_id, payload):
+    """Pick or clear the 24/7 playlist. Payload: ``{"playlist": name_norm|null,
+    "shuffle": bool}``.
+
+    Needs no live session: it goes through the SAME seam as ``/music alwayson
+    radio`` (``Music._set_radio_playlist``), which owns the Yasuho+ gate, the
+    "24/7 is on" check and the playlist lookup. Manage Server is the dashboard's
+    own gate. Codes: ``not_premium`` / ``not_247`` / ``playlist_not_found``.
+    """
+    cog = bot.get_cog("Music")
+    if cog is None:
+        return {"ok": False, "reason": "no_session"}
+    playlist = payload.get("playlist")
+    shuffle = payload.get("shuffle", True)
+    if (playlist is not None and not isinstance(playlist, str)) or not isinstance(
+        shuffle, bool
+    ):
+        return {"ok": False, "reason": "bad_payload"}
+    if playlist is not None and not playlist.strip():
+        return {"ok": False, "reason": "playlist_not_found"}
+    code, _name = await cog._set_radio_playlist(guild_id, playlist, shuffle)
+    if code in ("set", "off"):
+        return {"ok": True}
+    return {"ok": False, "reason": code}
+
+
 # Merged into ``dashboard_actions._EXECUTORS`` at import time, so the queue keeps
 # ONE kind table and this module stays the single owner of the music kinds.
 EXECUTORS = {
@@ -481,4 +507,5 @@ EXECUTORS = {
     "music_volume": _exec_music_volume,
     "music_stop": _exec_music_stop,
     "music_default_effect_set": _exec_music_default_effect_set,
+    "music_247_radio_set": _exec_music_247_radio_set,
 }
