@@ -177,6 +177,11 @@ ANTI_MIX_SKIP_CAP = 3
 RADIO247_BATCH = 10
 RADIO247_LOW_WATER = 2
 RADIO247_RETRY_SECONDS = 300.0
+# Consecutive playlist tracks that fail to load (a source outage) before the
+# lane is dropped and the playlist backs off - otherwise every dead track
+# pulls the next one, refills every few tracks and edits the controller each
+# time, for as long as the outage lasts.
+RADIO247_FAIL_LIMIT = 3
 
 # How long (seconds) after a controller is posted a same-track track_start still
 # counts as a reconnect re-fire (keep the message, no flicker) rather than a
@@ -1261,6 +1266,12 @@ class Music(ServerPlaylistMixin, commands.Cog):
         self._reconnect_rejoin_again = False
         self._idle_check.start()
 
+    async def cog_load(self) -> None:
+        # A ?reload lands on a READY bot whose startup restore already ran in
+        # the old instance and will not run again: open the 24/7 playlist gate
+        # now instead of leaving it shut until the next restart.
+        self._restore_done = self.bot.is_ready()
+
     def cog_unload(self) -> None:
         self._idle_check.cancel()
         self.lyrics_sessions.shutdown()
@@ -2054,7 +2065,8 @@ class Music(ServerPlaylistMixin, commands.Cog):
         # Saved server effect: once per player, before the controller renders so
         # the panel already shows it. The flag is set synchronously so two
         # overlapping track starts cannot both apply.
-        if not player.default_effect_done:
+        # getattr: a Player built before a ?reload has no such attribute.
+        if not getattr(player, "default_effect_done", True):
             player.default_effect_done = True
             try:
                 await self._apply_default_effect(player, guild_id)
@@ -2107,6 +2119,8 @@ class Music(ServerPlaylistMixin, commands.Cog):
             event.track.title,
             event.exception.message,
         )
+        if is_radio247_track(event.track):
+            self._radio247_note_failure(player, playerinfo.guild_id_of(player))
         home = getattr(player, "home", None)
         if home is None:
             return
@@ -2126,6 +2140,21 @@ class Music(ServerPlaylistMixin, commands.Cog):
             ),
         )
         self.track_failures.arm(key, self._summarise_track_failures(key, home))
+
+    @commands.Cog.listener()
+    async def on_sonolink_track_end(
+        self, player: Player, event: sonolink.gateway.TrackEndEvent
+    ) -> None:
+        """A 24/7 playlist track that ended for any reason but a load failure
+        really played: its consecutive-failure count starts over. Lavalink
+        sends TrackStart even for a track that then fails to load (followed by
+        TrackException and a ``loadFailed`` end), so the start is no proof."""
+        if not getattr(player, "radio247_failures", 0):
+            return
+        if event.reason == sonolink.TrackEndReason.LOAD_FAILED:
+            return
+        if is_radio247_track(event.track):
+            player.radio247_failures = 0
 
     async def _summarise_track_failures(self, key, home) -> None:
         """Wait out the burst window, then state what it swallowed in one message.
@@ -2622,6 +2651,29 @@ class Music(ServerPlaylistMixin, commands.Cog):
             log.exception("24/7 startup bare-join pass failed")
         finally:
             self._restore_done = True
+            self._radio247_after_restore()
+
+    def _radio247_after_restore(self) -> None:
+        """Stock the 24/7 playlist lane of every restored player at once.
+
+        A restored track comes back untagged (blobs carry no extras), so its
+        track_start trigger already ran behind the closed gate: without this,
+        the track after it would be a native recommendation. Cache reads only.
+        """
+        now = time.monotonic()
+        for player in list(getattr(self.bot, "voice_clients", ()) or ()):
+            if not isinstance(player, Player):
+                continue
+            try:
+                guild_id = playerinfo.guild_id_of(player)
+                if player.current is None:
+                    self._kick_radio247_if_idle(player, guild_id, now)
+                elif self._radio247_may_refill(player, guild_id, now) and (
+                    radio247_lane_count(player.queue) < RADIO247_LOW_WATER
+                ):
+                    self._schedule_radio247_refill(player, guild_id)
+            except Exception:
+                log.exception("24/7 playlist post-restore refill failed")
 
     async def _restore_players(self) -> None:
         """Rejoin and resume every recently-active player, bounded-concurrently.
@@ -2804,6 +2856,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
                 "24/7 restore for guild %s started paused: voice channel is empty",
                 guild_id,
             )
+        # The row's own effect (including none) wins over the server default.
+        # Set BEFORE play(): its TrackStart can arrive ahead of the REST reply.
+        player.default_effect_done = True
         await player.play(
             current,
             start=position,
@@ -2812,8 +2867,6 @@ class Music(ServerPlaylistMixin, commands.Cog):
             # not come back at full blast after a restart.
             volume=100 if row["volume"] is None else int(row["volume"]),
         )
-        # The row's own effect (including none) wins over the server default.
-        player.default_effect_done = True
         # Re-apply the persisted audio effect, re-acquiring a filtered-players
         # ceiling slot. A stale/unknown key is dropped (resolve_preset -> None);
         # a FULL ceiling skips the effect and keeps playing, holding no slot -
@@ -3738,9 +3791,12 @@ class Music(ServerPlaylistMixin, commands.Cog):
         already in flight, not backing off after an empty batch."""
         if not self._radio247_active(guild_id):
             return False
-        if player.radio247_hold or player._radio247_refilling:
+        # getattr throughout: a Player built before a ?reload has none of these.
+        if getattr(player, "radio247_hold", False) or getattr(
+            player, "_radio247_refilling", False
+        ):
             return False
-        return now >= player.radio247_retry_at
+        return now >= getattr(player, "radio247_retry_at", 0.0)
 
     def _kick_radio247_if_idle(
         self,
@@ -3794,7 +3850,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
     ) -> None:
         """Launch one background refill; the flag is set with no await between
         check and set, so two triggers can never run two refills."""
-        if player._radio247_refilling:
+        if getattr(player, "_radio247_refilling", False):
             return
         player._radio247_refilling = True
         task = asyncio.create_task(self._radio247_refill(player, guild_id))
@@ -3805,15 +3861,71 @@ class Music(ServerPlaylistMixin, commands.Cog):
         self, player: Player, guild_id: int, norm: str
     ) -> bool:
         """Re-checked after every await: same playlist, still active, not held,
-        and still THE player of that guild (not a dead one replaced by a
-        reconnect)."""
+        not backing off (a failing source dropped the lane meanwhile), and still
+        THE player of that guild (not a dead one replaced by a reconnect)."""
         config = self.always_on.radio(guild_id)
         if config is None or config[0] != norm:
             return False
-        if not self._radio247_active(guild_id) or player.radio247_hold:
+        if not self._radio247_active(guild_id) or getattr(
+            player, "radio247_hold", False
+        ):
+            return False
+        if time.monotonic() < getattr(player, "radio247_retry_at", 0.0):
             return False
         guild = self.bot.get_guild(guild_id)
         return guild is not None and guild.voice_client is player
+
+    async def _radio247_decode(
+        self, blobs: typing.Sequence[str]
+    ) -> typing.List[typing.Any]:
+        """Decode a batch, positionally, None for a blob that cannot be decoded.
+
+        sonolink's bulk ``decode_tracks`` never yields None entries: Lavalink's
+        /v4/decodetracks fails the WHOLE request on one bad blob. So a refused
+        batch falls back to one ``decode_track`` per blob (at most
+        RADIO247_BATCH calls) and only the bad ones are lost. RuntimeError (no
+        node at all) propagates: that is a retry-later, not a bad blob.
+        """
+        if not blobs:
+            return []
+        client = self.bot.sl_client
+        try:
+            return list(await client.decode_tracks(*blobs))
+        except RuntimeError:
+            raise
+        except Exception:
+            log.warning(
+                "RADIO247-DECODE batch refused, decoding %d blob(s) one by one",
+                len(blobs),
+            )
+        decoded: typing.List[typing.Any] = []
+        for blob in blobs:
+            try:
+                decoded.append(await client.decode_track(blob))
+            except RuntimeError:
+                raise
+            except Exception:
+                decoded.append(None)
+        return decoded
+
+    def _radio247_note_failure(self, player: Player, guild_id: typing.Any) -> None:
+        """A 24/7 playlist track failed to load: after RADIO247_FAIL_LIMIT in a
+        row, drop the staged playlist tracks and back off, so a source outage
+        costs a few dead tracks, not a refill and a controller edit per track
+        for as long as it lasts. Reset by a playlist track that really played
+        (see on_sonolink_track_end). No I/O."""
+        failures = getattr(player, "radio247_failures", 0) + 1
+        if failures < RADIO247_FAIL_LIMIT:
+            player.radio247_failures = failures
+            return
+        player.radio247_failures = 0
+        drop_staged_autoplay(player.queue, keep_radio247=False)
+        player.radio247_retry_at = time.monotonic() + RADIO247_RETRY_SECONDS
+        log.warning(
+            "RADIO247-FAILING guild=%s %d tracks in a row failed to load, backing off",
+            guild_id,
+            failures,
+        )
 
     async def _radio247_refill(
         self, player: Player, guild_id: typing.Optional[int]
@@ -3854,9 +3966,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
             blobs = await always_on.fetch_radio_blobs(pool, guild_id, norm, indexes)
             stored = [blob for blob in blobs if blob]
             try:
-                decoded = (
-                    await self.bot.sl_client.decode_tracks(*stored) if stored else []
-                )
+                decoded = await self._radio247_decode(stored)
             except RuntimeError:
                 # No node: retry later without moving the position.
                 backoff = True
@@ -3864,8 +3974,8 @@ class Music(ServerPlaylistMixin, commands.Cog):
             usable, skipped = account_decoded(decoded, len(indexes))
             if not self._radio247_still_wanted(player, guild_id, norm):
                 return
-            # Undecodable blobs are passed over too, so a stale track can never
-            # pin the playlist on the same batch.
+            # The position moves past undecodable blobs too, so one stale
+            # track can never pin the playlist on the same batch.
             if not await always_on.advance_radio_pos(
                 pool, guild_id, norm, pos, pos + len(indexes)
             ):
@@ -4697,7 +4807,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         ``not_premium`` / ``not_247`` / ``playlist_not_found``. Clearing is never
         premium-gated: a lapsed server must be able to unset it.
         """
-        row = None
+        name = None
         if playlist is not None:
             if not resolve_guild_limits(self.bot, guild_id).music_247:
                 return "not_premium", None
@@ -4707,17 +4817,17 @@ class Music(ServerPlaylistMixin, commands.Cog):
         norm = None
         if playlist is not None:
             norm = normalize_name(playlist)
-            row = await self._fetch_guild_playlist(guild_id, norm)
-            if row is None:
+            name = await self._fetch_guild_playlist_name(guild_id, norm)
+            if name is None:
                 return "playlist_not_found", None
         if not await self.always_on.set_radio(
             self.bot.db_pool, guild_id, norm, shuffle
         ):
             return "not_247", None
         self.radio247_refresh(guild_id)
-        if row is None:
+        if name is None:
             return "off", None
-        return "set", row["name"]
+        return "set", name
 
     @alwayson.command(name="radio")
     @commands.guild_only()
@@ -4775,8 +4885,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
         if radio is None:
             return _("24/7 playlist: off")
         norm, shuffle = radio
-        row = await self._fetch_guild_playlist(guild_id, norm)
-        name = row["name"] if row is not None else norm
+        # One indexed lookup of the name only: the tracks array (up to the
+        # playlist cap of encoded blobs) is never read for a status line.
+        name = await self._fetch_guild_playlist_name(guild_id, norm) or norm
         return _("24/7 playlist: **{name}** ({order})").format(
             name=echo_name(name), order=_(_RADIO_ORDER_WORDS[shuffle])
         )
@@ -4934,18 +5045,24 @@ class Music(ServerPlaylistMixin, commands.Cog):
 
         Codes: ``saved`` / ``cleared`` / ``unknown_preset`` / ``not_premium``.
         THE one seam behind the slash option, the panel button and the dashboard
-        action; callers own the who-may-do-it gate.
+        action; callers own the who-may-do-it gate. The CANONICAL key is stored
+        (the input may be a label or another case; apply_preset looks keys up
+        exactly), and clearing is never premium-gated: a lapsed server can
+        always remove what it saved.
         """
-        if effects.resolve_preset(key) is None:
+        preset = effects.resolve_preset(key)
+        if preset is None:
             return "unknown_preset"
-        if not resolve_guild_limits(self.bot, guild_id).music_saved_effects:
+        is_off = preset.key == effects.OFF_KEY
+        if not is_off and not resolve_guild_limits(
+            self.bot, guild_id
+        ).music_saved_effects:
             return "not_premium"
-        is_off = key == effects.OFF_KEY
         await settings.set_guild(
             self.bot.db_pool,
             guild_id,
             guild_config.KEY_DEFAULT_EFFECT,
-            None if is_off else key,
+            None if is_off else preset.key,
         )
         return "cleared" if is_off else "saved"
 

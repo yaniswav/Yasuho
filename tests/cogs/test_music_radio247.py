@@ -255,6 +255,32 @@ def test_same_seed_same_order_and_batches_compose():
     assert whole == ao.radio247_positions(GID, 9, 0, 10, True)
 
 
+@pytest.mark.parametrize("count", [2, 3, 4, 7, 12])
+def test_shuffle_never_repeats_across_a_cycle_boundary(count):
+    cycles = 60
+    for gid in range(20):
+        order = ao.radio247_positions(gid, count, 0, count * cycles, True)
+        assert all(a != b for a, b in zip(order, order[1:])), (gid, count)
+        for c in range(cycles):
+            assert sorted(order[c * count:(c + 1) * count]) == list(range(count))
+        # Deterministic, and independent of how it is cut into batches.
+        assert order == ao.radio247_positions(gid, count, 0, count * cycles, True)
+        assert order[count + 1:count + 9] == ao.radio247_positions(
+            gid, count, count + 1, 8, True
+        )
+
+
+def test_negative_control_raw_seeded_cycles_do_repeat():
+    # Without the boundary rule, some guild's seeded cycles open on the
+    # previous cycle's last track - the fix is not vacuous.
+    hits = 0
+    for gid in range(200):
+        prev = ao._raw_cycle(gid, 0, 5)
+        if ao._raw_cycle(gid, 1, 5)[0] == prev[-1]:
+            hits += 1
+    assert hits > 0
+
+
 def test_shuffle_differs_per_guild():
     orders = {tuple(ao.radio247_positions(g, 20, 0, 20, True)) for g in range(5)}
     assert len(orders) > 1
@@ -679,16 +705,90 @@ async def test_missing_or_empty_playlist_backs_off(premium, tracks):
     assert _kick(cog, player) is False
 
 
-async def test_undecodable_batch_advances_and_backs_off(premium):
-    cog, player, pool = _env(premium)
+def _http_error():
+    import json
 
-    async def decode(*blobs):
-        return [None for _ in blobs]
+    from sonolink.rest.errors import HTTPException
 
-    cog.bot.sl_client = types.SimpleNamespace(decode_tracks=decode)
+    return HTTPException(
+        json.dumps(
+            {
+                "timestamp": 0,
+                "status": 500,
+                "error": "Internal Server Error",
+                "message": "x",
+                "path": "/v4/decodetracks",
+            }
+        ).encode()
+    )
+
+
+def _decoder(bad):
+    """The real shape: /v4/decodetracks refuses the WHOLE batch when one blob
+    is bad (sonolink never yields None entries); /v4/decodetrack refuses the
+    one bad blob."""
+    calls = {"bulk": 0, "single": 0}
+
+    async def decode_tracks(*blobs):
+        calls["bulk"] += 1
+        if any(blob in bad for blob in blobs):
+            raise _http_error()
+        return [_track(blob) for blob in blobs]
+
+    async def decode_track(blob):
+        calls["single"] += 1
+        if blob in bad:
+            raise _http_error()
+        return _track(blob)
+
+    return (
+        types.SimpleNamespace(decode_tracks=decode_tracks, decode_track=decode_track),
+        calls,
+    )
+
+
+async def test_one_bad_blob_no_longer_pins_the_playlist(premium):
+    """Regression (review P2): one stale blob used to fail the bulk decode,
+    back off WITHOUT advancing radio_pos and fail the same batch forever."""
+    tracks = [f"b{i}" for i in range(25)]
+    tracks[3] = "STALE"
+    cog, player, pool = _env(premium, tracks=tracks)
+    cog.bot.sl_client, calls = _decoder({"STALE"})
+    await _refill(cog, player)
+    assert pool.pos == music_mod.RADIO247_BATCH
+    assert calls == {"bulk": 1, "single": music_mod.RADIO247_BATCH}
+    assert len(player.plays) == 1
+    staged = [player.current] + player.queue.autoplay_tracks
+    assert [t.encoded for t in staged] == [f"b{i}" for i in range(10) if i != 3]
+    assert player.radio247_retry_at == 0.0
+    # The next batch is clean: one bulk call, no fallback.
+    await _refill(cog, player)
+    assert calls == {"bulk": 2, "single": music_mod.RADIO247_BATCH}
+    assert pool.pos == 2 * music_mod.RADIO247_BATCH
+
+
+async def test_all_bad_blobs_advance_and_back_off(premium):
+    tracks = [f"b{i}" for i in range(25)]
+    cog, player, pool = _env(premium, tracks=tracks)
+    cog.bot.sl_client, _calls = _decoder(set(tracks))
     await _refill(cog, player)
     assert pool.pos == music_mod.RADIO247_BATCH  # never pinned on bad blobs
     assert player.plays == []
+    assert player.radio247_retry_at > 0
+
+
+async def test_no_node_in_the_fallback_keeps_the_position(premium):
+    cog, player, pool = _env(premium)
+
+    async def bulk(*blobs):
+        raise _http_error()
+
+    async def single(blob):
+        raise RuntimeError("no node")
+
+    cog.bot.sl_client = types.SimpleNamespace(decode_tracks=bulk, decode_track=single)
+    await _refill(cog, player)
+    assert pool.pos == 0
     assert player.radio247_retry_at > 0
 
 
@@ -867,3 +967,185 @@ async def test_maybe_restore_opens_the_gate_only_after_the_bare_joins(premium):
     await music_mod.Music._maybe_restore(cog)
     assert seen == [("players", False), ("bare", False)]
     assert cog._restore_done is True
+    # The idle room with a listener got its playlist right away (7d).
+    assert len(cog._refill_tasks) == 1
+    await _drain(cog)
+
+
+async def test_restored_untagged_track_gets_a_stocked_lane(premium):
+    """Review 7d: a restored track is untagged, its track_start ran behind the
+    closed gate, so without the post-restore pass the next track would be a
+    native recommendation."""
+    cog, player, pool = _env(premium, current=_track("restored"))
+    cog._restore_done = False
+    cog._restored = False
+    cog._restore_players = _noop
+    cog._restore_247_bare_joins = _noop
+    cog._nodes_connected = lambda: True
+    cog.bot.is_ready = lambda: True
+    await music_mod.Music._maybe_restore(cog)
+    await _drain(cog)
+    assert len(player.queue.autoplay_tracks) == music_mod.RADIO247_BATCH
+    assert player.plays == []  # the restored track keeps playing
+
+
+async def test_negative_control_post_restore_pass_respects_the_gate(premium):
+    cog, player, pool = _env(premium, current=_track("restored"), radio=False)
+    cog._restore_done = False
+    cog._restored = False
+    cog._restore_players = _noop
+    cog._restore_247_bare_joins = _noop
+    cog._nodes_connected = lambda: True
+    cog.bot.is_ready = lambda: True
+    await music_mod.Music._maybe_restore(cog)
+    assert not cog._refill_tasks
+    assert pool.calls == []
+
+
+async def test_cog_load_opens_the_gate_only_on_a_ready_bot(premium):
+    cog, _player, _pool = _env(premium)
+    cog.bot.is_ready = lambda: True
+    await music_mod.Music.cog_load(cog)
+    assert cog._restore_done is True
+    cog.bot.is_ready = lambda: False
+    await music_mod.Music.cog_load(cog)
+    assert cog._restore_done is False
+
+
+async def test_a_player_from_before_a_reload_never_raises(premium):
+    """Review P3: a ?reload keeps the old Player objects, which carry none of
+    the attributes this lot added; every hot path must read them safely."""
+    cog, player, _pool = _env(premium)
+    for name in (
+        "radio247_hold",
+        "_radio247_refilling",
+        "radio247_retry_at",
+        "default_effect_done",
+    ):
+        delattr(player, name)
+    await _start(cog, player, _track("u1"))
+    await _drain(cog)
+    assert len(player.queue.autoplay_tracks) == music_mod.RADIO247_BATCH
+    player._queue._current_track = None
+    player._queue._autoplay_items.clear()
+    await music_mod.Music._idle_check.coro(cog)
+    await _drain(cog)
+    assert player.plays
+
+
+# ---------------------------------------------------------------------------
+# A failing source (review P1): bounded, then backs off
+# ---------------------------------------------------------------------------
+
+
+def _exception_event(track):
+    return types.SimpleNamespace(
+        track=track, exception=types.SimpleNamespace(message="load failed")
+    )
+
+
+def _end_event(track, reason):
+    return types.SimpleNamespace(track=track, reason=reason)
+
+
+def _wire_failures(cog, player):
+    recorded = []
+    cog.track_failures = types.SimpleNamespace(
+        record=lambda key: recorded.append(key) or False
+    )
+    controllers = []
+
+    async def send_controller(*args, **kwargs):
+        controllers.append(1)
+
+    cog._send_controller = send_controller
+    player.home = object()
+    return recorded, controllers
+
+
+async def test_every_track_failing_backs_off_after_the_limit(premium):
+    """Regression for the reviewer's fail-loop probe: during an outage every
+    playlist track starts, fails to load and sonolink's skip() pulls the next
+    one. It used to refill every few tracks forever, editing the controller on
+    each dead track, with no backoff."""
+    cog, player, pool = _env(premium)
+    _recorded, controllers = _wire_failures(cog, player)
+    await _refill(cog, player)  # stages a batch, starts b0
+    dead = 0
+    for _ in range(200):
+        track = player.current
+        await _start(cog, player, track)  # TrackStart comes before the failure
+        await _drain(cog)
+        await music_mod.Music.on_sonolink_track_exception(
+            cog, player, _exception_event(track)
+        )
+        dead += 1
+        try:  # what sonolink's skip() does on the loadFailed end
+            player._queue._current_track = player.queue.get()
+        except sonolink.QueueEmpty:
+            break
+    assert dead == music_mod.RADIO247_FAIL_LIMIT
+    assert player.queue.autoplay_tracks == []
+    assert player.radio247_retry_at > 0
+    assert len(controllers) == music_mod.RADIO247_FAIL_LIMIT
+    assert sum(1 for c in pool.calls if c[0] == "execute") <= 2
+    # Backing off: no trigger refills until the deadline.
+    player._queue._current_track = None
+    assert _kick(cog, player) is False
+
+
+async def test_a_refill_in_flight_when_the_source_fails_is_discarded(premium):
+    cog, player, pool = _env(premium, current=_track("r0", radio=True))
+    _wire_failures(cog, player)
+    player.radio247_failures = music_mod.RADIO247_FAIL_LIMIT - 1
+
+    def fail_now():
+        cog._radio247_note_failure(player, GID)
+
+    cog.bot.on_decode = fail_now
+    await _refill(cog, player)
+    assert player.queue.autoplay_tracks == []
+    assert "execute" not in pool.kinds()
+
+
+async def test_a_playlist_track_that_really_played_resets_the_count(premium):
+    cog, player, _pool = _env(premium)
+    _wire_failures(cog, player)
+    radio = _track("r1", radio=True)
+    for _ in range(music_mod.RADIO247_FAIL_LIMIT - 1):
+        await music_mod.Music.on_sonolink_track_exception(
+            cog, player, _exception_event(radio)
+        )
+    # A loadFailed end proves nothing...
+    await music_mod.Music.on_sonolink_track_end(
+        cog, player, _end_event(radio, sonolink.TrackEndReason.LOAD_FAILED)
+    )
+    assert player.radio247_failures == music_mod.RADIO247_FAIL_LIMIT - 1
+    # ...a finished one does.
+    await music_mod.Music.on_sonolink_track_end(
+        cog, player, _end_event(radio, sonolink.TrackEndReason.FINISHED)
+    )
+    assert player.radio247_failures == 0
+    player.queue.put_autoplay([_track("r2", radio=True)])
+    await music_mod.Music.on_sonolink_track_exception(
+        cog, player, _exception_event(radio)
+    )
+    assert player.radio247_retry_at == 0.0
+    assert len(player.queue.autoplay_tracks) == 1
+
+
+async def test_negative_control_a_free_track_failure_is_untouched(premium):
+    """The non-playlist exception path is exactly what it was: no counter, no
+    lane drop, no backoff, and the burst announcement still runs."""
+    cog, player, _pool = _env(premium, radio=False)
+    recorded, _controllers = _wire_failures(cog, player)
+    pick = _track("a1", autoplay=True)
+    player.queue.put_autoplay([_track("a2", autoplay=True)])
+    for _ in range(music_mod.RADIO247_FAIL_LIMIT + 2):
+        await music_mod.Music.on_sonolink_track_exception(
+            cog, player, _exception_event(pick)
+        )
+    assert not hasattr(player, "radio247_failures")
+    assert len(player.queue.autoplay_tracks) == 1
+    assert player.radio247_retry_at == 0.0
+    assert len(recorded) == music_mod.RADIO247_FAIL_LIMIT + 2

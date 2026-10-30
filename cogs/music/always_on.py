@@ -280,7 +280,8 @@ def radio247_positions(
     seeded by ``(guild_id, cycle)`` - so nothing repeats inside a cycle, the
     order survives a restart with nothing but ``pos`` stored, and a batch that
     wraps (a playlist shorter than the batch) simply starts the next cycle.
-    Pure.
+    A shuffled cycle never opens on the track the previous one closed on (see
+    :func:`_shuffled_cycle`). Pure.
     """
     if count <= 0 or batch <= 0:
         return []
@@ -293,11 +294,35 @@ def radio247_positions(
             continue
         perm = perms.get(cycle)
         if perm is None:
-            perm = list(range(count))
-            random.Random(f"{guild_id}:{cycle}").shuffle(perm)
+            perm = _shuffled_cycle(guild_id, cycle, count)
             perms[cycle] = perm
         out.append(perm[offset])
     return out
+
+
+def _raw_cycle(guild_id: int, cycle: int, count: int) -> typing.List[int]:
+    perm = list(range(count))
+    random.Random(f"{guild_id}:{cycle}").shuffle(perm)
+    return perm
+
+
+def _shuffled_cycle(guild_id: int, cycle: int, count: int) -> typing.List[int]:
+    """Cycle ``cycle``'s order, with no immediate repeat across the boundary.
+
+    When the seeded permutation opens on the previous cycle's last index, its
+    first two entries swap. For ``count >= 3`` that swap never touches the
+    last entry, so "the previous cycle's last" is read off its raw seeded
+    permutation and the rule stays O(1) per cycle; with two tracks the only
+    order with no repeat is to alternate, so every cycle reuses cycle 0's.
+    Deterministic. Pure.
+    """
+    if count == 2 and cycle > 0:
+        return _raw_cycle(guild_id, 0, count)
+    perm = _raw_cycle(guild_id, cycle, count)
+    if cycle > 0 and count > 2:
+        if perm[0] == _raw_cycle(guild_id, cycle - 1, count)[-1]:
+            perm[0], perm[1] = perm[1], perm[0]
+    return perm
 
 
 async def fetch_radio_state(

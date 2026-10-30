@@ -39,11 +39,10 @@ async def _cog(fake_pool, *, premium=True, enabled=True, playlists=("Chill Mix",
     c.radio247_refresh = lambda gid: c.refreshed.append(gid) or True
     norms = {p.lower(): p for p in playlists}
 
-    async def _fetch(gid, norm):
-        name = norms.get(norm)
-        return {"name": name} if name else None
+    async def _fetch_name(gid, norm):
+        return norms.get(norm)
 
-    c._fetch_guild_playlist = _fetch
+    c._fetch_guild_playlist_name = _fetch_name
     return c
 
 

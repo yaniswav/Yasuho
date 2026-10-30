@@ -447,6 +447,16 @@ class ServerPlaylistMixin:
             norm,
         )
 
+    async def _fetch_guild_playlist_name(
+        self, guild_id: int, norm: str
+    ) -> typing.Optional[str]:
+        """Just a playlist's display name (or ``None``) - never its blobs."""
+        return await self.bot.db_pool.fetchval(
+            "SELECT name FROM guild_playlists WHERE guild_id = $1 AND name_norm = $2",
+            guild_id,
+            norm,
+        )
+
     async def _list_guild_playlists(self, guild_id: int) -> typing.List[typing.Mapping]:
         """Every playlist in a guild, newest first.
 

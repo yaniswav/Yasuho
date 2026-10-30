@@ -267,3 +267,82 @@ async def test_dashboard_null_maps_to_off_and_registry():
     await dma._exec_music_default_effect_set(_bot(cog), GID, {"preset": None})
     assert cog.calls == [(GID, effects.OFF_KEY)]
     assert dma.EXECUTORS["music_default_effect_set"] is dma._exec_music_default_effect_set
+
+
+# -- review fixes ---------------------------------------------------------
+
+
+@pytest.mark.parametrize("sent", ["Nightcore", "NIGHTCORE", " nightcore "])
+async def test_a_label_or_other_case_stores_the_canonical_key(cog, store, sent):
+    """Regression (review P2): the seam validated with resolve_preset (case-
+    insensitive, labels too) but stored the raw input, which apply_preset then
+    could not find. The dashboard is the caller that sends labels."""
+    bot = types.SimpleNamespace(get_cog=lambda name: cog)
+    out = await dma._exec_music_default_effect_set(bot, GID, {"preset": sent})
+    assert out == {"ok": True}
+    assert store[guild_config.KEY_DEFAULT_EFFECT] == "nightcore"
+    player = _Player()
+    await _start(cog, player)
+    assert player.effect_preset == "nightcore"
+    assert player.set_filters_calls == 1
+
+
+@pytest.mark.parametrize("sent", ["OFF", "Off", "off"])
+async def test_off_in_any_case_clears(cog, store, sent):
+    store[guild_config.KEY_DEFAULT_EFFECT] = "nightcore"
+    assert await cog._save_default_effect(GID, sent) == "cleared"
+    assert store[guild_config.KEY_DEFAULT_EFFECT] is None
+
+
+async def test_clearing_needs_no_premium_on_every_surface(cog, store, premium_on, monkeypatch):
+    """Review P3: a lapsed server can always remove what it saved - the seam,
+    the slash/button path and the dashboard action alike."""
+    premium_on["on"] = False
+
+    async def yes(player, actor):
+        return True
+
+    monkeypatch.setattr(cog, "_is_music_manager", yes, raising=False)
+    store[guild_config.KEY_DEFAULT_EFFECT] = "nightcore"
+    assert await cog._save_default_effect(GID, effects.OFF_KEY) == "cleared"
+    assert store[guild_config.KEY_DEFAULT_EFFECT] is None
+
+    store[guild_config.KEY_DEFAULT_EFFECT] = "nightcore"
+    text, view = await cog._request_default_effect(
+        _Player(), types.SimpleNamespace(id=GID), types.SimpleNamespace(id=1), "off"
+    )
+    assert "cleared" in text and view is None
+    assert store[guild_config.KEY_DEFAULT_EFFECT] is None
+
+    store[guild_config.KEY_DEFAULT_EFFECT] = "nightcore"
+    bot = types.SimpleNamespace(get_cog=lambda name: cog)
+    out = await dma._exec_music_default_effect_set(bot, GID, {"preset": None})
+    assert out == {"ok": True}
+    assert store[guild_config.KEY_DEFAULT_EFFECT] is None
+    # Negative control: SAVING still needs Yasuho+.
+    assert await cog._save_default_effect(GID, "nightcore") == "not_premium"
+    assert store[guild_config.KEY_DEFAULT_EFFECT] is None
+
+
+async def test_restore_marks_the_effect_done_before_play(monkeypatch):
+    """Review P2: TrackStart can land before play()'s REST reply, so the flag
+    must already be set when play() is called."""
+    from tests.cogs.test_music_queue_cap import (
+        _restore_cog,
+        _restore_now,
+        _restore_row,
+        _RestorePlayer,
+    )
+
+    seen = []
+
+    class _Watching(_RestorePlayer):
+        async def play(self, track, **kwargs):
+            seen.append(getattr(self, "default_effect_done", None))
+            await super().play(track, **kwargs)
+
+    player = _Watching()
+    player.default_effect_done = False
+    cog = _restore_cog(player, monkeypatch)
+    await cog._restore_one(_restore_row(1), _restore_now())
+    assert seen == [True]
