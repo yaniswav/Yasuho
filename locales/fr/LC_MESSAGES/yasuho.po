@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-30 12:16+0000\n"
+"POT-Creation-Date: 2026-10-30 13:03+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -458,7 +458,7 @@ msgid "Edit"
 msgstr "Modifier"
 
 #: cogs/anilist/collection.py:381 cogs/anilist/feed_views.py:1308
-#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:477
+#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:479
 #: cogs/config/rooms_config.py:489 tools/views.py:80
 msgid "This panel isn't for you."
 msgstr "Ce panneau n'est pas pour vous."
@@ -780,7 +780,7 @@ msgstr "Ce serveur n'a pas encore de flux AniList. Crées-en un avec `/anilistfe
 #: cogs/anilist/feed.py:2910 cogs/anilist/feed_views.py:658
 #: cogs/anilist/feed_views.py:953 cogs/anilist/feed_views.py:1349
 #: cogs/anilist/feed_views.py:1399 cogs/community/reminders.py:723
-#: cogs/config/rooms.py:1116 cogs/config/rooms_config.py:430
+#: cogs/config/rooms.py:1183 cogs/config/rooms_config.py:430
 #: cogs/music/playlists_shared.py:355 cogs/music/views.py:2475
 msgid "(archived)"
 msgstr "(archivé)"
@@ -1071,6 +1071,7 @@ msgstr "Les membres peuvent rejoindre : {state}"
 #: cogs/config/welcome.py:583 cogs/config/welcome.py:585
 #: cogs/config/welcome.py:587 cogs/config/welcome.py:701
 #: cogs/config/welcome.py:703 cogs/config/welcome.py:705
+#: tools/forumsolved.py:185 tools/forumsolved.py:186
 msgid "On"
 msgstr "Activé"
 
@@ -1078,7 +1079,8 @@ msgstr "Activé"
 #: cogs/config/welcome.py:245 cogs/config/welcome.py:583
 #: cogs/config/welcome.py:585 cogs/config/welcome.py:587
 #: cogs/config/welcome.py:701 cogs/config/welcome.py:703
-#: cogs/config/welcome.py:705 cogs/music/views.py:520
+#: cogs/config/welcome.py:705 cogs/music/views.py:520 tools/forumsolved.py:185
+#: tools/forumsolved.py:186
 msgid "Off"
 msgstr "Désactivé"
 
@@ -1237,7 +1239,7 @@ msgstr "Supprimer"
 
 #: cogs/anilist/feed_views.py:1065 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
-#: cogs/community/usersettings.py:246 cogs/community/usersettings.py:357
+#: cogs/community/usersettings.py:246 cogs/community/usersettings.py:359
 #: cogs/config/tickets/lifecycle.py:280 cogs/music/playlists_shared.py:399
 #: cogs/system/arg_completion.py:286
 msgid "Cancel"
@@ -1436,7 +1438,7 @@ msgstr "Impossible d'ouvrir le formulaire de code."
 #: cogs/anilist/lookup.py:39 cogs/config/settings.py:52
 #: cogs/config/settings.py:173 cogs/config/settings.py:182
 #: cogs/config/settings.py:196 cogs/config/settings.py:204
-#: cogs/system/help.py:517 cogs/utility/info.py:36 cogs/utility/info.py:148
+#: cogs/system/help.py:518 cogs/utility/info.py:36 cogs/utility/info.py:148
 msgid "Unknown"
 msgstr "Inconnu"
 
@@ -1902,6 +1904,7 @@ msgstr "ex. 10m, demain à 18h, ou une balise <t:...>"
 #: cogs/config/milestones.py:262 cogs/config/reactionroles.py:226
 #: cogs/config/reactionroles.py:342 cogs/config/twitch.py:36
 #: cogs/config/twitch.py:458 cogs/config/welcome.py:952
+#: cogs/config/youtube.py:460
 msgid "Message"
 msgstr "Message"
 
@@ -2109,61 +2112,65 @@ msgid "Your temporary-role records are gone."
 msgstr "Vos enregistrements de rôles temporaires ont disparu."
 
 #: cogs/community/usersettings.py:304
+msgid "Your remembered voice room settings are gone."
+msgstr "Vos réglages de salon vocal mémorisés ont disparu."
+
+#: cogs/community/usersettings.py:306
 msgid "Your top.gg vote record is gone too."
 msgstr "Ton historique de votes top.gg est effacé aussi."
 
-#: cogs/community/usersettings.py:306
+#: cogs/community/usersettings.py:308
 msgid "So is your personal rank card."
 msgstr "Ta carte de rang personnelle aussi."
 
-#: cogs/community/usersettings.py:309
+#: cogs/community/usersettings.py:311
 msgid "Your AniList link is gone as well, and your episode and chapter alert opt-ins with it."
 msgstr "Ton lien AniList est effacé lui aussi, et avec lui tes inscriptions aux alertes d'épisodes et de chapitres."
 
-#: cogs/community/usersettings.py:314
+#: cogs/community/usersettings.py:316
 msgid "Your Pack Confort purchase record is gone from our database too (it comes back automatically if you still hold that purchase), and so is the note of your last premium offer reminder."
 msgstr "Ton achat Pack Confort enregistré a aussi été supprimé de notre base (il revient automatiquement si tu possèdes toujours cet achat), tout comme la trace de ton dernier rappel d'offre premium."
 
-#: cogs/community/usersettings.py:325
+#: cogs/community/usersettings.py:327
 msgid "Something went wrong deleting your profile."
 msgstr "Une erreur est survenue lors de la suppression de ton profil."
 
-#: cogs/community/usersettings.py:335
+#: cogs/community/usersettings.py:337
 msgid "Profile deletion cancelled."
 msgstr "Suppression du profil annulée."
 
-#: cogs/community/usersettings.py:356
+#: cogs/community/usersettings.py:358
 msgid "Delete my avatar history"
 msgstr "Supprimer mon historique d'avatars"
 
-#: cogs/community/usersettings.py:377
+#: cogs/community/usersettings.py:379
 #, python-brace-format
 msgid "Deleted {count} saved image(s) ({size}). Future avatar tracking is now turned off."
 msgstr "{count} image(s) sauvegardée(s) supprimée(s) ({size}). Le suivi futur des avatars est désormais désactivé."
 
-#: cogs/community/usersettings.py:388
+#: cogs/community/usersettings.py:390
 msgid "Something went wrong deleting your avatar history."
 msgstr "Un problème est survenu pendant la suppression de ton historique d'avatars."
 
-#: cogs/community/usersettings.py:398
+#: cogs/community/usersettings.py:400
 msgid "Avatar history deletion cancelled."
 msgstr "Suppression de l'historique des avatars annulée."
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:413
+#: cogs/community/usersettings.py:415
 msgid "Turn off"
 msgstr "Desactiver"
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:413
+#: cogs/community/usersettings.py:415
 msgid "Turn on"
 msgstr "Activer"
 
-#: cogs/community/usersettings.py:497
+#: cogs/community/usersettings.py:499
 msgid "## Your preferences"
 msgstr "## Tes preferences"
 
-#: cogs/community/usersettings.py:501
+#: cogs/community/usersettings.py:503
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
@@ -2171,15 +2178,15 @@ msgstr ""
 "Ces reglages n'affectent que **toi**, partout ou je suis utilisee.\n"
 "Utilise le bouton a cote d'une preference pour l'activer ou la desactiver."
 
-#: cogs/community/usersettings.py:511
+#: cogs/community/usersettings.py:513
 msgid "ON"
 msgstr "ACTIVÉ"
 
-#: cogs/community/usersettings.py:511
+#: cogs/community/usersettings.py:513
 msgid "OFF"
 msgstr "DÉSACTIVÉ"
 
-#: cogs/community/usersettings.py:512
+#: cogs/community/usersettings.py:514
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
@@ -2188,7 +2195,7 @@ msgstr ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:534
+#: cogs/community/usersettings.py:536
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {value}\n"
@@ -2197,70 +2204,74 @@ msgstr ""
 "{emoji} **{label}** - {value}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:548
+#: cogs/community/usersettings.py:550
 msgid "-# Only you can use these controls."
 msgstr "-# Toi seul peux utiliser ces controles."
 
-#: cogs/community/usersettings.py:574 cogs/community/usersettings.py:594
-#: cogs/community/usersettings.py:614
+#: cogs/community/usersettings.py:576 cogs/community/usersettings.py:596
+#: cogs/community/usersettings.py:616
 msgid "Something went wrong updating that setting."
 msgstr "Une erreur est survenue lors de la mise à jour de ce paramètre."
 
-#: cogs/community/usersettings.py:673
+#: cogs/community/usersettings.py:675
 #, python-brace-format
 msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
 msgstr "Utilise `{prefix}mydata export` pour recevoir tes données, `{prefix}mydata deleteprofile` pour effacer ton profil, ou `{prefix}mydata deleteavatars` pour effacer les avatars enregistrés."
 
-#: cogs/community/usersettings.py:746
+#: cogs/community/usersettings.py:748
 msgid "I sent your data export to you by direct message."
 msgstr "Je t'ai envoyé ton export de données par message privé."
 
 #: cogs/community/profile/connectors/cog.py:280
-#: cogs/community/usersettings.py:750
+#: cogs/community/usersettings.py:752
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "Je n'ai pas pu t'envoyer de message privé. Active tes messages privés."
 
-#: cogs/community/usersettings.py:755
+#: cogs/community/usersettings.py:757
 msgid "Something went wrong building your data export."
 msgstr "Un problème est survenu pendant la création de ton export de données."
 
-#: cogs/community/usersettings.py:778
+#: cogs/community/usersettings.py:780
 msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
 msgstr "Cette action supprime définitivement ta bio, tes pronoms, ta couleur d'accent, tes champs personnalisés, tes identifiants de jeu et tous les choix que tu as faits sur qui pouvait les voir. Cette action est irréversible."
 
-#: cogs/community/usersettings.py:784
+#: cogs/community/usersettings.py:786
 msgid "It also deletes your top.gg vote record: your vote streak and your lifetime vote count start over from zero."
 msgstr "Cela supprime aussi ton historique de votes top.gg : ta série de votes et ton total cumulé repartent de zéro."
 
-#: cogs/community/usersettings.py:789
+#: cogs/community/usersettings.py:791
 msgid "Your scheduled announcements and their pending deliveries will be deleted."
 msgstr "Tes annonces programmées et leurs envois en attente seront supprimés."
 
-#: cogs/community/usersettings.py:793
+#: cogs/community/usersettings.py:795
 msgid "It also deletes your suggestions and your votes, and removes the posted suggestion messages where I can. Their discussion threads stay for the other members, renamed and locked."
 msgstr "Cela supprime aussi tes suggestions et tes votes, et retire les messages de suggestion publiés là où je le peux. Leurs fils de discussion restent pour les autres membres, renommés et verrouillés."
 
-#: cogs/community/usersettings.py:798
+#: cogs/community/usersettings.py:800
 msgid "It also deletes your shared birthdays, in every server."
 msgstr "Cela supprime aussi tes anniversaires partagés, sur tous les serveurs."
 
-#: cogs/community/usersettings.py:801
+#: cogs/community/usersettings.py:803
 msgid "It also forgets your temporary roles; the scheduled removal is kept until it runs (at most 90 days)."
 msgstr "Cela efface aussi vos rôles temporaires ; le retrait programmé est conservé jusqu'à son exécution (90 jours au maximum)."
 
-#: cogs/community/usersettings.py:806
+#: cogs/community/usersettings.py:807
+msgid "It also forgets your remembered voice room settings, in every server."
+msgstr "Cela efface aussi vos réglages de salon vocal mémorisés, sur tous les serveurs."
+
+#: cogs/community/usersettings.py:810
 msgid "And your personal rank card: the background image you uploaded and the accent colour you picked."
 msgstr "Et ta carte de rang personnelle : l'image de fond que tu as envoyee et la couleur d'accent que tu as choisie."
 
-#: cogs/community/usersettings.py:811
+#: cogs/community/usersettings.py:815
 msgid "And your AniList link: the stored login is deleted, so relinking needs a fresh sign-in with AniList. Your episode and chapter alert opt-ins go with it."
 msgstr "Et ton lien AniList : la connexion enregistrée est supprimée, donc te relier nécessitera une nouvelle authentification AniList. Tes inscriptions aux alertes d'épisodes et de chapitres partent avec."
 
-#: cogs/community/usersettings.py:817
+#: cogs/community/usersettings.py:821
 msgid "And your Pack Confort purchase record: it comes back on its own if you still hold that purchase, the next time we check with Discord. Also the note of when you last saw a premium offer reminder, so you may see one again sooner than usual."
 msgstr "Et ton achat Pack Confort enregistré : il revient tout seul à la prochaine vérification avec Discord si tu possèdes toujours cet achat. Ainsi que la trace de la dernière fois où tu as vu un rappel d'offre premium, donc tu pourrais en revoir un plus tôt que d'habitude."
 
-#: cogs/community/usersettings.py:834
+#: cogs/community/usersettings.py:838
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "Ceci supprime définitivement chaque avatar global, avatar de serveur et bannière sauvegardés pour ton compte. Ça désactive aussi le suivi futur. C'est irréversible."
 
@@ -4007,7 +4018,7 @@ msgid "You need these permissions in {channel} yourself before you can schedule 
 msgstr "Il te faut toi-meme ces permissions dans {channel} pour y programmer un resume hebdomadaire : {permissions}."
 
 #: cogs/community/serverstats/cog.py:956 cogs/community/serverstats/cog.py:1054
-#: cogs/config/tickets/panel.py:675 cogs/config/tickets/panel.py:819
+#: cogs/config/tickets/panel.py:675 cogs/config/tickets/panel.py:821
 #, python-brace-format
 msgid "I need these permissions in {channel} first: {permissions}."
 msgstr "J'ai d'abord besoin de ces permissions dans {channel} : {permissions}."
@@ -4636,7 +4647,8 @@ msgid "Ping"
 msgstr "Mention"
 
 #: cogs/config/announcements.py:321 cogs/config/customcommands.py:34
-#: cogs/moderation/automod_panel.py:322 cogs/moderation/automod_panel.py:324
+#: cogs/config/youtube.py:453 cogs/moderation/automod_panel.py:322
+#: cogs/moderation/automod_panel.py:324 tools/forumsolved.py:188
 msgid "None"
 msgstr "Aucun"
 
@@ -4882,7 +4894,8 @@ msgstr "Une erreur est survenue lors de la publication du panneau."
 msgid "Your button-role panel is live in {channel}."
 msgstr "Votre panneau de rôles à boutons est en ligne dans {channel}."
 
-#: cogs/config/buttonroles.py:697 cogs/moderation/moderation.py:772
+#: cogs/config/buttonroles.py:697 cogs/config/youtube.py:457
+#: cogs/moderation/moderation.py:772
 msgid "Skipped"
 msgstr "Ignoré"
 
@@ -5220,7 +5233,7 @@ msgstr[1] "{count} boutons"
 msgid "Selected: {name}"
 msgstr "Selectionne : {name}"
 
-#: cogs/config/customcommands.py:710
+#: cogs/config/customcommands.py:710 cogs/config/youtube.py:464
 #, python-brace-format
 msgid "Placeholders: {placeholders}"
 msgstr "Variables : {placeholders}"
@@ -5626,86 +5639,86 @@ msgstr "Menu de roles publie dans {channel}."
 msgid "This server already has the maximum of {n} role menus."
 msgstr "Ce serveur a deja atteint le maximum de {n} menus de roles."
 
-#: cogs/config/rooms.py:562 cogs/config/rooms_config.py:525
+#: cogs/config/rooms.py:605 cogs/config/rooms_config.py:525
 #, python-brace-format
 msgid "You already have the maximum of {max_hubs} hubs."
 msgstr "Tu as deja atteint le maximum de {max_hubs} hubs."
 
-#: cogs/config/rooms.py:570
+#: cogs/config/rooms.py:613
 #, python-brace-format
 msgid "This server is at Discord's limit of {max} categories."
 msgstr "Ce serveur a atteint la limite Discord de {max} categories."
 
-#: cogs/config/rooms.py:576
+#: cogs/config/rooms.py:619
 #, python-brace-format
 msgid "This server is too close to Discord's {budget}-channel limit to add another hub."
 msgstr "Ce serveur est trop proche de la limite Discord de {budget} salons pour ajouter un autre hub."
 
-#: cogs/config/rooms.py:602
+#: cogs/config/rooms.py:645
 msgid "Something went wrong while creating the hub's channels, and the empty category left behind could not be removed - please delete it by hand."
 msgstr "Quelque chose s'est mal passe pendant la creation des salons du hub, et la categorie vide laissee derriere n'a pas pu etre supprimee - merci de l'effacer a la main."
 
-#: cogs/config/rooms.py:609
+#: cogs/config/rooms.py:652
 msgid "Something went wrong while creating the hub's channels."
 msgstr "Un probleme est survenu lors de la creation des salons du hub."
 
-#: cogs/config/rooms.py:623
+#: cogs/config/rooms.py:666
 #, python-brace-format
 msgid "Created the **{label}** hub. Members can join {channel} now."
 msgstr "Hub **{label}** cree. Les membres peuvent rejoindre {channel} maintenant."
 
-#: cogs/config/rooms.py:634 cogs/config/rooms.py:705 cogs/config/rooms.py:793
+#: cogs/config/rooms.py:677 cogs/config/rooms.py:748 cogs/config/rooms.py:836
 #: cogs/config/rooms_config.py:559
 msgid "That hub no longer exists."
 msgstr "Ce hub n'existe plus."
 
-#: cogs/config/rooms.py:643
+#: cogs/config/rooms.py:686
 #, python-brace-format
 msgid "Updated the **{label}** hub."
 msgstr "Hub **{label}** mis a jour."
 
-#: cogs/config/rooms.py:769
+#: cogs/config/rooms.py:812
 #, python-brace-format
 msgid "Removed the **{label}** hub from the settings, but {count} of its channels could not be deleted - please remove it by hand."
 msgid_plural "Removed the **{label}** hub from the settings, but {count} of its channels could not be deleted - please remove them by hand."
 msgstr[0] "Hub **{label}** retire des reglages, mais {count} de ses salons n'a pas pu etre supprime - merci de l'effacer a la main."
 msgstr[1] "Hub **{label}** retire des reglages, mais {count} de ses salons n'ont pas pu etre supprimes - merci de les effacer a la main."
 
-#: cogs/config/rooms.py:776
+#: cogs/config/rooms.py:819
 #, python-brace-format
 msgid "Removed the **{label}** hub."
 msgstr "Hub **{label}** supprime."
 
-#: cogs/config/rooms.py:807
+#: cogs/config/rooms.py:850
 msgid "category"
 msgstr "categorie"
 
-#: cogs/config/rooms.py:813
+#: cogs/config/rooms.py:856
 msgid "join-to-create channel"
 msgstr "salon a rejoindre pour creer"
 
-#: cogs/config/rooms.py:818
+#: cogs/config/rooms.py:861
 msgid "Nothing was renamed - those channels are missing."
 msgstr "Rien n'a ete renomme - ces salons sont introuvables."
 
-#: cogs/config/rooms.py:819
+#: cogs/config/rooms.py:862
 #, python-brace-format
 msgid "Renamed the {targets}."
 msgstr "{targets} renomme(s)."
 
-#: cogs/config/rooms.py:1098
+#: cogs/config/rooms.py:1165
 msgid "There are no autoroom hubs set up in this server."
 msgstr "Aucun hub de salons automatiques n'est configure sur ce serveur."
 
-#: cogs/config/rooms.py:1107
+#: cogs/config/rooms.py:1174
 msgid "Autoroom hubs"
 msgstr "Hubs de salons automatiques"
 
-#: cogs/config/rooms.py:1111
+#: cogs/config/rooms.py:1178
 msgid "channel missing"
 msgstr "salon introuvable"
 
-#: cogs/config/rooms.py:1119
+#: cogs/config/rooms.py:1186
 #, python-brace-format
 msgid ""
 "{location}\n"
@@ -5713,6 +5726,54 @@ msgid ""
 msgstr ""
 "{location}\n"
 "{summary}"
+
+#: cogs/config/rooms.py:1203
+msgid "Saving is turned off for your rooms in this server."
+msgstr "La sauvegarde est désactivée pour vos salons sur ce serveur."
+
+#: cogs/config/rooms.py:1207
+#, python-brace-format
+msgid "Name: {name}"
+msgstr "Nom : {name}"
+
+#: cogs/config/rooms.py:1209
+#, python-brace-format
+msgid "User limit: {n}"
+msgstr "Limite d'utilisateurs : {n}"
+
+#: cogs/config/rooms.py:1211
+#, python-brace-format
+msgid "Locked: {state}"
+msgstr "Verrouillé : {state}"
+
+#: cogs/config/rooms.py:1211 cogs/config/rooms.py:1213
+msgid "yes"
+msgstr "oui"
+
+#: cogs/config/rooms.py:1211 cogs/config/rooms.py:1213
+msgid "no"
+msgstr "non"
+
+#: cogs/config/rooms.py:1213
+#, python-brace-format
+msgid "Hidden: {state}"
+msgstr "Masqué : {state}"
+
+#: cogs/config/rooms.py:1217
+msgid "Nothing is remembered for your rooms in this server."
+msgstr "Aucun réglage n'est mémorisé pour vos salons sur ce serveur."
+
+#: cogs/config/rooms.py:1229
+msgid "Forgotten. Your next room starts from the defaults."
+msgstr "Oublié. Votre prochain salon partira des valeurs par défaut."
+
+#: cogs/config/rooms.py:1239
+msgid "Your room settings will be remembered."
+msgstr "Vos réglages de salon seront mémorisés."
+
+#: cogs/config/rooms.py:1241
+msgid "Your room settings are forgotten and will not be saved."
+msgstr "Vos réglages de salon sont oubliés et ne seront pas sauvegardés."
 
 #: cogs/config/rooms_config.py:71 cogs/config/rooms_panels.py:86
 msgid "User limit..."
@@ -5814,13 +5875,13 @@ msgstr "Gerer le hub **{label}** :"
 msgid "Something went wrong removing that hub."
 msgstr "Un probleme est survenu lors de la suppression de ce hub."
 
-#: cogs/config/rooms_panels.py:100 cogs/config/rooms_panels.py:181
-#: cogs/config/rooms_panels.py:400 cogs/config/rooms_panels.py:616
+#: cogs/config/rooms_panels.py:100 cogs/config/rooms_panels.py:188
+#: cogs/config/rooms_panels.py:410 cogs/config/rooms_panels.py:632
 msgid "Only the room owner can use these controls."
 msgstr "Seul le proprietaire du salon peut utiliser ces controles."
 
-#: cogs/config/rooms_panels.py:106 cogs/config/rooms_panels.py:186
-#: cogs/config/rooms_panels.py:380 cogs/config/rooms_panels.py:622
+#: cogs/config/rooms_panels.py:106 cogs/config/rooms_panels.py:193
+#: cogs/config/rooms_panels.py:390 cogs/config/rooms_panels.py:638
 msgid "This room no longer exists."
 msgstr "Ce salon n'existe plus."
 
@@ -5828,208 +5889,208 @@ msgstr "Ce salon n'existe plus."
 msgid "Could not change the user limit."
 msgstr "Impossible de changer la limite d'utilisateurs."
 
-#: cogs/config/rooms_panels.py:117
+#: cogs/config/rooms_panels.py:118
 msgid "Updated the user limit."
 msgstr "Limite d'utilisateurs mise a jour."
 
-#: cogs/config/rooms_panels.py:135
+#: cogs/config/rooms_panels.py:142
 msgid "Select a member to remove..."
 msgstr "Selectionne un membre a retirer..."
 
-#: cogs/config/rooms_panels.py:136
+#: cogs/config/rooms_panels.py:143
 msgid "Select a member to unblacklist..."
 msgstr "Selectionne un membre a retirer de la liste noire..."
 
-#: cogs/config/rooms_panels.py:137
+#: cogs/config/rooms_panels.py:144
 msgid "Select the new owner..."
 msgstr "Selectionne le nouveau proprietaire..."
 
-#: cogs/config/rooms_panels.py:140
+#: cogs/config/rooms_panels.py:147
 msgid "Select a member..."
 msgstr "Selectionne un membre..."
 
-#: cogs/config/rooms_panels.py:165
+#: cogs/config/rooms_panels.py:172
 msgid "Rename room"
 msgstr "Renommer le salon"
 
-#: cogs/config/rooms_panels.py:168
+#: cogs/config/rooms_panels.py:175
 msgid "New room name"
 msgstr "Nouveau nom du salon"
 
-#: cogs/config/rooms_panels.py:190
+#: cogs/config/rooms_panels.py:197
 msgid "Give the room a name."
 msgstr "Donne un nom au salon."
 
-#: cogs/config/rooms_panels.py:208
+#: cogs/config/rooms_panels.py:215
 msgid "Could not rename the room."
 msgstr "Impossible de renommer le salon."
 
-#: cogs/config/rooms_panels.py:212
+#: cogs/config/rooms_panels.py:219
 #, python-brace-format
 msgid "Renamed the room to **{name}**."
 msgstr "Salon renomme en **{name}**."
 
-#: cogs/config/rooms_panels.py:283
+#: cogs/config/rooms_panels.py:293
 msgid "## Room controls"
 msgstr "## Controles du salon"
 
-#: cogs/config/rooms_panels.py:287
+#: cogs/config/rooms_panels.py:297
 #, python-brace-format
 msgid "Owner: <@{owner_id}> - use the buttons below to manage the room."
 msgstr "Proprietaire : <@{owner_id}> - utilise les boutons ci-dessous pour gerer le salon."
 
-#: cogs/config/rooms_panels.py:291
+#: cogs/config/rooms_panels.py:301
 msgid "No owner right now - anyone in the room can Claim it below."
 msgstr "Aucun proprietaire pour l'instant - n'importe qui dans le salon peut le revendiquer ci-dessous."
 
-#: cogs/config/rooms_panels.py:301
+#: cogs/config/rooms_panels.py:311
 msgid "Slots"
 msgstr "Places"
 
-#: cogs/config/rooms_panels.py:307
+#: cogs/config/rooms_panels.py:317
 msgid "Rename"
 msgstr "Renommer"
 
-#: cogs/config/rooms_panels.py:313
+#: cogs/config/rooms_panels.py:323
 msgid "Unlock"
 msgstr "Deverrouiller"
 
-#: cogs/config/rooms_panels.py:313
+#: cogs/config/rooms_panels.py:323
 msgid "Lock"
 msgstr "Verrouiller"
 
-#: cogs/config/rooms_panels.py:319
+#: cogs/config/rooms_panels.py:329
 msgid "Unhide"
 msgstr "Afficher"
 
-#: cogs/config/rooms_panels.py:319
+#: cogs/config/rooms_panels.py:329
 msgid "Hide"
 msgstr "Masquer"
 
-#: cogs/config/rooms_panels.py:325
+#: cogs/config/rooms_panels.py:335
 msgid "Kick + blacklist"
 msgstr "Expulser + liste noire"
 
-#: cogs/config/rooms_panels.py:333
+#: cogs/config/rooms_panels.py:343
 msgid "Remove from blacklist"
 msgstr "Retirer de la liste noire"
 
-#: cogs/config/rooms_panels.py:339
+#: cogs/config/rooms_panels.py:349
 msgid "Transfer lead"
 msgstr "Transferer le controle"
 
-#: cogs/config/rooms_panels.py:345
+#: cogs/config/rooms_panels.py:355
 msgid "Bump to top"
 msgstr "Remonter en haut"
 
-#: cogs/config/rooms_panels.py:351 cogs/config/tickets/lifecycle.py:229
+#: cogs/config/rooms_panels.py:361 cogs/config/tickets/lifecycle.py:229
 msgid "Claim"
 msgstr "Revendiquer"
 
-#: cogs/config/rooms_panels.py:362
+#: cogs/config/rooms_panels.py:372
 msgid "-# Only the room owner can use these controls (except Claim)."
 msgstr "-# Seul le proprietaire du salon peut utiliser ces controles (sauf Revendiquer)."
 
-#: cogs/config/rooms_panels.py:418 cogs/config/rooms_panels.py:657
+#: cogs/config/rooms_panels.py:428 cogs/config/rooms_panels.py:673
 msgid "Unknown action."
 msgstr "Action inconnue."
 
-#: cogs/config/rooms_panels.py:425
+#: cogs/config/rooms_panels.py:435
 msgid "Something went wrong with that action."
 msgstr "Un probleme est survenu avec cette action."
 
-#: cogs/config/rooms_panels.py:435
+#: cogs/config/rooms_panels.py:445
 msgid "Choose a user limit for the room:"
 msgstr "Choisis une limite d'utilisateurs pour le salon :"
 
-#: cogs/config/rooms_panels.py:460
+#: cogs/config/rooms_panels.py:470
 msgid "Could not change the lock."
 msgstr "Impossible de changer le verrouillage."
 
-#: cogs/config/rooms_panels.py:465
+#: cogs/config/rooms_panels.py:475
 msgid "Unlocked the room - anyone can join."
 msgstr "Salon deverrouille - tout le monde peut rejoindre."
 
-#: cogs/config/rooms_panels.py:467
+#: cogs/config/rooms_panels.py:477
 msgid "Locked the room - no one new can join."
 msgstr "Salon verrouille - plus personne ne peut rejoindre."
 
-#: cogs/config/rooms_panels.py:484
+#: cogs/config/rooms_panels.py:497
 msgid "Could not change visibility."
 msgstr "Impossible de changer la visibilite."
 
-#: cogs/config/rooms_panels.py:489
+#: cogs/config/rooms_panels.py:502
 msgid "The room is visible again."
 msgstr "Le salon est de nouveau visible."
 
-#: cogs/config/rooms_panels.py:491
+#: cogs/config/rooms_panels.py:504
 msgid "Hid the room from everyone else."
 msgstr "Salon masque a tous les autres."
 
-#: cogs/config/rooms_panels.py:507
+#: cogs/config/rooms_panels.py:523
 msgid "There's no one else in the room to remove."
 msgstr "Il n'y a personne d'autre a retirer du salon."
 
-#: cogs/config/rooms_panels.py:511
+#: cogs/config/rooms_panels.py:527
 msgid "Pick who to kick and blacklist:"
 msgstr "Choisis qui expulser et mettre sur liste noire :"
 
-#: cogs/config/rooms_panels.py:528
+#: cogs/config/rooms_panels.py:544
 msgid "No one is blacklisted here."
 msgstr "Personne n'est sur liste noire ici."
 
-#: cogs/config/rooms_panels.py:531
+#: cogs/config/rooms_panels.py:547
 msgid "Pick who to remove from the blacklist:"
 msgstr "Choisis qui retirer de la liste noire :"
 
-#: cogs/config/rooms_panels.py:550
+#: cogs/config/rooms_panels.py:566
 msgid "There's no one else here to hand the room to."
 msgstr "Il n'y a personne d'autre a qui confier le salon."
 
-#: cogs/config/rooms_panels.py:554
+#: cogs/config/rooms_panels.py:570
 msgid "Pick the new room owner:"
 msgstr "Choisis le nouveau proprietaire du salon :"
 
-#: cogs/config/rooms_panels.py:581
+#: cogs/config/rooms_panels.py:597
 msgid "Could not bump the room."
 msgstr "Impossible de remonter le salon."
 
-#: cogs/config/rooms_panels.py:584
+#: cogs/config/rooms_panels.py:600
 msgid "Bumped the room to the top."
 msgstr "Salon remonte en haut."
 
-#: cogs/config/rooms_panels.py:595
+#: cogs/config/rooms_panels.py:611
 msgid "The room already has an owner who's still here."
 msgstr "Le salon a deja un proprietaire toujours present."
 
-#: cogs/config/rooms_panels.py:600
+#: cogs/config/rooms_panels.py:616
 msgid "Join the room first to claim it."
 msgstr "Rejoins d'abord le salon pour le revendiquer."
 
-#: cogs/config/rooms_panels.py:606
+#: cogs/config/rooms_panels.py:622
 msgid "You're now the owner of this room."
 msgstr "Tu es maintenant proprietaire de ce salon."
 
-#: cogs/config/rooms_panels.py:628
+#: cogs/config/rooms_panels.py:644
 msgid "That member is no longer here."
 msgstr "Ce membre n'est plus la."
 
-#: cogs/config/rooms_panels.py:640
+#: cogs/config/rooms_panels.py:656
 #, python-brace-format
 msgid "Removed and blacklisted {name}."
 msgstr "{name} retire et mis sur liste noire."
 
-#: cogs/config/rooms_panels.py:647
+#: cogs/config/rooms_panels.py:663
 #, python-brace-format
 msgid "Removed {name} from the blacklist."
 msgstr "{name} retire de la liste noire."
 
-#: cogs/config/rooms_panels.py:653
+#: cogs/config/rooms_panels.py:669
 #, python-brace-format
 msgid "Transferred room ownership to {name}."
 msgstr "Propriete du salon transferee a {name}."
 
-#: cogs/config/rooms_panels.py:660
+#: cogs/config/rooms_panels.py:676
 msgid "Could not complete that action."
 msgstr "Impossible de terminer cette action."
 
@@ -6730,6 +6791,90 @@ msgstr "Les messages de bienvenue ont été désactivés."
 msgid "Welcome {member}!"
 msgstr "Bienvenue {member} !"
 
+#: cogs/config/youtube.py:269
+#, python-brace-format
+msgid ""
+"{channel} just uploaded a new video: {title}\n"
+"{url}"
+msgstr ""
+"{channel} vient de publier une nouvelle vidéo : {title}\n"
+"{url}"
+
+#: cogs/config/youtube.py:307
+msgid "I need a YouTube channel link, an @handle or a channel id."
+msgstr "J'ai besoin d'un lien de chaîne YouTube, d'un @handle ou d'un identifiant de chaîne."
+
+#: cogs/config/youtube.py:312
+msgid "Slow down a little, then try again in a few seconds."
+msgstr "Ralentissez un peu, puis réessayez dans quelques secondes."
+
+#: cogs/config/youtube.py:319
+msgid "I could not reach YouTube right now. Try again in a moment."
+msgstr "Je n'ai pas pu joindre YouTube pour le moment. Réessayez dans un instant."
+
+#: cogs/config/youtube.py:323
+msgid "I could not find that YouTube channel."
+msgstr "Je n'ai pas trouvé cette chaîne YouTube."
+
+#: cogs/config/youtube.py:326 cogs/music/requests.py:231
+#, python-brace-format
+msgid "I cannot send messages in {channel}."
+msgstr "Je ne peux pas envoyer de messages dans {channel}."
+
+#: cogs/config/youtube.py:337
+#, python-brace-format
+msgid "This server already follows the maximum of {n} YouTube channels."
+msgstr "Ce serveur suit déjà le maximum de {n} chaînes YouTube."
+
+#: cogs/config/youtube.py:343
+#, python-brace-format
+msgid "Following {name}. New videos will be posted in {channel}."
+msgstr "Je suis {name}. Les nouvelles vidéos seront publiées dans {channel}."
+
+#: cogs/config/youtube.py:383
+msgid "This server does not follow that channel."
+msgstr "Ce serveur ne suit pas cette chaîne."
+
+#: cogs/config/youtube.py:384
+msgid "Unfollowed."
+msgstr "Désabonné."
+
+#: cogs/config/youtube.py:407
+msgid "paused (over the limit)"
+msgstr "en pause (limite dépassée)"
+
+#: cogs/config/youtube.py:410
+msgid "This server follows no YouTube channel yet."
+msgstr "Ce serveur ne suit encore aucune chaîne YouTube."
+
+#: cogs/config/youtube.py:412
+msgid "Followed YouTube channels"
+msgstr "Chaînes YouTube suivies"
+
+#: cogs/config/youtube.py:439
+msgid "I will not ping everyone."
+msgstr "Je ne mentionnerai pas tout le monde."
+
+#: cogs/config/youtube.py:450
+msgid "YouTube alerts"
+msgstr "Alertes YouTube"
+
+#: cogs/config/youtube.py:452
+msgid "Ping role"
+msgstr "Rôle à mentionner"
+
+#: cogs/config/youtube.py:457
+msgid "Shorts"
+msgstr "Shorts"
+
+#: cogs/config/youtube.py:457
+msgid "Posted"
+msgstr "Publié"
+
+#: cogs/config/youtube.py:461
+msgid "Default"
+msgstr "Par défaut"
+
 #: cogs/config/tickets/lifecycle.py:204 cogs/config/tickets/lifecycle.py:276
 msgid "Close ticket"
 msgstr "Fermer le ticket"
@@ -6992,7 +7137,7 @@ msgstr ""
 "**Tickets ouverts par membre :** {cap}\n"
 "**Fenêtre d'inactivité :** {hours}h"
 
-#: cogs/config/tickets/panel.py:126 cogs/config/tickets/panel.py:934
+#: cogs/config/tickets/panel.py:126 cogs/config/tickets/panel.py:936
 #, python-brace-format
 msgid "Closed tickets are logged in {channel}, transcript attached."
 msgstr "Les tickets fermés sont journalisés dans {channel}, transcription jointe."
@@ -7119,35 +7264,35 @@ msgstr "Un ticket fermé est journalisé avec la transcription complète de son 
 msgid "Something went wrong saving that setting."
 msgstr "Un problème est survenu lors de l'enregistrement de ce réglage."
 
-#: cogs/config/tickets/panel.py:875
+#: cogs/config/tickets/panel.py:877
 msgid "Support tickets"
 msgstr "Tickets de support"
 
-#: cogs/config/tickets/panel.py:879
+#: cogs/config/tickets/panel.py:881
 msgid "Need a hand? Click below and I will open a private thread for you and the staff team."
 msgstr "Besoin d'un coup de main ? Clique ci-dessous et j'ouvrirai un fil privé pour toi et l'équipe."
 
-#: cogs/config/tickets/panel.py:891
+#: cogs/config/tickets/panel.py:893
 #, python-brace-format
 msgid "I could not post the panel in {channel}."
 msgstr "Je n'ai pas pu publier le panneau dans {channel}."
 
-#: cogs/config/tickets/panel.py:897
+#: cogs/config/tickets/panel.py:899
 #, python-brace-format
 msgid "Tickets are on - the panel is up in {channel}. {jump}"
 msgstr "Les tickets sont activés - le panneau est en place dans {channel}. {jump}"
 
-#: cogs/config/tickets/panel.py:927
+#: cogs/config/tickets/panel.py:929
 #, python-brace-format
 msgid "Support role: {role} | Log channel: {log} | setup only changes the options you name."
 msgstr "Rôle de support : {role} | Salon des logs : {log} | setup ne modifie que les options que tu précises."
 
-#: cogs/config/tickets/panel.py:949
+#: cogs/config/tickets/panel.py:951
 #, python-brace-format
 msgid "Heads up: {role} is missing {permissions} in {channel}. A ticket is a private thread, so staff can only see it with Manage Threads on the channel - without it they will be pinged into tickets they cannot open."
 msgstr "Attention : {role} n'a pas {permissions} dans {channel}. Un ticket est un fil privé, donc l'équipe ne peut le voir qu'avec Gérer les fils sur le salon - sans cela, elle sera pingée dans des tickets qu'elle ne pourra pas ouvrir."
 
-#: cogs/config/tickets/panel.py:1001
+#: cogs/config/tickets/panel.py:1031
 msgid "Tickets are off. Threads that are already open stay where they are, and the panel button will say tickets are not set up."
 msgstr "Les tickets sont désactivés. Les fils déjà ouverts restent en place, et le bouton du panneau indiquera que les tickets ne sont pas configurés."
 
@@ -9312,11 +9457,6 @@ msgstr "Un problème est survenu avec cette demande."
 msgid "Pick a text channel for the request panel."
 msgstr "Choisis un salon textuel pour le panneau de demandes."
 
-#: cogs/music/requests.py:231
-#, python-brace-format
-msgid "I cannot send messages in {channel}."
-msgstr "Je ne peux pas envoyer de messages dans {channel}."
-
 #: cogs/music/requests.py:249
 #, python-brace-format
 msgid "{channel} already has a request panel."
@@ -10634,56 +10774,56 @@ msgstr "Expulsions, bannissements, avertissements, automod et logs de modératio
 msgid "Welcome messages, starboard, custom commands and more."
 msgstr "Messages de bienvenue, starboard, commandes personnalisées et plus."
 
-#: cogs/system/help.py:140
+#: cogs/system/help.py:141
 msgid "Reaction roles, role menus, button roles and verification."
 msgstr "Rôles par réaction, menus de rôles, rôles par bouton et vérification."
 
-#: cogs/system/help.py:148
+#: cogs/system/help.py:149
 msgid "Anything not yet sorted into a category."
 msgstr "Tout ce qui n'est pas encore classé dans une catégorie."
 
-#: cogs/system/help.py:250 cogs/system/help.py:297 cogs/system/help.py:310
-#: cogs/system/help.py:790
+#: cogs/system/help.py:251 cogs/system/help.py:298 cogs/system/help.py:311
+#: cogs/system/help.py:791
 msgid "No description provided."
 msgstr "Aucune description fournie."
 
-#: cogs/system/help.py:302 cogs/system/help.py:794
+#: cogs/system/help.py:303 cogs/system/help.py:795
 msgid "Aliases"
 msgstr "Alias"
 
-#: cogs/system/help.py:315
+#: cogs/system/help.py:316
 #, python-brace-format
 msgid "This command has {count}. Toggle expansion in /preferences, or use `{prefix}help {group} <subcommand>`."
 msgstr "Cette commande en a {count}. Activez le développement dans /preferences, ou utilisez `{prefix}help {group} <subcommand>`."
 
-#: cogs/system/help.py:320
+#: cogs/system/help.py:321
 #, python-brace-format
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
 msgstr[0] "{n} sous-commande"
 msgstr[1] "{n} sous-commandes"
 
-#: cogs/system/help.py:325
+#: cogs/system/help.py:326
 msgid "Subcommands"
 msgstr "Sous-commandes"
 
-#: cogs/system/help.py:354
+#: cogs/system/help.py:355
 msgid "Jump to a category..."
 msgstr "Accéder à une catégorie..."
 
-#: cogs/system/help.py:423 cogs/system/help.py:552 cogs/system/help.py:571
+#: cogs/system/help.py:424 cogs/system/help.py:553 cogs/system/help.py:572
 #, python-brace-format
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] "{n} commande"
 msgstr[1] "{n} commandes"
 
-#: cogs/system/help.py:484
+#: cogs/system/help.py:485
 #, python-brace-format
 msgid "{bot} • Help"
 msgstr "{bot} • Aide"
 
-#: cogs/system/help.py:486
+#: cogs/system/help.py:487
 #, python-brace-format
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
@@ -10694,19 +10834,19 @@ msgstr ""
 "\n"
 "Utilisez le menu pour accéder à une catégorie, les flèches pour naviguer, ou `{prefix}help <command>` pour une commande spécifique."
 
-#: cogs/system/help.py:512
+#: cogs/system/help.py:513
 msgid "Enabled ✅"
 msgstr "Activé ✅"
 
-#: cogs/system/help.py:512
+#: cogs/system/help.py:513
 msgid "Disabled ❌"
 msgstr "Désactivé ❌"
 
-#: cogs/system/help.py:520
+#: cogs/system/help.py:521
 msgid "🏠 Server"
 msgstr "🏠 Serveur"
 
-#: cogs/system/help.py:523
+#: cogs/system/help.py:524
 #, python-brace-format
 msgid ""
 "Prefix: `{prefix}`\n"
@@ -10717,66 +10857,66 @@ msgstr ""
 "Membres : **{members}**\n"
 "Niveaux : {leveling}"
 
-#: cogs/system/help.py:535
+#: cogs/system/help.py:536
 msgid "🏠 Direct Messages"
 msgstr "🏠 Messages privés"
 
-#: cogs/system/help.py:537
+#: cogs/system/help.py:538
 #, python-brace-format
 msgid "Default prefix: `{prefix}`"
 msgstr "Préfixe par défaut : `{prefix}`"
 
-#: cogs/system/help.py:563
+#: cogs/system/help.py:564
 msgid "📚 Categories"
 msgstr "📚 Catégories"
 
-#: cogs/system/help.py:569
+#: cogs/system/help.py:570
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
 msgstr "{commands} réparties dans {categories} • Utilisez le menu ou les flèches pour explorer"
 
-#: cogs/system/help.py:575
+#: cogs/system/help.py:576
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] "{n} catégorie"
 msgstr[1] "{n} catégories"
 
-#: cogs/system/help.py:584
+#: cogs/system/help.py:585
 #, python-brace-format
 msgid "Category {current}/{total} • {prefix}help <command> for details"
 msgstr "Catégorie {current}/{total} • {prefix}help <command> pour les détails"
 
-#: cogs/system/help.py:590
+#: cogs/system/help.py:591
 #, python-brace-format
 msgid "...more commands available. Use `{prefix}help <command>` to see them."
 msgstr "...d'autres commandes disponibles. Utilisez `{prefix}help <command>` pour les voir."
 
-#: cogs/system/help.py:607
+#: cogs/system/help.py:608
 msgid "No commands available."
 msgstr "Aucune commande disponible."
 
-#: cogs/system/help.py:672
+#: cogs/system/help.py:673
 msgid "Something went wrong opening the help menu."
 msgstr "Une erreur est survenue à l'ouverture du menu d'aide."
 
-#: cogs/system/help.py:741
+#: cogs/system/help.py:742
 msgid "Collapse subcommands"
 msgstr "Réduire les sous-commandes"
 
-#: cogs/system/help.py:741
+#: cogs/system/help.py:742
 msgid "Expand subcommands"
 msgstr "Développer les sous-commandes"
 
-#: cogs/system/help.py:758
+#: cogs/system/help.py:759
 msgid "Something went wrong updating that preference."
 msgstr "Une erreur est survenue lors de la mise à jour de cette préférence."
 
-#: cogs/system/help.py:774 cogs/system/help.py:814
+#: cogs/system/help.py:775 cogs/system/help.py:815
 msgid "Help"
 msgstr "Aide"
 
-#: cogs/system/help.py:776
+#: cogs/system/help.py:777
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
 msgstr "Utilisez `{prefix}help <command>` pour plus d'infos sur une commande."
@@ -11004,8 +11144,8 @@ msgstr "Yasuho reste dans ton salon vocal, même quand la file est vide."
 msgid "**Extended server playlists**"
 msgstr "**Playlists serveur étendues**"
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:166
-#: tests/cogs/test_premium_panel.py:170
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:167
+#: tests/cogs/test_premium_panel.py:171
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr "Jusqu'à {count} playlists de {tracks} morceaux."
@@ -13512,6 +13652,52 @@ msgstr "Un embed peut comporter au maximum {limit} champs."
 #: tools/embed_creator.py:789
 msgid "Could not open the guide."
 msgstr "Impossible d'ouvrir le guide."
+
+#: tools/forumsolved.py:107
+msgid "Use this inside a forum post."
+msgstr "Utilisez ceci dans un post de forum."
+
+#: tools/forumsolved.py:111
+msgid "Only the post's author or someone who can manage threads can do that."
+msgstr "Seul l'auteur du post ou quelqu'un pouvant gérer les fils peut faire cela."
+
+#: tools/forumsolved.py:116
+msgid "I need the Manage Threads permission to close forum posts."
+msgstr "J'ai besoin de la permission Gérer les fils pour fermer les posts de forum."
+
+#: tools/forumsolved.py:130
+#, python-brace-format
+msgid "Marked as solved by {user}."
+msgstr "Marqué comme résolu par {user}."
+
+#: tools/forumsolved.py:132
+#, python-brace-format
+msgid "The post could not take the {tag} tag, so I left the tags as they were."
+msgstr "Le post n'a pas pu recevoir le tag {tag}, j'ai donc laissé les tags tels quels."
+
+#: tools/forumsolved.py:155
+msgid "I could not update that post."
+msgstr "Je n'ai pas pu mettre à jour ce post."
+
+#: tools/forumsolved.py:169
+msgid "That forum has no tag with that name."
+msgstr "Ce forum n'a aucun tag portant ce nom."
+
+#: tools/forumsolved.py:184
+msgid "Forum solved settings"
+msgstr "Réglages des forums résolus"
+
+#: tools/forumsolved.py:185
+msgid "Title prefix"
+msgstr "Préfixe du titre"
+
+#: tools/forumsolved.py:186
+msgid "Lock when closed"
+msgstr "Verrouiller à la fermeture"
+
+#: tools/forumsolved.py:188
+msgid "Forums with a chosen tag"
+msgstr "Forums avec un tag choisi"
 
 #: tools/interactions.py:91
 #, python-brace-format

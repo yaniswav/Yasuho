@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-30 12:16+0000\n"
+"POT-Creation-Date: 2026-10-30 13:03+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -458,7 +458,7 @@ msgid "Edit"
 msgstr "Επεξεργασία"
 
 #: cogs/anilist/collection.py:381 cogs/anilist/feed_views.py:1308
-#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:477
+#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:479
 #: cogs/config/rooms_config.py:489 tools/views.py:80
 msgid "This panel isn't for you."
 msgstr "Αυτό το πάνελ δεν είναι για εσένα."
@@ -780,7 +780,7 @@ msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή A
 #: cogs/anilist/feed.py:2910 cogs/anilist/feed_views.py:658
 #: cogs/anilist/feed_views.py:953 cogs/anilist/feed_views.py:1349
 #: cogs/anilist/feed_views.py:1399 cogs/community/reminders.py:723
-#: cogs/config/rooms.py:1116 cogs/config/rooms_config.py:430
+#: cogs/config/rooms.py:1183 cogs/config/rooms_config.py:430
 #: cogs/music/playlists_shared.py:355 cogs/music/views.py:2475
 msgid "(archived)"
 msgstr "(αρχειοθετημένο)"
@@ -1071,6 +1071,7 @@ msgstr "Τα μέλη μπορούν να μπουν: {state}"
 #: cogs/config/welcome.py:583 cogs/config/welcome.py:585
 #: cogs/config/welcome.py:587 cogs/config/welcome.py:701
 #: cogs/config/welcome.py:703 cogs/config/welcome.py:705
+#: tools/forumsolved.py:185 tools/forumsolved.py:186
 msgid "On"
 msgstr "Ενεργό"
 
@@ -1078,7 +1079,8 @@ msgstr "Ενεργό"
 #: cogs/config/welcome.py:245 cogs/config/welcome.py:583
 #: cogs/config/welcome.py:585 cogs/config/welcome.py:587
 #: cogs/config/welcome.py:701 cogs/config/welcome.py:703
-#: cogs/config/welcome.py:705 cogs/music/views.py:520
+#: cogs/config/welcome.py:705 cogs/music/views.py:520 tools/forumsolved.py:185
+#: tools/forumsolved.py:186
 msgid "Off"
 msgstr "Ανενεργό"
 
@@ -1237,7 +1239,7 @@ msgstr "Διαγραφή"
 
 #: cogs/anilist/feed_views.py:1065 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
-#: cogs/community/usersettings.py:246 cogs/community/usersettings.py:357
+#: cogs/community/usersettings.py:246 cogs/community/usersettings.py:359
 #: cogs/config/tickets/lifecycle.py:280 cogs/music/playlists_shared.py:399
 #: cogs/system/arg_completion.py:286
 msgid "Cancel"
@@ -1436,7 +1438,7 @@ msgstr "Δεν ήταν δυνατό το άνοιγμα της φόρμας κ�
 #: cogs/anilist/lookup.py:39 cogs/config/settings.py:52
 #: cogs/config/settings.py:173 cogs/config/settings.py:182
 #: cogs/config/settings.py:196 cogs/config/settings.py:204
-#: cogs/system/help.py:517 cogs/utility/info.py:36 cogs/utility/info.py:148
+#: cogs/system/help.py:518 cogs/utility/info.py:36 cogs/utility/info.py:148
 msgid "Unknown"
 msgstr "Άγνωστο"
 
@@ -1902,6 +1904,7 @@ msgstr "π.χ. 10m, αύριο στις 18:00, ή μια ετικέτα <t:...>"
 #: cogs/config/milestones.py:262 cogs/config/reactionroles.py:226
 #: cogs/config/reactionroles.py:342 cogs/config/twitch.py:36
 #: cogs/config/twitch.py:458 cogs/config/welcome.py:952
+#: cogs/config/youtube.py:460
 msgid "Message"
 msgstr "Μήνυμα"
 
@@ -2109,61 +2112,65 @@ msgid "Your temporary-role records are gone."
 msgstr "Τα αρχεία των προσωρινών ρόλων σας έχουν διαγραφεί."
 
 #: cogs/community/usersettings.py:304
+msgid "Your remembered voice room settings are gone."
+msgstr "Οι αποθηκευμένες ρυθμίσεις των δωματίων φωνής σας διαγράφηκαν."
+
+#: cogs/community/usersettings.py:306
 msgid "Your top.gg vote record is gone too."
 msgstr "Το ιστορικό ψήφων σου στο top.gg διαγράφηκε επίσης."
 
-#: cogs/community/usersettings.py:306
+#: cogs/community/usersettings.py:308
 msgid "So is your personal rank card."
 msgstr "Το ίδιο και η προσωπική σου κάρτα rank."
 
-#: cogs/community/usersettings.py:309
+#: cogs/community/usersettings.py:311
 msgid "Your AniList link is gone as well, and your episode and chapter alert opt-ins with it."
 msgstr "Ο σύνδεσμός σου με το AniList διαγράφηκε επίσης, και μαζί του οι εγγραφές σου στις ειδοποιήσεις επεισοδίων και κεφαλαίων."
 
-#: cogs/community/usersettings.py:314
+#: cogs/community/usersettings.py:316
 msgid "Your Pack Confort purchase record is gone from our database too (it comes back automatically if you still hold that purchase), and so is the note of your last premium offer reminder."
 msgstr "Η καταγραφή της αγοράς σου Pack Confort διαγράφηκε κι αυτή από τη βάση μας (επιστρέφει αυτόματα αν έχεις ακόμα αυτή την αγορά), όπως και η σημείωση της τελευταίας υπενθύμισης premium προσφοράς."
 
-#: cogs/community/usersettings.py:325
+#: cogs/community/usersettings.py:327
 msgid "Something went wrong deleting your profile."
 msgstr "Κάτι πήγε στραβά κατά τη διαγραφή του προφίλ σου."
 
-#: cogs/community/usersettings.py:335
+#: cogs/community/usersettings.py:337
 msgid "Profile deletion cancelled."
 msgstr "Η διαγραφή του προφίλ ακυρώθηκε."
 
-#: cogs/community/usersettings.py:356
+#: cogs/community/usersettings.py:358
 msgid "Delete my avatar history"
 msgstr "Διάγραψε το ιστορικό avatar μου"
 
-#: cogs/community/usersettings.py:377
+#: cogs/community/usersettings.py:379
 #, python-brace-format
 msgid "Deleted {count} saved image(s) ({size}). Future avatar tracking is now turned off."
 msgstr "Διαγράφηκαν {count} αποθηκευμένες εικόνες ({size}). Η μελλοντική παρακολούθηση avatar είναι πλέον απενεργοποιημένη."
 
-#: cogs/community/usersettings.py:388
+#: cogs/community/usersettings.py:390
 msgid "Something went wrong deleting your avatar history."
 msgstr "Κάτι πήγε στραβά κατά τη διαγραφή του ιστορικού avatar σου."
 
-#: cogs/community/usersettings.py:398
+#: cogs/community/usersettings.py:400
 msgid "Avatar history deletion cancelled."
 msgstr "Η διαγραφή ιστορικού avatar ακυρώθηκε."
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:413
+#: cogs/community/usersettings.py:415
 msgid "Turn off"
 msgstr "Απενεργοποίηση"
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:413
+#: cogs/community/usersettings.py:415
 msgid "Turn on"
 msgstr "Ενεργοποίηση"
 
-#: cogs/community/usersettings.py:497
+#: cogs/community/usersettings.py:499
 msgid "## Your preferences"
 msgstr "## Οι προτιμήσεις σου"
 
-#: cogs/community/usersettings.py:501
+#: cogs/community/usersettings.py:503
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
@@ -2171,15 +2178,15 @@ msgstr ""
 "Αυτές οι ρυθμίσεις επηρεάζουν μόνο **εσένα**, όπου κι αν με χρησιμοποιούν.\n"
 "Χρησιμοποίησε το κουμπί δίπλα σε μια προτίμηση για να την ενεργοποιήσεις ή να την απενεργοποιήσεις."
 
-#: cogs/community/usersettings.py:511
+#: cogs/community/usersettings.py:513
 msgid "ON"
 msgstr "ON"
 
-#: cogs/community/usersettings.py:511
+#: cogs/community/usersettings.py:513
 msgid "OFF"
 msgstr "OFF"
 
-#: cogs/community/usersettings.py:512
+#: cogs/community/usersettings.py:514
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
@@ -2188,7 +2195,7 @@ msgstr ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:534
+#: cogs/community/usersettings.py:536
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {value}\n"
@@ -2197,70 +2204,74 @@ msgstr ""
 "{emoji} **{label}** - {value}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:548
+#: cogs/community/usersettings.py:550
 msgid "-# Only you can use these controls."
 msgstr "-# Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου."
 
-#: cogs/community/usersettings.py:574 cogs/community/usersettings.py:594
-#: cogs/community/usersettings.py:614
+#: cogs/community/usersettings.py:576 cogs/community/usersettings.py:596
+#: cogs/community/usersettings.py:616
 msgid "Something went wrong updating that setting."
 msgstr "Κάτι πήγε στραβά κατά την ενημέρωση αυτής της ρύθμισης."
 
-#: cogs/community/usersettings.py:673
+#: cogs/community/usersettings.py:675
 #, python-brace-format
 msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
 msgstr "Χρησιμοποίησε `{prefix}mydata export` για να λάβεις τα δεδομένα σου, `{prefix}mydata deleteprofile` για να διαγράψεις το προφίλ σου, ή `{prefix}mydata deleteavatars` για να διαγράψεις τα αποθηκευμένα avatar."
 
-#: cogs/community/usersettings.py:746
+#: cogs/community/usersettings.py:748
 msgid "I sent your data export to you by direct message."
 msgstr "Σου έστειλα την εξαγωγή δεδομένων σου με άμεσο μήνυμα."
 
 #: cogs/community/profile/connectors/cog.py:280
-#: cogs/community/usersettings.py:750
+#: cogs/community/usersettings.py:752
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "Δεν κατάφερα να σου στείλω άμεσο μήνυμα. Ενεργοποίησε τα DMs, σε παρακαλώ."
 
-#: cogs/community/usersettings.py:755
+#: cogs/community/usersettings.py:757
 msgid "Something went wrong building your data export."
 msgstr "Κάτι πήγε στραβά κατά τη δημιουργία της εξαγωγής δεδομένων σου."
 
-#: cogs/community/usersettings.py:778
+#: cogs/community/usersettings.py:780
 msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
 msgstr "Αυτό διαγράφει μόνιμα το βιογραφικό σου, τις αντωνυμίες σου, το χρώμα τονισμού σου, τα προσαρμοσμένα πεδία σου, τα gaming IDs σου και κάθε επιλογή που έκανες σχετικά με το ποιος μπορούσε να τα δει. Αυτό δεν μπορεί να αναιρεθεί."
 
-#: cogs/community/usersettings.py:784
+#: cogs/community/usersettings.py:786
 msgid "It also deletes your top.gg vote record: your vote streak and your lifetime vote count start over from zero."
 msgstr "Διαγράφει επίσης το ιστορικό ψήφων σου στο top.gg: το σερί ψήφων και το συνολικό σου άθροισμα ξεκινούν πάλι από το μηδέν."
 
-#: cogs/community/usersettings.py:789
+#: cogs/community/usersettings.py:791
 msgid "Your scheduled announcements and their pending deliveries will be deleted."
 msgstr "Οι προγραμματισμένες ανακοινώσεις σου και οι εκκρεμείς αποστολές τους θα διαγραφούν."
 
-#: cogs/community/usersettings.py:793
+#: cogs/community/usersettings.py:795
 msgid "It also deletes your suggestions and your votes, and removes the posted suggestion messages where I can. Their discussion threads stay for the other members, renamed and locked."
 msgstr "Διαγράφει επίσης τις προτάσεις και τις ψήφους σου, και αφαιρεί τα δημοσιευμένα μηνύματα προτάσεων όπου μπορώ. Τα νήματα συζήτησής τους μένουν για τα υπόλοιπα μέλη, μετονομασμένα και κλειδωμένα."
 
-#: cogs/community/usersettings.py:798
+#: cogs/community/usersettings.py:800
 msgid "It also deletes your shared birthdays, in every server."
 msgstr "Διαγράφει επίσης τα κοινοποιημένα γενέθλιά σου, σε όλους τους διακομιστές."
 
-#: cogs/community/usersettings.py:801
+#: cogs/community/usersettings.py:803
 msgid "It also forgets your temporary roles; the scheduled removal is kept until it runs (at most 90 days)."
 msgstr "Ξεχνά επίσης τους προσωρινούς ρόλους σας· η προγραμματισμένη αφαίρεση διατηρείται έως ότου εκτελεστεί (το πολύ 90 ημέρες)."
 
-#: cogs/community/usersettings.py:806
+#: cogs/community/usersettings.py:807
+msgid "It also forgets your remembered voice room settings, in every server."
+msgstr "Ξεχνάω επίσης τις αποθηκευμένες ρυθμίσεις των δωματίων φωνής σας, σε όλους τους διακομιστές."
+
+#: cogs/community/usersettings.py:810
 msgid "And your personal rank card: the background image you uploaded and the accent colour you picked."
 msgstr "Και η προσωπική σου κάρτα rank: η εικόνα φόντου που ανέβασες και το χρώμα έμφασης που διάλεξες."
 
-#: cogs/community/usersettings.py:811
+#: cogs/community/usersettings.py:815
 msgid "And your AniList link: the stored login is deleted, so relinking needs a fresh sign-in with AniList. Your episode and chapter alert opt-ins go with it."
 msgstr "Και ο σύνδεσμός σου με το AniList: η αποθηκευμένη σύνδεση διαγράφεται, οπότε η επανασύνδεση απαιτεί νέα είσοδο στο AniList. Οι εγγραφές σου στις ειδοποιήσεις επεισοδίων και κεφαλαίων φεύγουν μαζί."
 
-#: cogs/community/usersettings.py:817
+#: cogs/community/usersettings.py:821
 msgid "And your Pack Confort purchase record: it comes back on its own if you still hold that purchase, the next time we check with Discord. Also the note of when you last saw a premium offer reminder, so you may see one again sooner than usual."
 msgstr "Και η καταγραφή της αγοράς σου Pack Confort: επιστρέφει μόνη της στον επόμενο έλεγχο με το Discord αν έχεις ακόμα αυτή την αγορά. Επίσης η σημείωση για το πότε είδες τελευταία φορά μια υπενθύμιση premium προσφοράς, οπότε μπορεί να δεις μία ξανά νωρίτερα από το συνηθισμένο."
 
-#: cogs/community/usersettings.py:834
+#: cogs/community/usersettings.py:838
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "Αυτό διαγράφει οριστικά κάθε αποθηκευμένο γενικό avatar, avatar διακομιστή και banner για τον λογαριασμό σου. Απενεργοποιεί επίσης τη μελλοντική παρακολούθηση. Αυτή η ενέργεια δεν αναιρείται."
 
@@ -4007,7 +4018,7 @@ msgid "You need these permissions in {channel} yourself before you can schedule 
 msgstr "Χρειάζεσαι κι εσύ αυτά τα δικαιώματα στο {channel} για να προγραμματίσεις εκεί εβδομαδιαία σύνοψη: {permissions}."
 
 #: cogs/community/serverstats/cog.py:956 cogs/community/serverstats/cog.py:1054
-#: cogs/config/tickets/panel.py:675 cogs/config/tickets/panel.py:819
+#: cogs/config/tickets/panel.py:675 cogs/config/tickets/panel.py:821
 #, python-brace-format
 msgid "I need these permissions in {channel} first: {permissions}."
 msgstr "Χρειάζομαι πρώτα αυτά τα δικαιώματα στο {channel}: {permissions}."
@@ -4636,7 +4647,8 @@ msgid "Ping"
 msgstr "Ping"
 
 #: cogs/config/announcements.py:321 cogs/config/customcommands.py:34
-#: cogs/moderation/automod_panel.py:322 cogs/moderation/automod_panel.py:324
+#: cogs/config/youtube.py:453 cogs/moderation/automod_panel.py:322
+#: cogs/moderation/automod_panel.py:324 tools/forumsolved.py:188
 msgid "None"
 msgstr "Κανένα"
 
@@ -4882,7 +4894,8 @@ msgstr "Κάτι πήγε στραβά κατά τη δημοσίευση του
 msgid "Your button-role panel is live in {channel}."
 msgstr "Το πάνελ ρόλων-κουμπιών σου είναι ενεργό στο {channel}."
 
-#: cogs/config/buttonroles.py:697 cogs/moderation/moderation.py:772
+#: cogs/config/buttonroles.py:697 cogs/config/youtube.py:457
+#: cogs/moderation/moderation.py:772
 msgid "Skipped"
 msgstr "Παραλείφθηκε"
 
@@ -5220,7 +5233,7 @@ msgstr[1] "{count} κουμπιά"
 msgid "Selected: {name}"
 msgstr "Επιλέχθηκε: {name}"
 
-#: cogs/config/customcommands.py:710
+#: cogs/config/customcommands.py:710 cogs/config/youtube.py:464
 #, python-brace-format
 msgid "Placeholders: {placeholders}"
 msgstr "Placeholders: {placeholders}"
@@ -5626,86 +5639,86 @@ msgstr "Το μενού ρόλων δημοσιεύτηκε στο {channel}."
 msgid "This server already has the maximum of {n} role menus."
 msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {n} μενού ρόλων."
 
-#: cogs/config/rooms.py:562 cogs/config/rooms_config.py:525
+#: cogs/config/rooms.py:605 cogs/config/rooms_config.py:525
 #, python-brace-format
 msgid "You already have the maximum of {max_hubs} hubs."
 msgstr "Έχεις ήδη το μέγιστο των {max_hubs} hub."
 
-#: cogs/config/rooms.py:570
+#: cogs/config/rooms.py:613
 #, python-brace-format
 msgid "This server is at Discord's limit of {max} categories."
 msgstr "Αυτός ο διακομιστής βρίσκεται στο όριο του Discord των {max} κατηγοριών."
 
-#: cogs/config/rooms.py:576
+#: cogs/config/rooms.py:619
 #, python-brace-format
 msgid "This server is too close to Discord's {budget}-channel limit to add another hub."
 msgstr "Αυτός ο διακομιστής είναι πολύ κοντά στο όριο των {budget} καναλιών του Discord για να προστεθεί άλλο hub."
 
-#: cogs/config/rooms.py:602
+#: cogs/config/rooms.py:645
 msgid "Something went wrong while creating the hub's channels, and the empty category left behind could not be removed - please delete it by hand."
 msgstr "Κάτι πήγε στραβά κατά τη δημιουργία των καναλιών του hub, και η άδεια κατηγορία που έμεινε δεν μπόρεσε να διαγραφεί - διέγραψέ την χειροκίνητα."
 
-#: cogs/config/rooms.py:609
+#: cogs/config/rooms.py:652
 msgid "Something went wrong while creating the hub's channels."
 msgstr "Κάτι πήγε στραβά κατά τη δημιουργία των καναλιών του hub."
 
-#: cogs/config/rooms.py:623
+#: cogs/config/rooms.py:666
 #, python-brace-format
 msgid "Created the **{label}** hub. Members can join {channel} now."
 msgstr "Δημιουργήθηκε το hub **{label}**. Τα μέλη μπορούν να μπουν στο {channel} τώρα."
 
-#: cogs/config/rooms.py:634 cogs/config/rooms.py:705 cogs/config/rooms.py:793
+#: cogs/config/rooms.py:677 cogs/config/rooms.py:748 cogs/config/rooms.py:836
 #: cogs/config/rooms_config.py:559
 msgid "That hub no longer exists."
 msgstr "Αυτό το hub δεν υπάρχει πλέον."
 
-#: cogs/config/rooms.py:643
+#: cogs/config/rooms.py:686
 #, python-brace-format
 msgid "Updated the **{label}** hub."
 msgstr "Το hub **{label}** ενημερώθηκε."
 
-#: cogs/config/rooms.py:769
+#: cogs/config/rooms.py:812
 #, python-brace-format
 msgid "Removed the **{label}** hub from the settings, but {count} of its channels could not be deleted - please remove it by hand."
 msgid_plural "Removed the **{label}** hub from the settings, but {count} of its channels could not be deleted - please remove them by hand."
 msgstr[0] "Το hub **{label}** αφαιρέθηκε από τις ρυθμίσεις, αλλά {count} από τα κανάλια του δεν μπόρεσε να διαγραφεί - διέγραψέ το χειροκίνητα."
 msgstr[1] "Το hub **{label}** αφαιρέθηκε από τις ρυθμίσεις, αλλά {count} από τα κανάλια του δεν μπόρεσαν να διαγραφούν - διέγραψέ τα χειροκίνητα."
 
-#: cogs/config/rooms.py:776
+#: cogs/config/rooms.py:819
 #, python-brace-format
 msgid "Removed the **{label}** hub."
 msgstr "Το hub **{label}** αφαιρέθηκε."
 
-#: cogs/config/rooms.py:807
+#: cogs/config/rooms.py:850
 msgid "category"
 msgstr "κατηγορία"
 
-#: cogs/config/rooms.py:813
+#: cogs/config/rooms.py:856
 msgid "join-to-create channel"
 msgstr "κανάλι join-to-create"
 
-#: cogs/config/rooms.py:818
+#: cogs/config/rooms.py:861
 msgid "Nothing was renamed - those channels are missing."
 msgstr "Δεν μετονομάστηκε τίποτα - αυτά τα κανάλια λείπουν."
 
-#: cogs/config/rooms.py:819
+#: cogs/config/rooms.py:862
 #, python-brace-format
 msgid "Renamed the {targets}."
 msgstr "Έγινε μετονομασία: {targets}."
 
-#: cogs/config/rooms.py:1098
+#: cogs/config/rooms.py:1165
 msgid "There are no autoroom hubs set up in this server."
 msgstr "Δεν έχουν ρυθμιστεί hub αυτόματων δωματίων σε αυτόν τον διακομιστή."
 
-#: cogs/config/rooms.py:1107
+#: cogs/config/rooms.py:1174
 msgid "Autoroom hubs"
 msgstr "Hub αυτόματων δωματίων"
 
-#: cogs/config/rooms.py:1111
+#: cogs/config/rooms.py:1178
 msgid "channel missing"
 msgstr "λείπει κανάλι"
 
-#: cogs/config/rooms.py:1119
+#: cogs/config/rooms.py:1186
 #, python-brace-format
 msgid ""
 "{location}\n"
@@ -5713,6 +5726,54 @@ msgid ""
 msgstr ""
 "{location}\n"
 "{summary}"
+
+#: cogs/config/rooms.py:1203
+msgid "Saving is turned off for your rooms in this server."
+msgstr "Η αποθήκευση είναι απενεργοποιημένη για τα δωμάτιά σας σε αυτόν τον διακομιστή."
+
+#: cogs/config/rooms.py:1207
+#, python-brace-format
+msgid "Name: {name}"
+msgstr "Όνομα: {name}"
+
+#: cogs/config/rooms.py:1209
+#, python-brace-format
+msgid "User limit: {n}"
+msgstr "Όριο χρηστών: {n}"
+
+#: cogs/config/rooms.py:1211
+#, python-brace-format
+msgid "Locked: {state}"
+msgstr "Κλειδωμένο: {state}"
+
+#: cogs/config/rooms.py:1211 cogs/config/rooms.py:1213
+msgid "yes"
+msgstr "ναι"
+
+#: cogs/config/rooms.py:1211 cogs/config/rooms.py:1213
+msgid "no"
+msgstr "όχι"
+
+#: cogs/config/rooms.py:1213
+#, python-brace-format
+msgid "Hidden: {state}"
+msgstr "Κρυφό: {state}"
+
+#: cogs/config/rooms.py:1217
+msgid "Nothing is remembered for your rooms in this server."
+msgstr "Δεν υπάρχει αποθηκευμένη ρύθμιση για τα δωμάτιά σας σε αυτόν τον διακομιστή."
+
+#: cogs/config/rooms.py:1229
+msgid "Forgotten. Your next room starts from the defaults."
+msgstr "Ξεχάστηκε. Το επόμενο δωμάτιό σας θα ξεκινήσει με τις προεπιλογές."
+
+#: cogs/config/rooms.py:1239
+msgid "Your room settings will be remembered."
+msgstr "Οι ρυθμίσεις των δωματίων σας θα αποθηκευτούν."
+
+#: cogs/config/rooms.py:1241
+msgid "Your room settings are forgotten and will not be saved."
+msgstr "Οι ρυθμίσεις των δωματίων σας ξεχνιούνται και δεν θα αποθηκευτούν."
 
 #: cogs/config/rooms_config.py:71 cogs/config/rooms_panels.py:86
 msgid "User limit..."
@@ -5814,13 +5875,13 @@ msgstr "Διαχείριση του hub **{label}**:"
 msgid "Something went wrong removing that hub."
 msgstr "Κάτι πήγε στραβά κατά την αφαίρεση αυτού του hub."
 
-#: cogs/config/rooms_panels.py:100 cogs/config/rooms_panels.py:181
-#: cogs/config/rooms_panels.py:400 cogs/config/rooms_panels.py:616
+#: cogs/config/rooms_panels.py:100 cogs/config/rooms_panels.py:188
+#: cogs/config/rooms_panels.py:410 cogs/config/rooms_panels.py:632
 msgid "Only the room owner can use these controls."
 msgstr "Μόνο ο ιδιοκτήτης του δωματίου μπορεί να χρησιμοποιήσει αυτά τα στοιχεία ελέγχου."
 
-#: cogs/config/rooms_panels.py:106 cogs/config/rooms_panels.py:186
-#: cogs/config/rooms_panels.py:380 cogs/config/rooms_panels.py:622
+#: cogs/config/rooms_panels.py:106 cogs/config/rooms_panels.py:193
+#: cogs/config/rooms_panels.py:390 cogs/config/rooms_panels.py:638
 msgid "This room no longer exists."
 msgstr "Αυτό το δωμάτιο δεν υπάρχει πλέον."
 
@@ -5828,208 +5889,208 @@ msgstr "Αυτό το δωμάτιο δεν υπάρχει πλέον."
 msgid "Could not change the user limit."
 msgstr "Δεν ήταν δυνατή η αλλαγή του ορίου χρηστών."
 
-#: cogs/config/rooms_panels.py:117
+#: cogs/config/rooms_panels.py:118
 msgid "Updated the user limit."
 msgstr "Το όριο χρηστών ενημερώθηκε."
 
-#: cogs/config/rooms_panels.py:135
+#: cogs/config/rooms_panels.py:142
 msgid "Select a member to remove..."
 msgstr "Διάλεξε ένα μέλος προς αφαίρεση..."
 
-#: cogs/config/rooms_panels.py:136
+#: cogs/config/rooms_panels.py:143
 msgid "Select a member to unblacklist..."
 msgstr "Διάλεξε ένα μέλος για αφαίρεση από τη μαύρη λίστα..."
 
-#: cogs/config/rooms_panels.py:137
+#: cogs/config/rooms_panels.py:144
 msgid "Select the new owner..."
 msgstr "Διάλεξε τον νέο ιδιοκτήτη..."
 
-#: cogs/config/rooms_panels.py:140
+#: cogs/config/rooms_panels.py:147
 msgid "Select a member..."
 msgstr "Διάλεξε ένα μέλος..."
 
-#: cogs/config/rooms_panels.py:165
+#: cogs/config/rooms_panels.py:172
 msgid "Rename room"
 msgstr "Μετονομασία δωματίου"
 
-#: cogs/config/rooms_panels.py:168
+#: cogs/config/rooms_panels.py:175
 msgid "New room name"
 msgstr "Νέο όνομα δωματίου"
 
-#: cogs/config/rooms_panels.py:190
+#: cogs/config/rooms_panels.py:197
 msgid "Give the room a name."
 msgstr "Δώσε ένα όνομα στο δωμάτιο."
 
-#: cogs/config/rooms_panels.py:208
+#: cogs/config/rooms_panels.py:215
 msgid "Could not rename the room."
 msgstr "Δεν ήταν δυνατή η μετονομασία του δωματίου."
 
-#: cogs/config/rooms_panels.py:212
+#: cogs/config/rooms_panels.py:219
 #, python-brace-format
 msgid "Renamed the room to **{name}**."
 msgstr "Το δωμάτιο μετονομάστηκε σε **{name}**."
 
-#: cogs/config/rooms_panels.py:283
+#: cogs/config/rooms_panels.py:293
 msgid "## Room controls"
 msgstr "## Στοιχεία ελέγχου δωματίου"
 
-#: cogs/config/rooms_panels.py:287
+#: cogs/config/rooms_panels.py:297
 #, python-brace-format
 msgid "Owner: <@{owner_id}> - use the buttons below to manage the room."
 msgstr "Ιδιοκτήτης: <@{owner_id}> - χρησιμοποίησε τα κουμπιά παρακάτω για να διαχειριστείς το δωμάτιο."
 
-#: cogs/config/rooms_panels.py:291
+#: cogs/config/rooms_panels.py:301
 msgid "No owner right now - anyone in the room can Claim it below."
 msgstr "Κανένας ιδιοκτήτης αυτή τη στιγμή - οποιοσδήποτε στο δωμάτιο μπορεί να το διεκδικήσει παρακάτω."
 
-#: cogs/config/rooms_panels.py:301
+#: cogs/config/rooms_panels.py:311
 msgid "Slots"
 msgstr "Θέσεις"
 
-#: cogs/config/rooms_panels.py:307
+#: cogs/config/rooms_panels.py:317
 msgid "Rename"
 msgstr "Μετονομασία"
 
-#: cogs/config/rooms_panels.py:313
+#: cogs/config/rooms_panels.py:323
 msgid "Unlock"
 msgstr "Ξεκλείδωμα"
 
-#: cogs/config/rooms_panels.py:313
+#: cogs/config/rooms_panels.py:323
 msgid "Lock"
 msgstr "Κλείδωμα"
 
-#: cogs/config/rooms_panels.py:319
+#: cogs/config/rooms_panels.py:329
 msgid "Unhide"
 msgstr "Εμφάνιση"
 
-#: cogs/config/rooms_panels.py:319
+#: cogs/config/rooms_panels.py:329
 msgid "Hide"
 msgstr "Απόκρυψη"
 
-#: cogs/config/rooms_panels.py:325
+#: cogs/config/rooms_panels.py:335
 msgid "Kick + blacklist"
 msgstr "Αποβολή + μαύρη λίστα"
 
-#: cogs/config/rooms_panels.py:333
+#: cogs/config/rooms_panels.py:343
 msgid "Remove from blacklist"
 msgstr "Αφαίρεση από μαύρη λίστα"
 
-#: cogs/config/rooms_panels.py:339
+#: cogs/config/rooms_panels.py:349
 msgid "Transfer lead"
 msgstr "Μεταβίβαση ιδιοκτησίας"
 
-#: cogs/config/rooms_panels.py:345
+#: cogs/config/rooms_panels.py:355
 msgid "Bump to top"
 msgstr "Ανέβασμα στην κορυφή"
 
-#: cogs/config/rooms_panels.py:351 cogs/config/tickets/lifecycle.py:229
+#: cogs/config/rooms_panels.py:361 cogs/config/tickets/lifecycle.py:229
 msgid "Claim"
 msgstr "Διεκδίκηση"
 
-#: cogs/config/rooms_panels.py:362
+#: cogs/config/rooms_panels.py:372
 msgid "-# Only the room owner can use these controls (except Claim)."
 msgstr "-# Μόνο ο ιδιοκτήτης του δωματίου μπορεί να χρησιμοποιήσει αυτά τα στοιχεία ελέγχου (εκτός από τη Διεκδίκηση)."
 
-#: cogs/config/rooms_panels.py:418 cogs/config/rooms_panels.py:657
+#: cogs/config/rooms_panels.py:428 cogs/config/rooms_panels.py:673
 msgid "Unknown action."
 msgstr "Άγνωστη ενέργεια."
 
-#: cogs/config/rooms_panels.py:425
+#: cogs/config/rooms_panels.py:435
 msgid "Something went wrong with that action."
 msgstr "Κάτι πήγε στραβά με αυτή την ενέργεια."
 
-#: cogs/config/rooms_panels.py:435
+#: cogs/config/rooms_panels.py:445
 msgid "Choose a user limit for the room:"
 msgstr "Διάλεξε ένα όριο χρηστών για το δωμάτιο:"
 
-#: cogs/config/rooms_panels.py:460
+#: cogs/config/rooms_panels.py:470
 msgid "Could not change the lock."
 msgstr "Δεν ήταν δυνατή η αλλαγή του κλειδώματος."
 
-#: cogs/config/rooms_panels.py:465
+#: cogs/config/rooms_panels.py:475
 msgid "Unlocked the room - anyone can join."
 msgstr "Το δωμάτιο ξεκλειδώθηκε - οποιοσδήποτε μπορεί να μπει."
 
-#: cogs/config/rooms_panels.py:467
+#: cogs/config/rooms_panels.py:477
 msgid "Locked the room - no one new can join."
 msgstr "Το δωμάτιο κλειδώθηκε - κανένας νέος δεν μπορεί να μπει."
 
-#: cogs/config/rooms_panels.py:484
+#: cogs/config/rooms_panels.py:497
 msgid "Could not change visibility."
 msgstr "Δεν ήταν δυνατή η αλλαγή της ορατότητας."
 
-#: cogs/config/rooms_panels.py:489
+#: cogs/config/rooms_panels.py:502
 msgid "The room is visible again."
 msgstr "Το δωμάτιο είναι ξανά ορατό."
 
-#: cogs/config/rooms_panels.py:491
+#: cogs/config/rooms_panels.py:504
 msgid "Hid the room from everyone else."
 msgstr "Το δωμάτιο κρύφτηκε από όλους τους άλλους."
 
-#: cogs/config/rooms_panels.py:507
+#: cogs/config/rooms_panels.py:523
 msgid "There's no one else in the room to remove."
 msgstr "Δεν υπάρχει κανένας άλλος στο δωμάτιο για αφαίρεση."
 
-#: cogs/config/rooms_panels.py:511
+#: cogs/config/rooms_panels.py:527
 msgid "Pick who to kick and blacklist:"
 msgstr "Διάλεξε ποιον να αποβάλεις και να βάλεις στη μαύρη λίστα:"
 
-#: cogs/config/rooms_panels.py:528
+#: cogs/config/rooms_panels.py:544
 msgid "No one is blacklisted here."
 msgstr "Κανένας δεν είναι στη μαύρη λίστα εδώ."
 
-#: cogs/config/rooms_panels.py:531
+#: cogs/config/rooms_panels.py:547
 msgid "Pick who to remove from the blacklist:"
 msgstr "Διάλεξε ποιον να αφαιρέσεις από τη μαύρη λίστα:"
 
-#: cogs/config/rooms_panels.py:550
+#: cogs/config/rooms_panels.py:566
 msgid "There's no one else here to hand the room to."
 msgstr "Δεν υπάρχει κανένας άλλος εδώ για να παραδώσεις το δωμάτιο."
 
-#: cogs/config/rooms_panels.py:554
+#: cogs/config/rooms_panels.py:570
 msgid "Pick the new room owner:"
 msgstr "Διάλεξε τον νέο ιδιοκτήτη του δωματίου:"
 
-#: cogs/config/rooms_panels.py:581
+#: cogs/config/rooms_panels.py:597
 msgid "Could not bump the room."
 msgstr "Δεν ήταν δυνατό το ανέβασμα του δωματίου."
 
-#: cogs/config/rooms_panels.py:584
+#: cogs/config/rooms_panels.py:600
 msgid "Bumped the room to the top."
 msgstr "Το δωμάτιο ανέβηκε στην κορυφή."
 
-#: cogs/config/rooms_panels.py:595
+#: cogs/config/rooms_panels.py:611
 msgid "The room already has an owner who's still here."
 msgstr "Το δωμάτιο έχει ήδη ιδιοκτήτη που βρίσκεται ακόμη εδώ."
 
-#: cogs/config/rooms_panels.py:600
+#: cogs/config/rooms_panels.py:616
 msgid "Join the room first to claim it."
 msgstr "Μπες πρώτα στο δωμάτιο για να το διεκδικήσεις."
 
-#: cogs/config/rooms_panels.py:606
+#: cogs/config/rooms_panels.py:622
 msgid "You're now the owner of this room."
 msgstr "Είσαι πλέον ο/η ιδιοκτήτης αυτού του δωματίου."
 
-#: cogs/config/rooms_panels.py:628
+#: cogs/config/rooms_panels.py:644
 msgid "That member is no longer here."
 msgstr "Αυτό το μέλος δεν είναι πλέον εδώ."
 
-#: cogs/config/rooms_panels.py:640
+#: cogs/config/rooms_panels.py:656
 #, python-brace-format
 msgid "Removed and blacklisted {name}."
 msgstr "Ο/Η {name} αφαιρέθηκε και μπήκε στη μαύρη λίστα."
 
-#: cogs/config/rooms_panels.py:647
+#: cogs/config/rooms_panels.py:663
 #, python-brace-format
 msgid "Removed {name} from the blacklist."
 msgstr "Ο/Η {name} αφαιρέθηκε από τη μαύρη λίστα."
 
-#: cogs/config/rooms_panels.py:653
+#: cogs/config/rooms_panels.py:669
 #, python-brace-format
 msgid "Transferred room ownership to {name}."
 msgstr "Η ιδιοκτησία του δωματίου μεταβιβάστηκε στον/στην {name}."
 
-#: cogs/config/rooms_panels.py:660
+#: cogs/config/rooms_panels.py:676
 msgid "Could not complete that action."
 msgstr "Δεν ήταν δυνατή η ολοκλήρωση αυτής της ενέργειας."
 
@@ -6730,6 +6791,90 @@ msgstr "Τα μηνύματα καλωσορίσματος απενεργοπο�
 msgid "Welcome {member}!"
 msgstr "Καλώς ήρθες {member}!"
 
+#: cogs/config/youtube.py:269
+#, python-brace-format
+msgid ""
+"{channel} just uploaded a new video: {title}\n"
+"{url}"
+msgstr ""
+"Το {channel} μόλις ανέβασε ένα νέο βίντεο: {title}\n"
+"{url}"
+
+#: cogs/config/youtube.py:307
+msgid "I need a YouTube channel link, an @handle or a channel id."
+msgstr "Χρειάζομαι σύνδεσμο καναλιού YouTube, ένα @handle ή ένα αναγνωριστικό καναλιού."
+
+#: cogs/config/youtube.py:312
+msgid "Slow down a little, then try again in a few seconds."
+msgstr "Κάντε λίγο πιο αργά και δοκιμάστε ξανά σε μερικά δευτερόλεπτα."
+
+#: cogs/config/youtube.py:319
+msgid "I could not reach YouTube right now. Try again in a moment."
+msgstr "Δεν μπόρεσα να συνδεθώ με το YouTube αυτή τη στιγμή. Δοκιμάστε ξανά σε λίγο."
+
+#: cogs/config/youtube.py:323
+msgid "I could not find that YouTube channel."
+msgstr "Δεν μπόρεσα να βρω αυτό το κανάλι YouTube."
+
+#: cogs/config/youtube.py:326 cogs/music/requests.py:231
+#, python-brace-format
+msgid "I cannot send messages in {channel}."
+msgstr "Δεν μπορώ να στείλω μηνύματα στο {channel}."
+
+#: cogs/config/youtube.py:337
+#, python-brace-format
+msgid "This server already follows the maximum of {n} YouTube channels."
+msgstr "Αυτός ο διακομιστής ακολουθεί ήδη το μέγιστο των {n} καναλιών YouTube."
+
+#: cogs/config/youtube.py:343
+#, python-brace-format
+msgid "Following {name}. New videos will be posted in {channel}."
+msgstr "Τώρα ακολουθώ το {name}. Τα νέα βίντεο θα δημοσιεύονται στο {channel}."
+
+#: cogs/config/youtube.py:383
+msgid "This server does not follow that channel."
+msgstr "Αυτός ο διακομιστής δεν ακολουθεί αυτό το κανάλι."
+
+#: cogs/config/youtube.py:384
+msgid "Unfollowed."
+msgstr "Καταργήθηκε η παρακολούθηση."
+
+#: cogs/config/youtube.py:407
+msgid "paused (over the limit)"
+msgstr "σε παύση (πάνω από το όριο)"
+
+#: cogs/config/youtube.py:410
+msgid "This server follows no YouTube channel yet."
+msgstr "Αυτός ο διακομιστής δεν ακολουθεί ακόμη κανένα κανάλι YouTube."
+
+#: cogs/config/youtube.py:412
+msgid "Followed YouTube channels"
+msgstr "Κανάλια YouTube που ακολουθούνται"
+
+#: cogs/config/youtube.py:439
+msgid "I will not ping everyone."
+msgstr "Δεν θα αναφέρω όλους."
+
+#: cogs/config/youtube.py:450
+msgid "YouTube alerts"
+msgstr "Ειδοποιήσεις YouTube"
+
+#: cogs/config/youtube.py:452
+msgid "Ping role"
+msgstr "Ρόλος ειδοποίησης"
+
+#: cogs/config/youtube.py:457
+msgid "Shorts"
+msgstr "Shorts"
+
+#: cogs/config/youtube.py:457
+msgid "Posted"
+msgstr "Δημοσιεύτηκε"
+
+#: cogs/config/youtube.py:461
+msgid "Default"
+msgstr "Προεπιλογή"
+
 #: cogs/config/tickets/lifecycle.py:204 cogs/config/tickets/lifecycle.py:276
 msgid "Close ticket"
 msgstr "Κλείσιμο εισιτηρίου"
@@ -6992,7 +7137,7 @@ msgstr ""
 "**Ανοιχτά εισιτήρια ανά μέλος:** {cap}\n"
 "**Παράθυρο αδράνειας:** {hours}h"
 
-#: cogs/config/tickets/panel.py:126 cogs/config/tickets/panel.py:934
+#: cogs/config/tickets/panel.py:126 cogs/config/tickets/panel.py:936
 #, python-brace-format
 msgid "Closed tickets are logged in {channel}, transcript attached."
 msgstr "Τα κλειστά εισιτήρια καταγράφονται στο {channel}, με επισυναπτόμενη μεταγραφή."
@@ -7119,35 +7264,35 @@ msgstr "Ένα κλειστό εισιτήριο καταγράφεται με �
 msgid "Something went wrong saving that setting."
 msgstr "Κάτι πήγε στραβά κατά την αποθήκευση αυτής της ρύθμισης."
 
-#: cogs/config/tickets/panel.py:875
+#: cogs/config/tickets/panel.py:877
 msgid "Support tickets"
 msgstr "Εισιτήρια υποστήριξης"
 
-#: cogs/config/tickets/panel.py:879
+#: cogs/config/tickets/panel.py:881
 msgid "Need a hand? Click below and I will open a private thread for you and the staff team."
 msgstr "Χρειάζεσαι βοήθεια; Κάνε κλικ παρακάτω και θα ανοίξω ένα ιδιωτικό νήμα για εσένα και την ομάδα υποστήριξης."
 
-#: cogs/config/tickets/panel.py:891
+#: cogs/config/tickets/panel.py:893
 #, python-brace-format
 msgid "I could not post the panel in {channel}."
 msgstr "Δεν μπόρεσα να δημοσιεύσω το πάνελ στο {channel}."
 
-#: cogs/config/tickets/panel.py:897
+#: cogs/config/tickets/panel.py:899
 #, python-brace-format
 msgid "Tickets are on - the panel is up in {channel}. {jump}"
 msgstr "Τα εισιτήρια είναι ενεργά - το πάνελ είναι διαθέσιμο στο {channel}. {jump}"
 
-#: cogs/config/tickets/panel.py:927
+#: cogs/config/tickets/panel.py:929
 #, python-brace-format
 msgid "Support role: {role} | Log channel: {log} | setup only changes the options you name."
 msgstr "Ρόλος υποστήριξης: {role} | Κανάλι καταγραφής: {log} | το setup αλλάζει μόνο τις επιλογές που ονομάζεις."
 
-#: cogs/config/tickets/panel.py:949
+#: cogs/config/tickets/panel.py:951
 #, python-brace-format
 msgid "Heads up: {role} is missing {permissions} in {channel}. A ticket is a private thread, so staff can only see it with Manage Threads on the channel - without it they will be pinged into tickets they cannot open."
 msgstr "Προσοχή: στον ρόλο {role} λείπουν τα {permissions} στο {channel}. Ένα εισιτήριο είναι ιδιωτικό νήμα, οπότε το προσωπικό μπορεί να το δει μόνο με το Διαχείριση Νημάτων στο κανάλι - χωρίς αυτό θα λαμβάνουν ειδοποίηση σε εισιτήρια που δεν μπορούν να ανοίξουν."
 
-#: cogs/config/tickets/panel.py:1001
+#: cogs/config/tickets/panel.py:1031
 msgid "Tickets are off. Threads that are already open stay where they are, and the panel button will say tickets are not set up."
 msgstr "Τα εισιτήρια είναι απενεργοποιημένα. Τα νήματα που είναι ήδη ανοιχτά παραμένουν όπως είναι, και το κουμπί του πάνελ θα αναφέρει ότι τα εισιτήρια δεν έχουν ρυθμιστεί."
 
@@ -9312,11 +9457,6 @@ msgstr "Κάτι πήγε στραβά με αυτό το αίτημα."
 msgid "Pick a text channel for the request panel."
 msgstr "Επίλεξε ένα κανάλι κειμένου για τον πίνακα αιτημάτων."
 
-#: cogs/music/requests.py:231
-#, python-brace-format
-msgid "I cannot send messages in {channel}."
-msgstr "Δεν μπορώ να στείλω μηνύματα στο {channel}."
-
 #: cogs/music/requests.py:249
 #, python-brace-format
 msgid "{channel} already has a request panel."
@@ -10634,56 +10774,56 @@ msgstr "Kicks, bans, προειδοποιήσεις, automod και αρχεία
 msgid "Welcome messages, starboard, custom commands and more."
 msgstr "Μηνύματα καλωσορίσματος, starboard, προσαρμοσμένες εντολές και άλλα."
 
-#: cogs/system/help.py:140
+#: cogs/system/help.py:141
 msgid "Reaction roles, role menus, button roles and verification."
 msgstr "Ρόλοι με αντίδραση, μενού ρόλων, ρόλοι με κουμπιά και επαλήθευση."
 
-#: cogs/system/help.py:148
+#: cogs/system/help.py:149
 msgid "Anything not yet sorted into a category."
 msgstr "Ο,τι δεν έχει ακόμα ταξινομηθεί σε κατηγορία."
 
-#: cogs/system/help.py:250 cogs/system/help.py:297 cogs/system/help.py:310
-#: cogs/system/help.py:790
+#: cogs/system/help.py:251 cogs/system/help.py:298 cogs/system/help.py:311
+#: cogs/system/help.py:791
 msgid "No description provided."
 msgstr "Δεν δόθηκε περιγραφή."
 
-#: cogs/system/help.py:302 cogs/system/help.py:794
+#: cogs/system/help.py:303 cogs/system/help.py:795
 msgid "Aliases"
 msgstr "Συνώνυμα"
 
-#: cogs/system/help.py:315
+#: cogs/system/help.py:316
 #, python-brace-format
 msgid "This command has {count}. Toggle expansion in /preferences, or use `{prefix}help {group} <subcommand>`."
 msgstr "Αυτή η εντολή έχει {count}. Εναλλάξε την ανάπτυξη στο /preferences ή χρησιμοποίησε `{prefix}help {group} <subcommand>`."
 
-#: cogs/system/help.py:320
+#: cogs/system/help.py:321
 #, python-brace-format
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
 msgstr[0] "{n} υποεντολή"
 msgstr[1] "{n} υποεντολές"
 
-#: cogs/system/help.py:325
+#: cogs/system/help.py:326
 msgid "Subcommands"
 msgstr "Υποεντολές"
 
-#: cogs/system/help.py:354
+#: cogs/system/help.py:355
 msgid "Jump to a category..."
 msgstr "Μετάβαση σε κατηγορία..."
 
-#: cogs/system/help.py:423 cogs/system/help.py:552 cogs/system/help.py:571
+#: cogs/system/help.py:424 cogs/system/help.py:553 cogs/system/help.py:572
 #, python-brace-format
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] "{n} εντολή"
 msgstr[1] "{n} εντολές"
 
-#: cogs/system/help.py:484
+#: cogs/system/help.py:485
 #, python-brace-format
 msgid "{bot} • Help"
 msgstr "{bot} • Βοήθεια"
 
-#: cogs/system/help.py:486
+#: cogs/system/help.py:487
 #, python-brace-format
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
@@ -10694,19 +10834,19 @@ msgstr ""
 "\n"
 "Χρησιμοποίησε το μενού για να μεταβείς σε μια κατηγορία, τα βέλη για περιήγηση, ή `{prefix}help <command>` για μια συγκεκριμένη εντολή."
 
-#: cogs/system/help.py:512
+#: cogs/system/help.py:513
 msgid "Enabled ✅"
 msgstr "Ενεργοποιημένο ✅"
 
-#: cogs/system/help.py:512
+#: cogs/system/help.py:513
 msgid "Disabled ❌"
 msgstr "Απενεργοποιημένο ❌"
 
-#: cogs/system/help.py:520
+#: cogs/system/help.py:521
 msgid "🏠 Server"
 msgstr "🏠 Διακομιστής"
 
-#: cogs/system/help.py:523
+#: cogs/system/help.py:524
 #, python-brace-format
 msgid ""
 "Prefix: `{prefix}`\n"
@@ -10717,66 +10857,66 @@ msgstr ""
 "Μέλη: **{members}**\n"
 "Επίπεδα: {leveling}"
 
-#: cogs/system/help.py:535
+#: cogs/system/help.py:536
 msgid "🏠 Direct Messages"
 msgstr "🏠 Προσωπικά μηνύματα"
 
-#: cogs/system/help.py:537
+#: cogs/system/help.py:538
 #, python-brace-format
 msgid "Default prefix: `{prefix}`"
 msgstr "Προεπιλεγμένο πρόθεμα: `{prefix}`"
 
-#: cogs/system/help.py:563
+#: cogs/system/help.py:564
 msgid "📚 Categories"
 msgstr "📚 Κατηγορίες"
 
-#: cogs/system/help.py:569
+#: cogs/system/help.py:570
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
 msgstr "{commands} σε {categories} • Χρησιμοποίησε το μενού ή τα βέλη για εξερεύνηση"
 
-#: cogs/system/help.py:575
+#: cogs/system/help.py:576
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] "{n} κατηγορία"
 msgstr[1] "{n} κατηγορίες"
 
-#: cogs/system/help.py:584
+#: cogs/system/help.py:585
 #, python-brace-format
 msgid "Category {current}/{total} • {prefix}help <command> for details"
 msgstr "Κατηγορία {current}/{total} • {prefix}help <command> για λεπτομέρειες"
 
-#: cogs/system/help.py:590
+#: cogs/system/help.py:591
 #, python-brace-format
 msgid "...more commands available. Use `{prefix}help <command>` to see them."
 msgstr "...υπάρχουν περισσότερες εντολές. Χρησιμοποίησε `{prefix}help <command>` για να τις δεις."
 
-#: cogs/system/help.py:607
+#: cogs/system/help.py:608
 msgid "No commands available."
 msgstr "Δεν υπάρχουν διαθέσιμες εντολές."
 
-#: cogs/system/help.py:672
+#: cogs/system/help.py:673
 msgid "Something went wrong opening the help menu."
 msgstr "Κάτι πήγε στραβά κατά το άνοιγμα του μενού βοήθειας."
 
-#: cogs/system/help.py:741
+#: cogs/system/help.py:742
 msgid "Collapse subcommands"
 msgstr "Σύμπτυξη υποεντολών"
 
-#: cogs/system/help.py:741
+#: cogs/system/help.py:742
 msgid "Expand subcommands"
 msgstr "Ανάπτυξη υποεντολών"
 
-#: cogs/system/help.py:758
+#: cogs/system/help.py:759
 msgid "Something went wrong updating that preference."
 msgstr "Κάτι πήγε στραβά κατά την ενημέρωση αυτής της προτίμησης."
 
-#: cogs/system/help.py:774 cogs/system/help.py:814
+#: cogs/system/help.py:775 cogs/system/help.py:815
 msgid "Help"
 msgstr "Βοήθεια"
 
-#: cogs/system/help.py:776
+#: cogs/system/help.py:777
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
 msgstr "Χρησιμοποίησε `{prefix}help <command>` για περισσότερες πληροφορίες σχετικά με μια εντολή."
@@ -11004,8 +11144,8 @@ msgstr "Το Yasuho μένει στο φωνητικό σου κανάλι, ακ
 msgid "**Extended server playlists**"
 msgstr "**Εκτεταμένες λίστες διακομιστή**"
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:166
-#: tests/cogs/test_premium_panel.py:170
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:167
+#: tests/cogs/test_premium_panel.py:171
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr "Έως {count} λίστες των {tracks} κομματιών."
@@ -13512,6 +13652,52 @@ msgstr "Ένα embed μπορεί να έχει το πολύ {limit} πεδία
 #: tools/embed_creator.py:789
 msgid "Could not open the guide."
 msgstr "Δεν ήταν δυνατό το άνοιγμα του οδηγού."
+
+#: tools/forumsolved.py:107
+msgid "Use this inside a forum post."
+msgstr "Χρησιμοποιήστε αυτό μέσα σε μια ανάρτηση φόρουμ."
+
+#: tools/forumsolved.py:111
+msgid "Only the post's author or someone who can manage threads can do that."
+msgstr "Μόνο ο συγγραφέας της ανάρτησης ή κάποιος που μπορεί να διαχειρίζεται νήματα μπορεί να το κάνει."
+
+#: tools/forumsolved.py:116
+msgid "I need the Manage Threads permission to close forum posts."
+msgstr "Χρειάζομαι το δικαίωμα Διαχείριση νημάτων για να κλείνω αναρτήσεις φόρουμ."
+
+#: tools/forumsolved.py:130
+#, python-brace-format
+msgid "Marked as solved by {user}."
+msgstr "Επισημάνθηκε ως επιλυμένο από τον {user}."
+
+#: tools/forumsolved.py:132
+#, python-brace-format
+msgid "The post could not take the {tag} tag, so I left the tags as they were."
+msgstr "Η ανάρτηση δεν μπόρεσε να πάρει την ετικέτα {tag}, γι' αυτό άφησα τις ετικέτες όπως ήταν."
+
+#: tools/forumsolved.py:155
+msgid "I could not update that post."
+msgstr "Δεν μπόρεσα να ενημερώσω αυτή την ανάρτηση."
+
+#: tools/forumsolved.py:169
+msgid "That forum has no tag with that name."
+msgstr "Αυτό το φόρουμ δεν έχει ετικέτα με αυτό το όνομα."
+
+#: tools/forumsolved.py:184
+msgid "Forum solved settings"
+msgstr "Ρυθμίσεις επιλυμένων φόρουμ"
+
+#: tools/forumsolved.py:185
+msgid "Title prefix"
+msgstr "Πρόθεμα τίτλου"
+
+#: tools/forumsolved.py:186
+msgid "Lock when closed"
+msgstr "Κλείδωμα όταν κλείνει"
+
+#: tools/forumsolved.py:188
+msgid "Forums with a chosen tag"
+msgstr "Φόρουμ με επιλεγμένη ετικέτα"
 
 #: tools/interactions.py:91
 #, python-brace-format
