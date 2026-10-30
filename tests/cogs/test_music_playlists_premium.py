@@ -21,6 +21,7 @@ import types
 
 import pytest
 
+from cogs.music import always_on
 from cogs.music import playlists_shared as ps
 from tools import premium
 
@@ -88,6 +89,8 @@ class _Cog(ps.ServerPlaylistMixin):
         self.bot = types.SimpleNamespace(db_pool=pool, premium=_StubPremium(limits))
         self._player = player
         self._manage_guild = manage_guild
+        # Music always carries the 24/7 store (a rename/delete retargets it).
+        self.always_on = always_on.AlwaysOnStore()
 
     async def _require_player(self, ctx, in_channel=True, control=False):
         return self._player

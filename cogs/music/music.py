@@ -44,7 +44,7 @@ from cogs.music.player import (
     seed_needs_youtube_resolution,  # noqa: F401
     youtube_seed_query,  # noqa: F401
 )
-from cogs.music.playlists_shared import ServerPlaylistMixin
+from cogs.music.playlists_shared import ServerPlaylistMixin, account_decoded
 from tools import i18n, music_state, premium, premium_upsell, settings
 from tools.i18n import _, ngettext
 from tools.premium import resolve_guild_limits
@@ -160,6 +160,17 @@ AUTOPLAY_PREF_KEY = "music_autoplay"
 # before it gives up and lets one play, so a run of nothing-but-mixes can never
 # spin forever skipping. The counter resets the instant any track plays normally.
 ANTI_MIX_SKIP_CAP = 3
+
+# 24/7 playlist (Yasuho+ V3a) refill shape. One refill reads RADIO247_BATCH
+# blobs, decodes them in one Lavalink round trip and advances the stored
+# position with one compare-and-set: one write per batch, never per track. A
+# refill is scheduled when fewer than RADIO247_LOW_WATER playlist tracks are
+# left in the lane, so the next one is always staged before the current one
+# ends. An empty or failed batch backs off RADIO247_RETRY_SECONDS so a broken
+# playlist costs one read per guild per 5 minutes, not one per tick.
+RADIO247_BATCH = 10
+RADIO247_LOW_WATER = 2
+RADIO247_RETRY_SECONDS = 300.0
 
 # How long (seconds) after a controller is posted a same-track track_start still
 # counts as a reconnect re-fire (keep the message, no flicker) rather than a
@@ -379,14 +390,41 @@ def resolve_session_autoplay(user_pref, guild_default=None):
     return True
 
 
+def is_radio247_track(track):
+    """True when ``track`` came from the 24/7 playlist (Yasuho+ V3a).
+
+    Reads the ``extras.radio247`` tag the refill stamps. Extras travel to
+    Lavalink as user data and come back on the track_start event's track, so
+    the tag survives that round trip (but not a restart: blobs carry no
+    extras). Pure and None-safe.
+    """
+    return bool(getattr(getattr(track, "extras", None), "radio247", False))
+
+
+def should_start_now(player):
+    """Whether a USER add must start playing right away (Q1 of the V3a plan).
+
+    True when nothing is playing - the historic "start from idle" rule - and
+    also when the 24/7 playlist is: a member's /play interrupts the radio
+    (``queue.get()`` serves the user lane first), it never waits behind it.
+    """
+    current = player.current
+    return current is None or is_radio247_track(current)
+
+
 def is_autoplay_track(track):
     """True when ``track`` was sourced by sonolink autoplay (a recommendation).
 
     Reads the read-only ``Playable.autoplay`` flag sonolink stamps on every
     autoplay-discovered track (in ``AutoPlayHandler._apply_discovery`` and
     ``Queue.put_autoplay``), so the controller shows its recommendation notice
-    only on autoplay-sourced tracks. Pure and None-safe.
+    only on autoplay-sourced tracks. A 24/7 playlist track rides the same lane
+    (and so carries the same flag) but is the server's own pick, not a
+    recommendation: it is excluded, which also keeps the anti-mix skip off it.
+    Pure and None-safe.
     """
+    if is_radio247_track(track):
+        return False
     return bool(getattr(track, "autoplay", False))
 
 
@@ -759,6 +797,26 @@ def purge_queue_lanes(queue: typing.Any) -> None:
     queue._autoplay_items.clear()
 
 
+def radio247_lane_count(queue: typing.Any) -> int:
+    """How many 24/7 playlist tracks wait in the autoplay lane. Pure."""
+    lane = getattr(queue, "autoplay_tracks", None) or ()
+    return sum(1 for track in lane if is_radio247_track(track))
+
+
+def drop_staged_autoplay(queue: typing.Any, *, keep_radio247: bool) -> None:
+    """Drop staged picks from the autoplay lane, in place, with no await.
+
+    ``keep_radio247=True`` (a refill) removes native autoplay recommendations
+    staged behind the 24/7 playlist, which would otherwise play before its
+    next batch; False (a config change) removes the old playlist's tracks.
+    Same private deque :func:`purge_queue_lanes` reaches for.
+    """
+    items = queue._autoplay_items
+    kept = [track for track in items if is_radio247_track(track) == keep_radio247]
+    items.clear()
+    items.extend(kept)
+
+
 # How many upcoming tracks the queue view lists per page.
 QUEUE_PAGE_SIZE = 10
 
@@ -1123,10 +1181,16 @@ def is_bot_channel_move(
 class Music(ServerPlaylistMixin, commands.Cog):
     """Music playback commands powered by sonolink (Lavalink v4)."""
 
+    # True once the startup restore (and its 24/7 bare joins) has finished: the
+    # 24/7 playlist engine stays off until then, so it never races a restore
+    # for the same player. A class default so a bare instance reads False.
+    _restore_done = False
+
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         # Guards the one-shot startup restore (on_ready can fire repeatedly).
         self._restored = False
+        self._restore_done = False
         # One live controller per guild, tracked at cog level so concurrent
         # posters (explicit restore post, track_start, reconnect re-fires) can
         # never leave two controllers standing - even across different Player
@@ -1962,6 +2026,16 @@ class Music(ServerPlaylistMixin, commands.Cog):
         # Remember what actually played so a radio refill never re-seeds it.
         player.played_ids.add(getattr(track, "identifier", None))
 
+        # 24/7 playlist: a track a human started (anything not from the
+        # playlist) lifts a /stop hold; then keep the lane stocked so the next
+        # playlist track is staged before this one ends. Cache reads only.
+        if getattr(player, "radio247_hold", False) and not is_radio247_track(track):
+            player.radio247_hold = False
+        if self._radio247_may_refill(player, guild_id, time.monotonic()) and (
+            radio247_lane_count(player.queue) < RADIO247_LOW_WATER
+        ):
+            self._schedule_radio247_refill(player, guild_id)
+
         # Saved server effect: once per player, before the controller renders so
         # the panel already shows it. The flag is set synchronously so two
         # overlapping track starts cannot both apply.
@@ -2194,6 +2268,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
 
         humans = [m for m in channel.members if not m.bot]
         if humans:
+            # A human walked into an idle 24/7 room: start its playlist.
+            if after.channel == channel and before.channel != channel:
+                self._kick_radio247_if_idle(player, channel.guild.id)
             return
 
         if self._is_247_active(channel.guild.id):
@@ -2392,6 +2469,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
                     # method's own docstring for why this is a separate
                     # check from _is_idle above.
                     await self._apply_no_listener_stop(voice_client, guild_id, now)
+                    # Safety net for a bare join / restore / failed refill:
+                    # an idle 24/7 room with a listener gets its playlist.
+                    self._kick_radio247_if_idle(voice_client, guild_id, now)
                     continue
                 if self._is_idle(voice_client):
                     if voice_client.idle_since is None:
@@ -2525,6 +2605,8 @@ class Music(ServerPlaylistMixin, commands.Cog):
             await self._restore_247_bare_joins()
         except Exception:
             log.exception("24/7 startup bare-join pass failed")
+        finally:
+            self._restore_done = True
 
     async def _restore_players(self) -> None:
         """Rejoin and resume every recently-active player, bounded-concurrently.
@@ -3411,7 +3493,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
         # An explicit query ends radio mode: a station session becomes a normal
         # one and the controller drops its station select on the next rerender.
         player.radio_genre = None
-        if player.current is None:
+        if should_start_now(player):
             # Owner decision: starting playback from idle (a user action) must
             # never inherit a stale paused flag. See resume_after_track_change.
             await player.play(player.queue.get(), paused=False)
@@ -3501,7 +3583,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
             track.extras.radio = True
             player.queue.put(track)
         player.radio_genre = genre.key
-        if replace or player.current is None:
+        if replace or should_start_now(player):
             # Owner decision: starting playback from idle (a user action) must
             # never inherit a stale paused flag. See resume_after_track_change.
             await player.play(player.queue.get(), paused=False)
@@ -3613,6 +3695,194 @@ class Music(ServerPlaylistMixin, commands.Cog):
             log.exception("Radio refill failed")
         finally:
             player._radio_refilling = False
+
+    # ------------------------------------------------------------------
+    # 24/7 playlist (Yasuho+ V3a): an idle 24/7 player plays a server playlist
+    # on its own. Its tracks ride sonolink's AUTOPLAY lane, which queue.get()
+    # serves only once the user lane is empty and which keeps native autoplay
+    # from firing while it holds anything - so members always go first and no
+    # recommendation cuts in. Every trigger below is cache reads only; the
+    # I/O (two indexed reads, one decode, one compare-and-set) happens in the
+    # background refill, once per batch of RADIO247_BATCH tracks.
+    # ------------------------------------------------------------------
+
+    def _radio247_active(self, guild_id: typing.Optional[int]) -> bool:
+        """Restore finished, a 24/7 playlist is configured, and 24/7 itself is
+        live (entitled, not suspended - which also covers a lapse). Cache only:
+        a guild without a 24/7 playlist pays one dict miss."""
+        return (
+            self._restore_done
+            and self.always_on.radio(guild_id) is not None
+            and self._is_247_active(guild_id)
+        )
+
+    def _radio247_may_refill(
+        self, player: Player, guild_id: typing.Optional[int], now: float
+    ) -> bool:
+        """The gate every trigger shares: active, not held by /stop, no refill
+        already in flight, not backing off after an empty batch."""
+        if not self._radio247_active(guild_id):
+            return False
+        if player.radio247_hold or player._radio247_refilling:
+            return False
+        return now >= player.radio247_retry_at
+
+    def _kick_radio247_if_idle(
+        self,
+        player: Player,
+        guild_id: typing.Optional[int],
+        now: typing.Optional[float] = None,
+    ) -> bool:
+        """Start the 24/7 playlist on an idle player a human is listening to.
+
+        Idle means nothing loaded and not paused (Q2: a paused player is left
+        for the human to resume). Returns whether a refill was scheduled.
+        """
+        if now is None:
+            now = time.monotonic()
+        if not self._radio247_may_refill(player, guild_id, now):
+            return False
+        if player.current is not None or player.paused:
+            return False
+        channel = player.channel
+        if channel is None or not any(not m.bot for m in channel.members):
+            return False
+        self._schedule_radio247_refill(player, guild_id)
+        return True
+
+    def radio247_refresh(self, guild_id: int) -> bool:
+        """Seam for the 24/7 playlist setting (V3a-3): the choice just changed.
+
+        Drops the previous playlist's staged tracks (the one playing finishes),
+        lifts a /stop hold and the backoff, then restocks - for the track
+        playing now, or right away when idle with a listener. With the playlist
+        turned off the gate fails and the lane simply stays empty. Returns
+        whether a refill was scheduled. No I/O here.
+        """
+        guild = self.bot.get_guild(guild_id)
+        player = getattr(guild, "voice_client", None)
+        if not isinstance(player, Player):
+            return False
+        drop_staged_autoplay(player.queue, keep_radio247=False)
+        player.radio247_hold = False
+        player.radio247_retry_at = 0.0
+        now = time.monotonic()
+        if player.current is None:
+            return self._kick_radio247_if_idle(player, guild_id, now)
+        if not self._radio247_may_refill(player, guild_id, now):
+            return False
+        self._schedule_radio247_refill(player, guild_id)
+        return True
+
+    def _schedule_radio247_refill(
+        self, player: Player, guild_id: typing.Optional[int]
+    ) -> None:
+        """Launch one background refill; the flag is set with no await between
+        check and set, so two triggers can never run two refills."""
+        if player._radio247_refilling:
+            return
+        player._radio247_refilling = True
+        task = asyncio.create_task(self._radio247_refill(player, guild_id))
+        self._refill_tasks.add(task)
+        task.add_done_callback(self._refill_tasks.discard)
+
+    def _radio247_still_wanted(
+        self, player: Player, guild_id: int, norm: str
+    ) -> bool:
+        """Re-checked after every await: same playlist, still active, not held,
+        and still THE player of that guild (not a dead one replaced by a
+        reconnect)."""
+        config = self.always_on.radio(guild_id)
+        if config is None or config[0] != norm:
+            return False
+        if not self._radio247_active(guild_id) or player.radio247_hold:
+            return False
+        guild = self.bot.get_guild(guild_id)
+        return guild is not None and guild.voice_client is player
+
+    async def _radio247_refill(
+        self, player: Player, guild_id: typing.Optional[int]
+    ) -> None:
+        """Stage the next batch of the 24/7 playlist in the autoplay lane, and
+        start it when the player is idle.
+
+        A batch is only discarded (no backoff) when the world moved under it -
+        the playlist changed, /stop held it, 24/7 lapsed, the player was
+        replaced, or the stored position moved (compare-and-set lost). An
+        empty or failed batch backs off RADIO247_RETRY_SECONDS. The lane is
+        never persisted: a restart rebuilds it from ``radio_pos``.
+        """
+        backoff = False
+        try:
+            config = self.always_on.radio(guild_id)
+            if config is None:
+                return
+            norm = config[0]
+            batch = min(RADIO247_BATCH, queue_room_left(player.queue))
+            if batch <= 0:
+                backoff = True
+                return
+            pool = self.bot.db_pool
+            state = await always_on.fetch_radio_state(pool, guild_id, norm)
+            if state is None or not state["track_count"]:
+                log.info("RADIO247-EMPTY guild=%s playlist missing or empty", guild_id)
+                backoff = True
+                return
+            pos = int(state["radio_pos"])
+            indexes = always_on.radio247_positions(
+                guild_id,
+                int(state["track_count"]),
+                pos,
+                batch,
+                bool(state["radio_shuffle"]),
+            )
+            blobs = await always_on.fetch_radio_blobs(pool, guild_id, norm, indexes)
+            stored = [blob for blob in blobs if blob]
+            try:
+                decoded = (
+                    await self.bot.sl_client.decode_tracks(*stored) if stored else []
+                )
+            except RuntimeError:
+                # No node: retry later without moving the position.
+                backoff = True
+                return
+            usable, skipped = account_decoded(decoded, len(indexes))
+            if not self._radio247_still_wanted(player, guild_id, norm):
+                return
+            # Undecodable blobs are passed over too, so a stale track can never
+            # pin the playlist on the same batch.
+            if not await always_on.advance_radio_pos(
+                pool, guild_id, norm, pos, pos + len(indexes)
+            ):
+                return
+            if not self._radio247_still_wanted(player, guild_id, norm):
+                return
+            # From here to play() there is no await: nothing can slip in
+            # between the lane check, the current-is-None check and get().
+            usable, _over_cap = fit_queue_additions(player.queue, usable)
+            if not usable:
+                backoff = True
+                return
+            drop_staged_autoplay(player.queue, keep_radio247=True)
+            for track in usable:
+                track.extras.radio247 = True
+            player.queue.put_autoplay(usable)
+            log.info(
+                "RADIO247-REFILL guild=%s +%d skipped=%d pos=%d",
+                guild_id,
+                len(usable),
+                skipped,
+                pos + len(indexes),
+            )
+            if player.current is None and not player.paused:
+                await player.play(player.queue.get(), paused=False)
+        except Exception:
+            log.exception("24/7 playlist refill failed (guild=%s)", guild_id)
+            backoff = True
+        finally:
+            player._radio247_refilling = False
+            if backoff:
+                player.radio247_retry_at = time.monotonic() + RADIO247_RETRY_SECONDS
 
     async def _start_genre(self, interaction: discord.Interaction, genre) -> None:
         """Join the author's voice channel and start (or zap to) a genre station.
@@ -4075,6 +4345,9 @@ class Music(ServerPlaylistMixin, commands.Cog):
         player = await self._require_player(ctx, control=True)
         if player is None:
             return
+        # Hold the 24/7 playlist until a human starts something (Q3); set
+        # before the await so an in-flight refill re-checks it and stands down.
+        player.radio247_hold = True
         await player.stop(clear_queue=True)
         await self._clear(ctx.guild.id)
         await ctx.send(_("Stopped playback and cleared the queue."))
@@ -4924,7 +5197,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
 
         # Playing favourites is an explicit choice: it ends any radio session.
         player.radio_genre = None
-        if player.current is None:
+        if should_start_now(player):
             # Owner decision: starting playback from idle (a user action) must
             # never inherit a stale paused flag. See resume_after_track_change.
             await player.play(player.queue.get(), paused=False)

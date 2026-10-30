@@ -441,6 +441,8 @@ async def _exec_music_stop(bot, guild_id, payload):
         if session is None:
             return {"ok": False, "reason": "no_session"}
         player, cog = session
+        # Same 24/7 playlist hold as /stop (set before the await, see there).
+        player.radio247_hold = True
         await player.stop(clear_queue=True)
         with i18n.locale(loc):
             await cog._clear(guild_id)

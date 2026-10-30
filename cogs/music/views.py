@@ -60,6 +60,7 @@ from cogs.music.music import (
     queued_track_count,
     remove_queue_index,
     resume_after_track_change,
+    should_start_now,
     station_select_options,
 )
 from cogs.music.search import truncate
@@ -295,7 +296,7 @@ class AddSongModal(LocaleModal, title="Add a song"):
             # An explicit add turns a radio session into a normal one: the station
             # select disappears on the rerender below.
             player.radio_genre = None
-            if player.current is None:
+            if should_start_now(player):
                 # Owner decision: starting playback from idle (a user action) must
                 # never inherit a stale paused flag. See resume_after_track_change.
                 await player.play(player.queue.get(), paused=False)
@@ -2214,7 +2215,7 @@ class HistoryCard(PinnedRenderLocale, LocaleLayoutView):
             # An explicit add turns a radio session into a normal one, exactly as
             # the add-track modal does.
             self.player.radio_genre = None
-            if self.player.current is None:
+            if should_start_now(self.player):
                 # Owner decision: starting playback from idle (a user action) must
                 # never inherit a stale paused flag. See resume_after_track_change.
                 await self.player.play(self.player.queue.get(), paused=False)
@@ -2664,7 +2665,7 @@ class FavouritesCard(AuthorLayoutView):
             player.queue.put(track)
             # An explicit pick ends any radio session, as every other add does.
             player.radio_genre = None
-            if player.current is None:
+            if should_start_now(player):
                 # Owner decision: starting playback from idle (a user action) must
                 # never inherit a stale paused flag. See resume_after_track_change.
                 await player.play(player.queue.get(), paused=False)

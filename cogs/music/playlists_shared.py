@@ -62,7 +62,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from cogs.music import safetext
+from cogs.music import always_on, safetext
 from cogs.music.player import VoiceConnectFailed, connect_player
 from tools import premium, premium_upsell
 from tools.formats import random_colour
@@ -524,29 +524,49 @@ class ServerPlaylistMixin:
         )
 
     async def _delete_guild_playlist(self, guild_id: int, norm: str) -> bool:
-        """Delete a playlist by normalised name; True when a row was removed."""
-        status = await self.bot.db_pool.execute(
-            "DELETE FROM guild_playlists WHERE guild_id = $1 AND name_norm = $2",
-            guild_id,
-            norm,
-        )
+        """Delete a playlist by normalised name; True when a row was removed.
+
+        A 24/7 playlist pointing at it is cleared in the same transaction, so
+        the radio never keeps a key no playlist answers to.
+        """
+        async with self.bot.db_pool.acquire() as conn:
+            async with conn.transaction():
+                status = await conn.execute(
+                    "DELETE FROM guild_playlists WHERE guild_id = $1 AND name_norm = $2",
+                    guild_id,
+                    norm,
+                )
+                await always_on.retarget_radio_row(conn, guild_id, norm, None)
+        self.always_on.retarget_radio(guild_id, norm, None)
         return status.rsplit(" ", 1)[-1] != "0"
 
     async def _rename_guild_playlist(
         self, guild_id: int, old_norm: str, new_display: str, new_norm: str
     ) -> None:
-        """Rename a playlist's display name and normalised key (caller pre-checks)."""
-        await self.bot.db_pool.execute(
-            """
-            UPDATE guild_playlists
-            SET name = $3, name_norm = $4
-            WHERE guild_id = $1 AND name_norm = $2
-            """,
-            guild_id,
-            old_norm,
-            new_display,
-            new_norm,
-        )
+        """Rename a playlist's display name and normalised key (caller pre-checks).
+
+        A 24/7 playlist pointing at it follows the new key in the same
+        transaction (its play position is kept: same tracks, new name).
+        """
+        async with self.bot.db_pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute(
+                    """
+                    UPDATE guild_playlists
+                    SET name = $3, name_norm = $4
+                    WHERE guild_id = $1 AND name_norm = $2
+                    """,
+                    guild_id,
+                    old_norm,
+                    new_display,
+                    new_norm,
+                )
+                if new_norm != old_norm:
+                    await always_on.retarget_radio_row(
+                        conn, guild_id, old_norm, new_norm
+                    )
+        if new_norm != old_norm:
+            self.always_on.retarget_radio(guild_id, old_norm, new_norm)
 
     # -- Shared command helpers -------------------------------------------
 
@@ -821,6 +841,7 @@ class ServerPlaylistMixin:
             fit_queue_additions,
             queue_full_message,
             queue_full_suffix,
+            should_start_now,
         )
 
         usable, over_cap = fit_queue_additions(player.queue, usable)
@@ -834,7 +855,7 @@ class ServerPlaylistMixin:
 
         # Loading a playlist is an explicit choice: it ends any radio session.
         player.radio_genre = None
-        if player.current is None:
+        if should_start_now(player):
             # Owner decision: starting playback from idle (a user action) must
             # never inherit a stale paused flag. See resume_after_track_change.
             await player.play(player.queue.get(), paused=False)

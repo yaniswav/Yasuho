@@ -524,6 +524,8 @@ async def test_music_stop_stops_with_the_queue_cleared_and_tears_the_session_dow
     # clear_queue=True also resets the queue MODE, so a looping session cannot
     # restart itself - byte for byte the /stop command.
     assert player.calls == [("stop", True, False)]
+    # Same 24/7 playlist hold as /stop.
+    assert player.radio247_hold is True
     # Music._clear drops music_state, the lyrics session, the vote and the
     # effect-ceiling slot, keyed by the AUTHORITATIVE guild id.
     assert cog.cleared == [GUILD_ID]

@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 import time
 import typing
 
@@ -74,8 +75,8 @@ async def _load_rows(pool: typing.Any) -> typing.List[typing.Any]:
     """Every persisted 24/7 row, oldest ``enabled_at`` first. Empty on error."""
     try:
         return await pool.fetch(
-            "SELECT guild_id, channel_id, enabled_at FROM music_247 "
-            "ORDER BY enabled_at, guild_id"
+            "SELECT guild_id, channel_id, enabled_at, radio_playlist, radio_shuffle "
+            "FROM music_247 ORDER BY enabled_at, guild_id"
         )
     except Exception:
         log.exception("Failed to load 24/7 settings; starting with none cached")
@@ -109,7 +110,14 @@ class AlwaysOnStore:
     voice-state listener exactly as cheaply as ``tools.premium`` is.
     """
 
-    __slots__ = ("_channels", "_order", "_suspended", "_loaded", "_load_lock")
+    __slots__ = (
+        "_channels",
+        "_order",
+        "_suspended",
+        "_radio",
+        "_loaded",
+        "_load_lock",
+    )
 
     def __init__(self) -> None:
         self._channels: typing.Dict[int, int] = {}
@@ -119,6 +127,10 @@ class AlwaysOnStore:
         # posture for every other commercial limit in this codebase).
         self._order: typing.Dict[int, float] = {}
         self._suspended: typing.Set[int] = set()
+        # 24/7 playlist (V3a): guild id -> (playlist name_norm, shuffle), only
+        # for guilds that picked one, so "is a 24/7 playlist configured?" is
+        # one dict miss for everybody else.
+        self._radio: typing.Dict[int, typing.Tuple[str, bool]] = {}
         self._loaded = False
         self._load_lock = asyncio.Lock()
 
@@ -139,6 +151,9 @@ class AlwaysOnStore:
                 self._order[guild_id] = (
                     enabled_at.timestamp() if enabled_at is not None else 0.0
                 )
+                norm = row.get("radio_playlist")
+                if norm:
+                    self._radio[guild_id] = (norm, bool(row.get("radio_shuffle", True)))
             self._loaded = True
 
     def is_enabled(self, guild_id: typing.Optional[int]) -> bool:
@@ -169,6 +184,59 @@ class AlwaysOnStore:
         if guild_id is not None:
             self._suspended.discard(int(guild_id))
 
+    def radio(
+        self, guild_id: typing.Optional[int]
+    ) -> typing.Optional[typing.Tuple[str, bool]]:
+        """The 24/7 playlist ``(name_norm, shuffle)`` or None. A dict lookup."""
+        if guild_id is None:
+            return None
+        return self._radio.get(int(guild_id))
+
+    async def set_radio(
+        self,
+        pool: typing.Any,
+        guild_id: int,
+        norm: typing.Optional[str],
+        shuffle: bool = True,
+    ) -> bool:
+        """Pick (or with ``norm=None`` clear) the 24/7 playlist; restarts its
+        order from the top. Returns False, writing nothing, when the guild has
+        no 24/7 row - the playlist rides the 24/7 setting, it never creates
+        one."""
+        guild_id = int(guild_id)
+        status = await pool.execute(
+            """
+            UPDATE music_247
+            SET radio_playlist = $2, radio_shuffle = $3, radio_pos = 0
+            WHERE guild_id = $1
+            """,
+            guild_id,
+            norm,
+            bool(shuffle),
+        )
+        if str(status).rsplit(" ", 1)[-1] == "0":
+            return False
+        if norm:
+            self._radio[guild_id] = (norm, bool(shuffle))
+        else:
+            self._radio.pop(guild_id, None)
+        return True
+
+    def retarget_radio(
+        self, guild_id: int, old: str, new: typing.Optional[str]
+    ) -> None:
+        """Cache side of a playlist rename (``new``) or delete (None); the row
+        side is :func:`retarget_radio_row`, run in the playlist's own
+        transaction. A no-op unless the 24/7 playlist was ``old``."""
+        guild_id = int(guild_id)
+        current = self._radio.get(guild_id)
+        if current is None or current[0] != old:
+            return
+        if new:
+            self._radio[guild_id] = (new, current[1])
+        else:
+            self._radio.pop(guild_id, None)
+
     def ordered_guild_ids(self) -> typing.List[int]:
         """Every configured guild id, oldest-enabled first."""
         return sorted(self._channels, key=lambda gid: self._order.get(gid, 0.0))
@@ -194,6 +262,119 @@ class AlwaysOnStore:
         self._channels.pop(guild_id, None)
         self._order.pop(guild_id, None)
         self._suspended.discard(guild_id)
+        self._radio.pop(guild_id, None)
+
+
+# ---------------------------------------------------------------------------
+# 24/7 playlist (Yasuho+ V3a): the play order and the batch I/O
+# ---------------------------------------------------------------------------
+
+
+def radio247_positions(
+    guild_id: int, count: int, pos: int, batch: int, shuffle: bool
+) -> typing.List[int]:
+    """The 0-based playlist indexes of the next ``batch`` plays from ``pos``.
+
+    ``pos`` is monotonic: cycle ``pos // count`` plays the whole playlist
+    once. In order, a cycle is ``0..count-1``; shuffled, it is a permutation
+    seeded by ``(guild_id, cycle)`` - so nothing repeats inside a cycle, the
+    order survives a restart with nothing but ``pos`` stored, and a batch that
+    wraps (a playlist shorter than the batch) simply starts the next cycle.
+    Pure.
+    """
+    if count <= 0 or batch <= 0:
+        return []
+    out: typing.List[int] = []
+    perms: typing.Dict[int, typing.List[int]] = {}
+    for p in range(max(0, pos), max(0, pos) + batch):
+        cycle, offset = divmod(p, count)
+        if not shuffle:
+            out.append(offset)
+            continue
+        perm = perms.get(cycle)
+        if perm is None:
+            perm = list(range(count))
+            random.Random(f"{guild_id}:{cycle}").shuffle(perm)
+            perms[cycle] = perm
+        out.append(perm[offset])
+    return out
+
+
+async def fetch_radio_state(
+    pool: typing.Any, guild_id: int, norm: str
+) -> typing.Any:
+    """``(radio_pos, radio_shuffle, track_count)`` of the 24/7 playlist, or
+    None when it is no longer configured as ``norm`` or the playlist is gone.
+    One indexed read (both primary keys); no blob is read here."""
+    return await pool.fetchrow(
+        """
+        SELECT r.radio_pos, r.radio_shuffle, cardinality(p.tracks) AS track_count
+        FROM music_247 r
+        JOIN guild_playlists p
+          ON p.guild_id = r.guild_id AND p.name_norm = r.radio_playlist
+        WHERE r.guild_id = $1 AND r.radio_playlist = $2
+        """,
+        guild_id,
+        norm,
+    )
+
+
+async def fetch_radio_blobs(
+    pool: typing.Any, guild_id: int, norm: str, indexes: typing.Sequence[int]
+) -> typing.List[typing.Optional[str]]:
+    """Only the encoded blobs at ``indexes`` (0-based), in that order - never
+    the whole ``tracks`` array. An index past the end reads back None."""
+    value = await pool.fetchval(
+        """
+        SELECT ARRAY(
+            SELECT p.tracks[u.i]
+            FROM unnest($3::int[]) WITH ORDINALITY AS u(i, o)
+            ORDER BY u.o
+        )
+        FROM guild_playlists p
+        WHERE p.guild_id = $1 AND p.name_norm = $2
+        """,
+        guild_id,
+        norm,
+        [int(i) + 1 for i in indexes],
+    )
+    return list(value or [])
+
+
+async def advance_radio_pos(
+    pool: typing.Any, guild_id: int, norm: str, old: int, new: int
+) -> bool:
+    """Compare-and-set ``radio_pos`` from ``old`` to ``new``. False when the
+    playlist or the position moved underneath (a config change, a rename)."""
+    status = await pool.execute(
+        """
+        UPDATE music_247 SET radio_pos = $4
+        WHERE guild_id = $1 AND radio_playlist = $2 AND radio_pos = $3
+        """,
+        guild_id,
+        norm,
+        int(old),
+        int(new),
+    )
+    return str(status).rsplit(" ", 1)[-1] != "0"
+
+
+async def retarget_radio_row(
+    conn: typing.Any, guild_id: int, old: str, new: typing.Optional[str]
+) -> None:
+    """Follow a playlist rename (``new``) or delete (None, which also resets
+    the order) - run inside the playlist write's own transaction."""
+    await conn.execute(
+        """
+        UPDATE music_247
+        SET radio_playlist = $3::text,
+            radio_pos = CASE WHEN $3::text IS NULL THEN 0 ELSE radio_pos END
+        WHERE guild_id = $1 AND radio_playlist = $2
+        """,
+        guild_id,
+        old,
+        new,
+    )
 
 
 def count_active_sessions(bot: typing.Any, store: AlwaysOnStore) -> int:

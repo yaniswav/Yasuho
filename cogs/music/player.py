@@ -162,6 +162,12 @@ class Player(sonolink.Player):
         # The server's saved default effect is applied ONCE per player (first
         # track start); a cold restore sets this so the row's own effect wins.
         self.default_effect_done = False
+        # 24/7 playlist (Yasuho+ V3a, see Music._radio247_refill): the /stop
+        # hold, the one-refill-in-flight flag and the empty-batch backoff
+        # deadline (time.monotonic()). A new Player starts with none of them.
+        self.radio247_hold = False
+        self._radio247_refilling = False
+        self.radio247_retry_at = 0.0
         # Repair autoplay for non-YouTube seeds: swap sonolink's stock autoplay
         # handler for our subclass, reusing the SAME settings object so the
         # player.autoplay getter/setter (and _set_autoplay) keep operating on it.

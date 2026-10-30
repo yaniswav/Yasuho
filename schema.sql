@@ -858,6 +858,14 @@ CREATE TABLE IF NOT EXISTS music_247 (
     channel_id BIGINT      NOT NULL,
     enabled_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- 24/7 playlist (Yasuho+ V3a): a server playlist the idle 24/7 player plays on
+-- its own. radio_playlist is a guild_playlists.name_norm (NULL = off; a rename
+-- moves it, a delete clears it). radio_pos is a monotonic position into the
+-- playlist's play order (shuffled per cycle, deterministically, from the guild
+-- id), advanced by one compare-and-set per batch of tracks, never per track.
+ALTER TABLE music_247 ADD COLUMN IF NOT EXISTS radio_playlist TEXT;
+ALTER TABLE music_247 ADD COLUMN IF NOT EXISTS radio_shuffle BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE music_247 ADD COLUMN IF NOT EXISTS radio_pos INTEGER NOT NULL DEFAULT 0;
 
 -- ============================================================
 -- Secondary-column indexes for non-PK lookups (see DB audit)
