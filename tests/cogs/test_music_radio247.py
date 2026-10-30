@@ -565,7 +565,7 @@ async def test_free_247_without_a_radio_playlist_never_refills_or_queries(premiu
     runs and none of them schedules anything or touches the pool."""
     cog, player, pool = _env(premium, radio=False)
     await music_mod.Music._idle_check.coro(cog)
-    event = types.SimpleNamespace(track=_track("u1"))
+    event = types.SimpleNamespace(track=_track("u1"), original=None)
     player._queue._current_track = event.track
     await music_mod.Music.on_sonolink_track_start(cog, player, event)
     player._queue._current_track = None
@@ -841,7 +841,7 @@ async def test_refill_vs_user_play_from_idle_is_benign(premium):
 async def _start(cog, player, track):
     player._queue._current_track = track
     await music_mod.Music.on_sonolink_track_start(
-        cog, player, types.SimpleNamespace(track=track)
+        cog, player, types.SimpleNamespace(track=track, original=None)
     )
 
 

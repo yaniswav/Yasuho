@@ -2075,7 +2075,16 @@ class Music(RequestPanelMixin, ServerPlaylistMixin, commands.Cog):
     async def on_sonolink_track_start(
         self, player: Player, event: sonolink.gateway.TrackStartEvent
     ) -> None:
+        # event.track is REBUILT from the Lavalink payload, so it never carries
+        # the read-only autoplay flag; event.original is the Playable that was
+        # queued (None on a re-fire without a play() call: fall back). It is the
+        # LAST play()'s track, so only trust it when it is this very track.
         track = event.track
+        original = event.original
+        if original is not None and getattr(original, "encoded", None) == getattr(
+            track, "encoded", None
+        ):
+            track = original
         guild_id = player.channel.guild.id if player.channel else None
         log.debug("Track start: %s (guild=%s)", track.title, guild_id)
 

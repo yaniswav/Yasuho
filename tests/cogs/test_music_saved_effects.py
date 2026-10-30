@@ -85,7 +85,7 @@ def _event(title="Song"):
     track = types.SimpleNamespace(
         identifier="t1", title=title, author="A", length=200_000, extras=None
     )
-    return types.SimpleNamespace(track=track)
+    return types.SimpleNamespace(track=track, original=None)
 
 
 async def _start(cog, player):

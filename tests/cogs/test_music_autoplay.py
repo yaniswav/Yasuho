@@ -548,3 +548,101 @@ async def test_fill_from_seed_negative_control_without_seed_update():
     # Without the fix, the same recommendations come back every cycle.
     assert second is not None
     assert second.identifier == "a"
+
+
+# ---------------------------------------------------------------------------
+# on_sonolink_track_start: autoplay provenance comes from event.original
+# (event.track is rebuilt from the Lavalink payload and never has the flag)
+# ---------------------------------------------------------------------------
+
+
+def _mix_track(autoplay, title="Best Songs Mix 2 hour compilation"):
+    return types.SimpleNamespace(
+        autoplay=autoplay,
+        title=title,
+        author="Various",
+        length=2 * 3600 * 1000,
+        identifier="abc",
+        encoded="enc-abc",
+        extras={},
+    )
+
+
+async def _run_track_start(event):
+    calls = types.SimpleNamespace(skipped=0, controller_track=None)
+
+    async def _noop(*a, **k):
+        return None
+
+    async def skip():
+        calls.skipped += 1
+
+    async def send_controller(player, track, dedupe=False):
+        calls.controller_track = track
+
+    cog = types.SimpleNamespace(
+        lyrics_sessions=types.SimpleNamespace(notify_track=_noop),
+        skip_votes=types.SimpleNamespace(notify_track=_noop),
+        _radio247_may_refill=lambda *a: False,
+        _send_controller=send_controller,
+        _snapshot=_noop,
+    )
+    player = types.SimpleNamespace(
+        channel=None,
+        played_ids=set(),
+        home=object(),
+        skip=skip,
+        queue=types.SimpleNamespace(tracks=[]),
+        _automix_skips=0,
+    )
+    await music.Music.on_sonolink_track_start(cog, player, event)
+    return calls
+
+
+@pytest.mark.asyncio
+async def test_track_start_skips_autoplay_mix_flagged_only_on_original():
+    event = types.SimpleNamespace(
+        track=_mix_track(False), original=_mix_track(True)
+    )
+    calls = await _run_track_start(event)
+    assert calls.skipped == 1
+
+
+@pytest.mark.asyncio
+async def test_track_start_controller_gets_the_autoplay_flag():
+    event = types.SimpleNamespace(
+        track=_mix_track(False, "A Song"), original=_mix_track(True, "A Song")
+    )
+    event.original.length = event.track.length = 200_000
+    calls = await _run_track_start(event)
+    assert calls.skipped == 0
+    assert music.is_autoplay_track(calls.controller_track) is True
+
+
+@pytest.mark.asyncio
+async def test_track_start_user_queued_mix_is_not_skipped():
+    event = types.SimpleNamespace(
+        track=_mix_track(False), original=_mix_track(False)
+    )
+    calls = await _run_track_start(event)
+    assert calls.skipped == 0
+    assert music.is_autoplay_track(calls.controller_track) is False
+
+
+@pytest.mark.asyncio
+async def test_track_start_original_none_falls_back_to_event_track():
+    event = types.SimpleNamespace(track=_mix_track(True), original=None)
+    calls = await _run_track_start(event)
+    assert calls.skipped == 1
+
+
+@pytest.mark.asyncio
+async def test_track_start_ignores_an_original_for_another_track():
+    # original is the LAST play()'s track: a re-fire for a different track must
+    # not borrow its autoplay flag.
+    stale = _mix_track(True)
+    stale.encoded = "enc-other"
+    event = types.SimpleNamespace(track=_mix_track(False), original=stale)
+    calls = await _run_track_start(event)
+    assert calls.skipped == 0
+    assert calls.controller_track is event.track
