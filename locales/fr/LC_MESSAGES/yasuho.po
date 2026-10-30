@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-30 13:03+0000\n"
+"POT-Creation-Date: 2026-10-30 13:40+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -458,7 +458,7 @@ msgid "Edit"
 msgstr "Modifier"
 
 #: cogs/anilist/collection.py:381 cogs/anilist/feed_views.py:1308
-#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:479
+#: cogs/anilist/hub.py:285 cogs/community/usersettings.py:481
 #: cogs/config/rooms_config.py:489 tools/views.py:80
 msgid "This panel isn't for you."
 msgstr "Ce panneau n'est pas pour vous."
@@ -1239,7 +1239,7 @@ msgstr "Supprimer"
 
 #: cogs/anilist/feed_views.py:1065 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
-#: cogs/community/usersettings.py:246 cogs/community/usersettings.py:359
+#: cogs/community/usersettings.py:246 cogs/community/usersettings.py:361
 #: cogs/config/tickets/lifecycle.py:280 cogs/music/playlists_shared.py:399
 #: cogs/system/arg_completion.py:286
 msgid "Cancel"
@@ -1300,7 +1300,7 @@ msgstr "Ce serveur n'a pas encore de flux AniList. Choisis un salon ci-dessous p
 #: cogs/anilist/feed_views.py:1391 cogs/community/birthdays/panel.py:170
 #: cogs/community/suggestions/panel.py:195 cogs/config/event_reminders.py:260
 #: cogs/config/milestones.py:247 cogs/config/settings.py:53
-#: cogs/config/tickets/panel.py:92 cogs/config/tickets/panel.py:489
+#: cogs/config/tickets/panel.py:98 cogs/config/tickets/panel.py:495
 #: cogs/config/twitch.py:424 cogs/config/verification.py:111
 #: cogs/config/welcome.py:557 cogs/config/welcome.py:680
 #: cogs/moderation/modlog.py:276
@@ -1310,7 +1310,7 @@ msgstr "Activé"
 #: cogs/anilist/feed_views.py:1391 cogs/community/birthdays/panel.py:170
 #: cogs/community/suggestions/panel.py:195 cogs/config/event_reminders.py:260
 #: cogs/config/milestones.py:247 cogs/config/settings.py:53
-#: cogs/config/tickets/panel.py:94 cogs/config/tickets/panel.py:491
+#: cogs/config/tickets/panel.py:100 cogs/config/tickets/panel.py:497
 #: cogs/config/twitch.py:426 cogs/config/verification.py:113
 #: cogs/config/welcome.py:559 cogs/config/welcome.py:682
 #: cogs/config/welcome.py:971 cogs/moderation/modlog.py:278
@@ -2116,61 +2116,65 @@ msgid "Your remembered voice room settings are gone."
 msgstr "Vos réglages de salon vocal mémorisés ont disparu."
 
 #: cogs/community/usersettings.py:306
+msgid "Your ticket ratings and comments are gone."
+msgstr "Tes évaluations et commentaires sur les tickets ont été supprimés."
+
+#: cogs/community/usersettings.py:308
 msgid "Your top.gg vote record is gone too."
 msgstr "Ton historique de votes top.gg est effacé aussi."
 
-#: cogs/community/usersettings.py:308
+#: cogs/community/usersettings.py:310
 msgid "So is your personal rank card."
 msgstr "Ta carte de rang personnelle aussi."
 
-#: cogs/community/usersettings.py:311
+#: cogs/community/usersettings.py:313
 msgid "Your AniList link is gone as well, and your episode and chapter alert opt-ins with it."
 msgstr "Ton lien AniList est effacé lui aussi, et avec lui tes inscriptions aux alertes d'épisodes et de chapitres."
 
-#: cogs/community/usersettings.py:316
+#: cogs/community/usersettings.py:318
 msgid "Your Pack Confort purchase record is gone from our database too (it comes back automatically if you still hold that purchase), and so is the note of your last premium offer reminder."
 msgstr "Ton achat Pack Confort enregistré a aussi été supprimé de notre base (il revient automatiquement si tu possèdes toujours cet achat), tout comme la trace de ton dernier rappel d'offre premium."
 
-#: cogs/community/usersettings.py:327
+#: cogs/community/usersettings.py:329
 msgid "Something went wrong deleting your profile."
 msgstr "Une erreur est survenue lors de la suppression de ton profil."
 
-#: cogs/community/usersettings.py:337
+#: cogs/community/usersettings.py:339
 msgid "Profile deletion cancelled."
 msgstr "Suppression du profil annulée."
 
-#: cogs/community/usersettings.py:358
+#: cogs/community/usersettings.py:360
 msgid "Delete my avatar history"
 msgstr "Supprimer mon historique d'avatars"
 
-#: cogs/community/usersettings.py:379
+#: cogs/community/usersettings.py:381
 #, python-brace-format
 msgid "Deleted {count} saved image(s) ({size}). Future avatar tracking is now turned off."
 msgstr "{count} image(s) sauvegardée(s) supprimée(s) ({size}). Le suivi futur des avatars est désormais désactivé."
 
-#: cogs/community/usersettings.py:390
+#: cogs/community/usersettings.py:392
 msgid "Something went wrong deleting your avatar history."
 msgstr "Un problème est survenu pendant la suppression de ton historique d'avatars."
 
-#: cogs/community/usersettings.py:400
+#: cogs/community/usersettings.py:402
 msgid "Avatar history deletion cancelled."
 msgstr "Suppression de l'historique des avatars annulée."
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:415
+#: cogs/community/usersettings.py:417
 msgid "Turn off"
 msgstr "Desactiver"
 
 #: cogs/community/leveling/seasons_views.py:323
-#: cogs/community/usersettings.py:415
+#: cogs/community/usersettings.py:417
 msgid "Turn on"
 msgstr "Activer"
 
-#: cogs/community/usersettings.py:499
+#: cogs/community/usersettings.py:501
 msgid "## Your preferences"
 msgstr "## Tes preferences"
 
-#: cogs/community/usersettings.py:503
+#: cogs/community/usersettings.py:505
 msgid ""
 "These settings only affect **you**, everywhere I'm used.\n"
 "Use the button beside a preference to toggle it on or off."
@@ -2178,15 +2182,15 @@ msgstr ""
 "Ces reglages n'affectent que **toi**, partout ou je suis utilisee.\n"
 "Utilise le bouton a cote d'une preference pour l'activer ou la desactiver."
 
-#: cogs/community/usersettings.py:513
+#: cogs/community/usersettings.py:515
 msgid "ON"
 msgstr "ACTIVÉ"
 
-#: cogs/community/usersettings.py:513
+#: cogs/community/usersettings.py:515
 msgid "OFF"
 msgstr "DÉSACTIVÉ"
 
-#: cogs/community/usersettings.py:514
+#: cogs/community/usersettings.py:516
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {badge} {state}\n"
@@ -2195,7 +2199,7 @@ msgstr ""
 "{emoji} **{label}** - {badge} {state}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:536
+#: cogs/community/usersettings.py:538
 #, python-brace-format
 msgid ""
 "{emoji} **{label}** - {value}\n"
@@ -2204,74 +2208,78 @@ msgstr ""
 "{emoji} **{label}** - {value}\n"
 "{description}"
 
-#: cogs/community/usersettings.py:550
+#: cogs/community/usersettings.py:552
 msgid "-# Only you can use these controls."
 msgstr "-# Toi seul peux utiliser ces controles."
 
-#: cogs/community/usersettings.py:576 cogs/community/usersettings.py:596
-#: cogs/community/usersettings.py:616
+#: cogs/community/usersettings.py:578 cogs/community/usersettings.py:598
+#: cogs/community/usersettings.py:618
 msgid "Something went wrong updating that setting."
 msgstr "Une erreur est survenue lors de la mise à jour de ce paramètre."
 
-#: cogs/community/usersettings.py:675
+#: cogs/community/usersettings.py:677
 #, python-brace-format
 msgid "Use `{prefix}mydata export` to receive your data, `{prefix}mydata deleteprofile` to erase your profile, or `{prefix}mydata deleteavatars` to erase saved avatars."
 msgstr "Utilise `{prefix}mydata export` pour recevoir tes données, `{prefix}mydata deleteprofile` pour effacer ton profil, ou `{prefix}mydata deleteavatars` pour effacer les avatars enregistrés."
 
-#: cogs/community/usersettings.py:748
+#: cogs/community/usersettings.py:750
 msgid "I sent your data export to you by direct message."
 msgstr "Je t'ai envoyé ton export de données par message privé."
 
 #: cogs/community/profile/connectors/cog.py:280
-#: cogs/community/usersettings.py:752
+#: cogs/community/usersettings.py:754
 msgid "I couldn't send you a direct message. Please enable DMs."
 msgstr "Je n'ai pas pu t'envoyer de message privé. Active tes messages privés."
 
-#: cogs/community/usersettings.py:757
+#: cogs/community/usersettings.py:759
 msgid "Something went wrong building your data export."
 msgstr "Un problème est survenu pendant la création de ton export de données."
 
-#: cogs/community/usersettings.py:780
+#: cogs/community/usersettings.py:782
 msgid "This permanently deletes your bio, pronouns, accent colour, custom fields, gaming IDs and every choice you made about who could see them. This cannot be undone."
 msgstr "Cette action supprime définitivement ta bio, tes pronoms, ta couleur d'accent, tes champs personnalisés, tes identifiants de jeu et tous les choix que tu as faits sur qui pouvait les voir. Cette action est irréversible."
 
-#: cogs/community/usersettings.py:786
+#: cogs/community/usersettings.py:788
 msgid "It also deletes your top.gg vote record: your vote streak and your lifetime vote count start over from zero."
 msgstr "Cela supprime aussi ton historique de votes top.gg : ta série de votes et ton total cumulé repartent de zéro."
 
-#: cogs/community/usersettings.py:791
+#: cogs/community/usersettings.py:793
 msgid "Your scheduled announcements and their pending deliveries will be deleted."
 msgstr "Tes annonces programmées et leurs envois en attente seront supprimés."
 
-#: cogs/community/usersettings.py:795
+#: cogs/community/usersettings.py:797
 msgid "It also deletes your suggestions and your votes, and removes the posted suggestion messages where I can. Their discussion threads stay for the other members, renamed and locked."
 msgstr "Cela supprime aussi tes suggestions et tes votes, et retire les messages de suggestion publiés là où je le peux. Leurs fils de discussion restent pour les autres membres, renommés et verrouillés."
 
-#: cogs/community/usersettings.py:800
+#: cogs/community/usersettings.py:802
 msgid "It also deletes your shared birthdays, in every server."
 msgstr "Cela supprime aussi tes anniversaires partagés, sur tous les serveurs."
 
-#: cogs/community/usersettings.py:803
+#: cogs/community/usersettings.py:805
 msgid "It also forgets your temporary roles; the scheduled removal is kept until it runs (at most 90 days)."
 msgstr "Cela efface aussi vos rôles temporaires ; le retrait programmé est conservé jusqu'à son exécution (90 jours au maximum)."
 
-#: cogs/community/usersettings.py:807
+#: cogs/community/usersettings.py:809
 msgid "It also forgets your remembered voice room settings, in every server."
 msgstr "Cela efface aussi vos réglages de salon vocal mémorisés, sur tous les serveurs."
 
-#: cogs/community/usersettings.py:810
+#: cogs/community/usersettings.py:811
+msgid "It also erases the ratings and comments you left on support tickets, in every server."
+msgstr "Cela efface aussi les évaluations et commentaires que tu as laissés sur les tickets de support, sur tous les serveurs."
+
+#: cogs/community/usersettings.py:814
 msgid "And your personal rank card: the background image you uploaded and the accent colour you picked."
 msgstr "Et ta carte de rang personnelle : l'image de fond que tu as envoyee et la couleur d'accent que tu as choisie."
 
-#: cogs/community/usersettings.py:815
+#: cogs/community/usersettings.py:819
 msgid "And your AniList link: the stored login is deleted, so relinking needs a fresh sign-in with AniList. Your episode and chapter alert opt-ins go with it."
 msgstr "Et ton lien AniList : la connexion enregistrée est supprimée, donc te relier nécessitera une nouvelle authentification AniList. Tes inscriptions aux alertes d'épisodes et de chapitres partent avec."
 
-#: cogs/community/usersettings.py:821
+#: cogs/community/usersettings.py:825
 msgid "And your Pack Confort purchase record: it comes back on its own if you still hold that purchase, the next time we check with Discord. Also the note of when you last saw a premium offer reminder, so you may see one again sooner than usual."
 msgstr "Et ton achat Pack Confort enregistré : il revient tout seul à la prochaine vérification avec Discord si tu possèdes toujours cet achat. Ainsi que la trace de la dernière fois où tu as vu un rappel d'offre premium, donc tu pourrais en revoir un plus tôt que d'habitude."
 
-#: cogs/community/usersettings.py:838
+#: cogs/community/usersettings.py:842
 msgid "This permanently deletes every saved global avatar, server avatar and banner for your account. It also turns future tracking off. This cannot be undone."
 msgstr "Ceci supprime définitivement chaque avatar global, avatar de serveur et bannière sauvegardés pour ton compte. Ça désactive aussi le suivi futur. C'est irréversible."
 
@@ -2469,7 +2477,7 @@ msgstr "Les membres partagent leur anniversaire avec /birthday set et je le cél
 #: cogs/community/suggestions/panel.py:198 cogs/config/announcements.py:316
 #: cogs/config/buttonroles.py:550 cogs/config/event_reminders.py:265
 #: cogs/config/milestones.py:252 cogs/config/rolemenus.py:679
-#: cogs/config/tickets/panel.py:157 cogs/config/twitch.py:420
+#: cogs/config/tickets/panel.py:163 cogs/config/twitch.py:420
 #: cogs/config/verification.py:118 cogs/config/welcome.py:555
 #: cogs/config/welcome.py:678 cogs/moderation/modlog.py:274
 msgid "*Not set.*"
@@ -2744,7 +2752,7 @@ msgstr "Tout le serveur : **x{factor}**"
 #: cogs/community/leveling/level_config_ui.py:179
 #: cogs/community/leveling/level_config_ui.py:899
 #: cogs/community/leveling/level_config_ui.py:905
-#: cogs/config/tickets/panel.py:156 cogs/config/verification.py:116
+#: cogs/config/tickets/panel.py:162 cogs/config/verification.py:116
 msgid "(deleted)"
 msgstr "(supprimé)"
 
@@ -2849,7 +2857,7 @@ msgstr "Styles de carte des membres"
 #: cogs/community/leveling/seasons_views.py:185
 #: cogs/community/leveling/seasons_views.py:431
 #: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:769
-#: cogs/config/settings.py:265 cogs/config/tickets/panel.py:603
+#: cogs/config/settings.py:265 cogs/config/tickets/panel.py:609
 #: cogs/moderation/automod_panel.py:401 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "Vous seul pouvez utiliser ces commandes"
@@ -2858,7 +2866,7 @@ msgstr "Vous seul pouvez utiliser ces commandes"
 #: cogs/community/leveling/seasons_views.py:187
 #: cogs/community/leveling/seasons_views.py:433
 #: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:771
-#: cogs/config/settings.py:267 cogs/config/tickets/panel.py:605
+#: cogs/config/settings.py:267 cogs/config/tickets/panel.py:611
 #: cogs/moderation/automod_panel.py:403 cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
 msgstr "expire après 3 min"
@@ -4018,7 +4026,7 @@ msgid "You need these permissions in {channel} yourself before you can schedule 
 msgstr "Il te faut toi-meme ces permissions dans {channel} pour y programmer un resume hebdomadaire : {permissions}."
 
 #: cogs/community/serverstats/cog.py:956 cogs/community/serverstats/cog.py:1054
-#: cogs/config/tickets/panel.py:675 cogs/config/tickets/panel.py:821
+#: cogs/config/tickets/panel.py:681 cogs/config/tickets/panel.py:827
 #, python-brace-format
 msgid "I need these permissions in {channel} first: {permissions}."
 msgstr "J'ai d'abord besoin de ces permissions dans {channel} : {permissions}."
@@ -6600,7 +6608,8 @@ msgstr "Je ne peux pas te donner ce rôle : il comporte des permissions que je n
 #: cogs/config/tickets/lifecycle.py:373 cogs/config/tickets/lifecycle.py:463
 #: cogs/config/tickets/lifecycle.py:520 cogs/config/tickets/open.py:230
 #: cogs/config/tickets/open.py:262 cogs/config/tickets/open.py:418
-#: cogs/config/verification.py:83
+#: cogs/config/tickets/rating.py:177 cogs/config/tickets/rating.py:192
+#: cogs/config/tickets/rating.py:232 cogs/config/verification.py:83
 msgid "Something went wrong, please try again."
 msgstr "Une erreur est survenue, veuillez réessayer."
 
@@ -6948,97 +6957,101 @@ msgstr "Je n'ai pas pu fermer le ticket #{number}. Rien n'a changé, réessaie s
 msgid "Ticket #{number} is closed."
 msgstr "Le ticket #{number} est fermé."
 
-#: cogs/config/tickets/lifecycle.py:678
+#: cogs/config/tickets/lifecycle.py:685
 #, python-brace-format
 msgid "Ticket #{number} is closed. Thanks for reaching out."
 msgstr "Le ticket #{number} est fermé. Merci de nous avoir contactés."
 
-#: cogs/config/tickets/lifecycle.py:683
+#: cogs/config/tickets/lifecycle.py:690
 msgid "This server has no ticket log channel, so no transcript was saved."
 msgstr "Ce serveur n'a pas de salon de logs pour les tickets, donc aucune transcription n'a été sauvegardée."
 
-#: cogs/config/tickets/lifecycle.py:692
+#: cogs/config/tickets/lifecycle.py:699
 msgid "A transcript of this conversation was saved to this server's ticket log channel, where its staff team keeps it."
 msgstr "Une transcription de cette conversation a été enregistrée dans le salon de logs des tickets du serveur, où l'équipe peut la consulter."
 
-#: cogs/config/tickets/lifecycle.py:712
+#: cogs/config/tickets/lifecycle.py:703
+msgid "Check your DMs to rate this ticket."
+msgstr "Vérifie tes MP pour évaluer ce ticket."
+
+#: cogs/config/tickets/lifecycle.py:721
 #, python-brace-format
 msgid "Transcript of ticket #{number}"
 msgstr "Transcription du ticket #{number}"
 
-#: cogs/config/tickets/lifecycle.py:713
+#: cogs/config/tickets/lifecycle.py:722
 #, python-brace-format
 msgid "Server: {guild}"
 msgstr "Serveur : {guild}"
 
-#: cogs/config/tickets/lifecycle.py:714
+#: cogs/config/tickets/lifecycle.py:723
 #, python-brace-format
 msgid "Opened by {user} on {date}"
 msgstr "Ouvert par {user} le {date}"
 
-#: cogs/config/tickets/lifecycle.py:718
+#: cogs/config/tickets/lifecycle.py:727
 #, python-brace-format
 msgid "Taken on {date}"
 msgstr "Pris en charge le {date}"
 
-#: cogs/config/tickets/lifecycle.py:721
+#: cogs/config/tickets/lifecycle.py:730
 msgid "Attachment links are Discord CDN links and stop working after a while."
 msgstr "Les liens de pièces jointes sont des liens CDN Discord et cessent de fonctionner au bout d'un moment."
 
-#: cogs/config/tickets/lifecycle.py:770
+#: cogs/config/tickets/lifecycle.py:779
 #, python-brace-format
 msgid "Ticket #{number} closed"
 msgstr "Ticket #{number} fermé"
 
-#: cogs/config/tickets/lifecycle.py:774
+#: cogs/config/tickets/lifecycle.py:783
 msgid "Opened by"
 msgstr "Ouvert par"
 
-#: cogs/config/tickets/lifecycle.py:777
+#: cogs/config/tickets/lifecycle.py:786
 msgid "Claimed by"
 msgstr "Revendiqué par"
 
-#: cogs/config/tickets/lifecycle.py:781
+#: cogs/config/tickets/lifecycle.py:790
 msgid "Nobody"
 msgstr "Personne"
 
-#: cogs/config/tickets/lifecycle.py:785
+#: cogs/config/tickets/lifecycle.py:794
 msgid "Ended by"
 msgstr "Terminé par"
 
-#: cogs/config/tickets/lifecycle.py:787
+#: cogs/config/tickets/lifecycle.py:796
 msgid "Opened"
 msgstr "Ouvert"
 
-#: cogs/config/tickets/lifecycle.py:790
+#: cogs/config/tickets/lifecycle.py:799
 msgid "Closed"
 msgstr "Fermé"
 
-#: cogs/config/tickets/lifecycle.py:809
+#: cogs/config/tickets/lifecycle.py:818
 msgid "Transcript attached: what was said in the ticket thread. It stays in this channel."
 msgstr "Transcription jointe : ce qui a été dit dans le fil du ticket. Elle reste dans ce salon."
 
-#: cogs/config/tickets/lifecycle.py:833
+#: cogs/config/tickets/lifecycle.py:842
 msgid "The thread was deleted."
 msgstr "Le fil a été supprimé."
 
-#: cogs/config/tickets/lifecycle.py:836
+#: cogs/config/tickets/lifecycle.py:845
 msgid "Auto-closed after inactivity."
 msgstr "Fermé automatiquement après inactivité."
 
-#: cogs/config/tickets/lifecycle.py:850
+#: cogs/config/tickets/lifecycle.py:859
 msgid "No transcript: the thread was already gone."
 msgstr "Pas de transcription : le fil avait déjà disparu."
 
-#: cogs/config/tickets/lifecycle.py:853
+#: cogs/config/tickets/lifecycle.py:862
 msgid "No transcript: everyone can read this channel. Use a staff-only log channel to keep transcripts."
 msgstr "Pas de transcript : tout le monde peut lire ce salon. Utilise un salon de logs réservé au staff pour garder les transcripts."
 
-#: cogs/config/tickets/lifecycle.py:857
+#: cogs/config/tickets/lifecycle.py:866
 msgid "No transcript: I cannot attach files in this channel."
 msgstr "Pas de transcription : je ne peux pas joindre de fichiers dans ce salon."
 
-#: cogs/config/tickets/lifecycle.py:859
+#: cogs/config/tickets/lifecycle.py:868
 msgid "No transcript: I could not read the thread."
 msgstr "Pas de transcription : je n'ai pas pu lire le fil."
 
@@ -7115,12 +7128,12 @@ msgstr "Ouvert par {user}"
 msgid "Ticket #{number} - use the buttons below to claim or close it."
 msgstr "Ticket #{number} - utilise les boutons ci-dessous pour le revendiquer ou le fermer."
 
-#: cogs/config/tickets/panel.py:100
+#: cogs/config/tickets/panel.py:106
 #, python-brace-format
 msgid "Support tickets | {guild}"
 msgstr "Tickets de support | {guild}"
 
-#: cogs/config/tickets/panel.py:107
+#: cogs/config/tickets/panel.py:113
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -7137,85 +7150,85 @@ msgstr ""
 "**Tickets ouverts par membre :** {cap}\n"
 "**Fenêtre d'inactivité :** {hours}h"
 
-#: cogs/config/tickets/panel.py:126 cogs/config/tickets/panel.py:936
+#: cogs/config/tickets/panel.py:132 cogs/config/tickets/panel.py:942
 #, python-brace-format
 msgid "Closed tickets are logged in {channel}, transcript attached."
 msgstr "Les tickets fermés sont journalisés dans {channel}, transcription jointe."
 
-#: cogs/config/tickets/panel.py:133
+#: cogs/config/tickets/panel.py:139
 msgid "Use `/ticket setup` to turn tickets on."
 msgstr "Utilise `/ticket setup` pour activer les tickets."
 
-#: cogs/config/tickets/panel.py:179
+#: cogs/config/tickets/panel.py:185
 #, python-brace-format
 msgid "Heads up: everyone can read {channel}, so closed tickets are logged there WITHOUT their transcript. Pick a staff-only channel to keep transcripts."
 msgstr "Attention : tout le monde peut lire {channel}, donc les tickets fermés y sont journalisés SANS leur transcript. Choisis un salon réservé au staff pour garder les transcripts."
 
-#: cogs/config/tickets/panel.py:229
+#: cogs/config/tickets/panel.py:235
 msgid "Panel channel (clear to turn tickets off)..."
 msgstr "Salon du panneau (vide pour désactiver les tickets)..."
 
-#: cogs/config/tickets/panel.py:247
+#: cogs/config/tickets/panel.py:253
 msgid "Support role (clear for none)..."
 msgstr "Rôle de support (vide pour aucun)..."
 
-#: cogs/config/tickets/panel.py:275
+#: cogs/config/tickets/panel.py:281
 msgid "Log channel: closed tickets + transcripts..."
 msgstr "Salon des logs : tickets fermés + transcriptions..."
 
-#: cogs/config/tickets/panel.py:292
+#: cogs/config/tickets/panel.py:298
 msgid "Clears the setting and follows the bot default."
 msgstr "Efface le réglage et suit le défaut du bot."
 
-#: cogs/config/tickets/panel.py:309
+#: cogs/config/tickets/panel.py:315
 #, python-brace-format
 msgid "Default ({count})"
 msgstr "Par défaut ({count})"
 
-#: cogs/config/tickets/panel.py:318
+#: cogs/config/tickets/panel.py:324
 #, python-brace-format
 msgid "{count} at a time"
 msgstr "{count} à la fois"
 
-#: cogs/config/tickets/panel.py:324
+#: cogs/config/tickets/panel.py:330
 msgid "Open tickets per member..."
 msgstr "Tickets ouverts par membre..."
 
-#: cogs/config/tickets/panel.py:343
+#: cogs/config/tickets/panel.py:349
 #, python-brace-format
 msgid "Default ({hours}h)"
 msgstr "Par défaut ({hours}h)"
 
-#: cogs/config/tickets/panel.py:352 cogs/config/tickets/panel.py:500
+#: cogs/config/tickets/panel.py:358 cogs/config/tickets/panel.py:506
 #, python-brace-format
 msgid "{hours}h"
 msgstr "{hours}h"
 
-#: cogs/config/tickets/panel.py:358
+#: cogs/config/tickets/panel.py:364
 msgid "Close a ticket after this much silence..."
 msgstr "Fermer un ticket après autant de silence..."
 
-#: cogs/config/tickets/panel.py:374
+#: cogs/config/tickets/panel.py:380
 msgid "Panel message"
 msgstr "Message du panneau"
 
-#: cogs/config/tickets/panel.py:377
+#: cogs/config/tickets/panel.py:383
 msgid "Shown above the ticket button"
 msgstr "Affiché au-dessus du bouton du ticket"
 
-#: cogs/config/tickets/panel.py:382
+#: cogs/config/tickets/panel.py:388
 msgid "Leave empty to use the default wording."
 msgstr "Laisse vide pour utiliser le message par défaut."
 
-#: cogs/config/tickets/panel.py:393
+#: cogs/config/tickets/panel.py:399
 msgid "Edit panel message"
 msgstr "Modifier le message du panneau"
 
-#: cogs/config/tickets/panel.py:404
+#: cogs/config/tickets/panel.py:410
 msgid "Reset message"
 msgstr "Réinitialiser le message"
 
-#: cogs/config/tickets/panel.py:480
+#: cogs/config/tickets/panel.py:486
 #, python-brace-format
 msgid ""
 "**Status:** {status}\n"
@@ -7234,65 +7247,86 @@ msgstr ""
 "**Fenêtre d'inactivité :** {hours}\n"
 "**Message du panneau :** {message}"
 
-#: cogs/config/tickets/panel.py:504
+#: cogs/config/tickets/panel.py:510
 msgid "*Default wording.*"
 msgstr "*Message par défaut.*"
 
-#: cogs/config/tickets/panel.py:512
+#: cogs/config/tickets/panel.py:518
 #, python-brace-format
 msgid "{value} (default)"
 msgstr "{value} (par défaut)"
 
-#: cogs/config/tickets/panel.py:522
+#: cogs/config/tickets/panel.py:528
 #, python-brace-format
 msgid "Support tickets - {guild}"
 msgstr "Tickets de support - {guild}"
 
-#: cogs/config/tickets/panel.py:525
+#: cogs/config/tickets/panel.py:531
 msgid "Every setting below is optional: clear a picker, or choose Default, and Yasuho goes back to her own default for it."
 msgstr "Chaque réglage ci-dessous est facultatif : vide un menu, ou choisis Par défaut, et Yasuho revient à son propre réglage par défaut pour celui-ci."
 
-#: cogs/config/tickets/panel.py:588
+#: cogs/config/tickets/panel.py:594
 msgid "Changing the panel channel here does not post a panel there - run `/ticket setup` for that."
 msgstr "Changer le salon du panneau ici ne publie pas de panneau là-bas - lance `/ticket setup` pour ça."
 
-#: cogs/config/tickets/panel.py:592
+#: cogs/config/tickets/panel.py:598
 msgid "A closed ticket is logged with the full transcript of its thread; with no log channel, no transcript is kept at all."
 msgstr "Un ticket fermé est journalisé avec la transcription complète de son fil ; sans salon de logs, aucune transcription n'est conservée."
 
-#: cogs/config/tickets/panel.py:635
+#: cogs/config/tickets/panel.py:641
 msgid "Something went wrong saving that setting."
 msgstr "Un problème est survenu lors de l'enregistrement de ce réglage."
 
-#: cogs/config/tickets/panel.py:877
+#: cogs/config/tickets/panel.py:883
 msgid "Support tickets"
 msgstr "Tickets de support"
 
-#: cogs/config/tickets/panel.py:881
+#: cogs/config/tickets/panel.py:887
 msgid "Need a hand? Click below and I will open a private thread for you and the staff team."
 msgstr "Besoin d'un coup de main ? Clique ci-dessous et j'ouvrirai un fil privé pour toi et l'équipe."
 
-#: cogs/config/tickets/panel.py:893
+#: cogs/config/tickets/panel.py:899
 #, python-brace-format
 msgid "I could not post the panel in {channel}."
 msgstr "Je n'ai pas pu publier le panneau dans {channel}."
 
-#: cogs/config/tickets/panel.py:899
+#: cogs/config/tickets/panel.py:905
 #, python-brace-format
 msgid "Tickets are on - the panel is up in {channel}. {jump}"
 msgstr "Les tickets sont activés - le panneau est en place dans {channel}. {jump}"
 
-#: cogs/config/tickets/panel.py:929
+#: cogs/config/tickets/panel.py:935
 #, python-brace-format
 msgid "Support role: {role} | Log channel: {log} | setup only changes the options you name."
 msgstr "Rôle de support : {role} | Salon des logs : {log} | setup ne modifie que les options que tu précises."
 
-#: cogs/config/tickets/panel.py:951
+#: cogs/config/tickets/panel.py:957
 #, python-brace-format
 msgid "Heads up: {role} is missing {permissions} in {channel}. A ticket is a private thread, so staff can only see it with Manage Threads on the channel - without it they will be pinged into tickets they cannot open."
 msgstr "Attention : {role} n'a pas {permissions} dans {channel}. Un ticket est un fil privé, donc l'équipe ne peut le voir qu'avec Gérer les fils sur le salon - sans cela, elle sera pingée dans des tickets qu'elle ne pourra pas ouvrir."
 
-#: cogs/config/tickets/panel.py:1031
+#: cogs/config/tickets/panel.py:1012
+msgid "Ratings are on. When a ticket closes, the member who opened it can rate the support from 1 to 5 stars and add a short comment."
+msgstr "Les évaluations sont activées. Quand un ticket est fermé, le membre qui l'a ouvert peut noter le support de 1 à 5 étoiles et ajouter un court commentaire."
+
+#: cogs/config/tickets/panel.py:1018
+msgid "Ratings are off. Ratings already given are kept."
+msgstr "Les évaluations sont désactivées. Les évaluations déjà données sont conservées."
+
+#: cogs/config/tickets/panel.py:1037
+#, python-brace-format
+msgid "Ticket statistics go back {n} days on the free plan."
+msgstr "Les statistiques des tickets remontent à {n} jours avec le plan gratuit."
+
+#: cogs/config/tickets/panel.py:1048
+msgid "The ticket CSV export is a Yasuho+ feature."
+msgstr "L'export CSV des tickets est une fonctionnalité de Yasuho+."
+
+#: cogs/config/tickets/panel.py:1055
+msgid "Please wait a moment before asking for statistics again."
+msgstr "Patiente un instant avant de redemander les statistiques."
+
+#: cogs/config/tickets/panel.py:1127
 msgid "Tickets are off. Threads that are already open stay where they are, and the panel button will say tickets are not set up."
 msgstr "Les tickets sont désactivés. Les fils déjà ouverts restent en place, et le bouton du panneau indiquera que les tickets ne sont pas configurés."
 
@@ -7311,6 +7345,135 @@ msgstr "Gérer les fils"
 #: cogs/config/tickets/preflight.py:79
 msgid "Read Message History"
 msgstr "Voir l'historique des messages"
+
+#: cogs/config/tickets/rating.py:94
+msgid "Add a comment"
+msgstr "Ajouter un commentaire"
+
+#: cogs/config/tickets/rating.py:130
+msgid "Rate your ticket"
+msgstr "Évalue ton ticket"
+
+#: cogs/config/tickets/rating.py:133
+msgid "Comment (optional)"
+msgstr "Commentaire (facultatif)"
+
+#: cogs/config/tickets/rating.py:134
+msgid "What went well, or what could be better?"
+msgstr "Ce qui a bien marché, ou ce qui pourrait être mieux ?"
+
+#: cogs/config/tickets/rating.py:156 cogs/config/tickets/rating.py:239
+msgid "Only the member who opened this ticket can rate it."
+msgstr "Seul le membre qui a ouvert ce ticket peut l'évaluer."
+
+#: cogs/config/tickets/rating.py:158
+msgid "This ticket is already rated. Thank you!"
+msgstr "Ce ticket a déjà été évalué. Merci !"
+
+#: cogs/config/tickets/rating.py:159
+msgid "The time to rate this ticket has passed."
+msgstr "Le délai pour évaluer ce ticket est dépassé."
+
+#: cogs/config/tickets/rating.py:183
+msgid "Ratings are turned off on this server."
+msgstr "Les évaluations sont désactivées sur ce serveur."
+
+#: cogs/config/tickets/rating.py:201
+#, python-brace-format
+msgid "Thank you! You rated ticket #{number}: {stars}"
+msgstr "Merci ! Tu as noté le ticket #{number} : {stars}"
+
+#: cogs/config/tickets/rating.py:211
+#, python-brace-format
+msgid "Ticket #{number} was rated {stars}"
+msgstr "Le ticket #{number} a été noté {stars}"
+
+#: cogs/config/tickets/rating.py:223
+msgid "The comment was empty, so nothing was saved."
+msgstr "Le commentaire était vide, rien n'a été enregistré."
+
+#: cogs/config/tickets/rating.py:243
+msgid "Your comment could not be saved: it is already there, or the time has passed."
+msgstr "Ton commentaire n'a pas pu être enregistré : il est déjà là, ou le délai est dépassé."
+
+#: cogs/config/tickets/rating.py:245
+msgid "Thank you, your comment was saved."
+msgstr "Merci, ton commentaire a été enregistré."
+
+#: cogs/config/tickets/rating.py:249
+#, python-brace-format
+msgid "Comment on ticket #{number}: {comment}"
+msgstr "Commentaire sur le ticket #{number} : {comment}"
+
+#: cogs/config/tickets/rating.py:294
+#, python-brace-format
+msgid "How was the support you got in {server} on ticket #{number}?"
+msgstr "Comment s'est passé le support reçu sur {server} pour le ticket #{number} ?"
+
+#: cogs/config/tickets/rating.py:298
+msgid "Staff can see your rating."
+msgstr "Le staff peut voir ton évaluation."
+
+#: cogs/config/tickets/stats_render.py:24
+msgid "under a minute"
+msgstr "moins d'une minute"
+
+#: cogs/config/tickets/stats_render.py:38
+#, python-brace-format
+msgid "median {median}, average {average}"
+msgstr "médiane {median}, moyenne {average}"
+
+#: cogs/config/tickets/stats_render.py:46
+#, python-brace-format
+msgid "Ticket statistics: the last day"
+msgid_plural "Ticket statistics: the last {days} days"
+msgstr[0] "Statistiques des tickets : le dernier jour"
+msgstr[1] "Statistiques des tickets : les {days} derniers jours"
+
+#: cogs/config/tickets/stats_render.py:51
+#, python-brace-format
+msgid "{opened} opened, {closed} closed."
+msgstr "{opened} ouverts, {closed} fermés."
+
+#: cogs/config/tickets/stats_render.py:56
+msgid "Time to first claim"
+msgstr "Délai avant la première prise en charge"
+
+#: cogs/config/tickets/stats_render.py:58
+msgid "No claimed tickets yet."
+msgstr "Aucun ticket pris en charge pour le moment."
+
+#: cogs/config/tickets/stats_render.py:63
+msgid "Time to close"
+msgstr "Délai de fermeture"
+
+#: cogs/config/tickets/stats_render.py:65
+msgid "No closed tickets yet."
+msgstr "Aucun ticket fermé pour le moment."
+
+#: cogs/config/tickets/stats_render.py:70
+msgid "No ratings yet."
+msgstr "Aucune évaluation pour le moment."
+
+#: cogs/config/tickets/stats_render.py:74
+#, python-brace-format
+msgid "{average} out of 5 from {count} rating"
+msgid_plural "{average} out of 5 from {count} ratings"
+msgstr[0] "{average} sur 5 d'après {count} évaluation"
+msgstr[1] "{average} sur 5 d'après {count} évaluations"
+
+#: cogs/config/tickets/stats_render.py:82
+msgid "Satisfaction"
+msgstr "Satisfaction"
+
+#: cogs/config/tickets/stats_render.py:85
+msgid "Most claims"
+msgstr "Plus de prises en charge"
+
+#: cogs/config/tickets/stats_render.py:93
+#, python-brace-format
+msgid "Only the most recent {n} tickets are counted."
+msgstr "Seuls les {n} tickets les plus récents sont comptés."
 
 #: cogs/fun/fun.py:121 cogs/fun/games.py:74
 msgid "Something went wrong with that move."
@@ -11144,8 +11307,8 @@ msgstr "Yasuho reste dans ton salon vocal, même quand la file est vide."
 msgid "**Extended server playlists**"
 msgstr "**Playlists serveur étendues**"
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:167
-#: tests/cogs/test_premium_panel.py:171
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:169
+#: tests/cogs/test_premium_panel.py:173
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr "Jusqu'à {count} playlists de {tracks} morceaux."
