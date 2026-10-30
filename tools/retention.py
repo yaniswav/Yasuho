@@ -172,6 +172,11 @@ GUILD_DELETE_QUERIES = (
         "DELETE FROM serverstats_digest_state WHERE guild_id = $1",
     ),
     (
+        # V5b: the daily-summary claim row, same reasoning as the digest's.
+        "serverstats_daily_state",
+        "DELETE FROM serverstats_daily_state WHERE guild_id = $1",
+    ),
+    (
         # Member-milestone high-water mark (cogs/config/milestones.py): guild
         # config state, no personal data. The milestone settings themselves are
         # a guild_settings key and leave with that row.
@@ -278,6 +283,7 @@ UNION SELECT guild_id FROM dashboard_audit
 UNION SELECT guild_id FROM server_stats_messages
 UNION SELECT guild_id FROM server_stats_days
 UNION SELECT guild_id FROM serverstats_digest_state
+UNION SELECT guild_id FROM serverstats_daily_state
 UNION SELECT guild_id FROM milestone_state
 UNION SELECT guild_id FROM premium_entitlements WHERE guild_id IS NOT NULL
 UNION SELECT guild_id FROM premium_grants WHERE guild_id IS NOT NULL

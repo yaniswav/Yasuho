@@ -245,6 +245,10 @@ FREE_MAX_LINKED_PLAYLISTS = 0
 # Fair-queue extras (cogs/music/fairqueue): DJ priority and the per-member cap
 # on queued tracks are Yasuho+; the fair queue itself is free.
 FREE_MUSIC_QUEUE_CONTROLS = False
+# Server statistics extras (cogs/community/serverstats): the opt-in daily
+# summary post and the CSV export of the daily aggregates. Yasuho+ only.
+FREE_SERVERSTATS_DAILY_SUMMARY = False
+FREE_SERVERSTATS_EXPORT = False
 
 FREE_MAX_FAVOURITES = 100  # cogs/music/music.MAX_FAVOURITES
 FREE_MAX_PENDING_REMINDERS = 25  # cogs/community/reminders.MAX_PENDING_REMINDERS
@@ -325,6 +329,8 @@ class GuildLimits:
     max_request_panels: int
     max_linked_playlists: int
     music_queue_controls: bool
+    serverstats_daily_summary: bool
+    serverstats_export: bool
 
     def __post_init__(self):
         for name, ceiling in GUILD_CEILINGS.items():
@@ -375,6 +381,8 @@ GUILD_FREE = GuildLimits(
     max_request_panels=FREE_MAX_REQUEST_PANELS,
     max_linked_playlists=FREE_MAX_LINKED_PLAYLISTS,
     music_queue_controls=FREE_MUSIC_QUEUE_CONTROLS,
+    serverstats_daily_summary=FREE_SERVERSTATS_DAILY_SUMMARY,
+    serverstats_export=FREE_SERVERSTATS_EXPORT,
 )
 
 # Yasuho+ (guild subscription). Values from the retained plan's table
@@ -404,6 +412,8 @@ GUILD_PREMIUM = GuildLimits(
     max_request_panels=3,
     max_linked_playlists=10,
     music_queue_controls=True,
+    serverstats_daily_summary=True,
+    serverstats_export=True,
 )
 
 USER_FREE = UserLimits(

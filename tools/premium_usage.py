@@ -288,6 +288,8 @@ EXCLUDED_GUILD_FIELDS = {
     "max_request_panels": "panels live in the guild_settings blob, not a countable table; LIMIT-REACHED is its measure",
     "max_linked_playlists": "FREE is 0 (a capability gate, no 80%-of-free reading); LIMIT-REACHED is its measure",
     "music_queue_controls": "binary capability gated at READ time (a lapsed server's stored value is ignored), nothing to refuse",
+    "serverstats_daily_summary": "binary capability refused at the command; the delivery tick skips a lapsed server; LIMIT-REACHED is its measure",
+    "serverstats_export": "binary capability refused at the command; LIMIT-REACHED is its measure",
 }
 EXCLUDED_USER_FIELDS = {}
 

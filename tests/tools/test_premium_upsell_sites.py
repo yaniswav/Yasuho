@@ -67,6 +67,8 @@ _ALLOWED_IMPORTERS = {
     # move/create-feed ChannelSelect both show the upsell themselves now
     # (cog helpers return a plain error string the panel already relays).
     "cogs/anilist/feed_views.py",
+    # V5b: the serverstats daily summary / export are Yasuho+ capabilities.
+    "cogs/community/serverstats/cog.py",
 }
 
 

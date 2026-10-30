@@ -38,9 +38,9 @@ import logging
 import discord
 from discord.ext import commands, tasks
 
-from . import buffer, charts, digest, queries, rollups, views
-from tools import i18n, premium, rendering
-from tools.i18n import _
+from . import buffer, charts, daily, digest, export, queries, rollups, views
+from tools import i18n, premium, premium_upsell, rendering
+from tools.i18n import _, ngettext
 from tools.snowflake import coerce_id
 
 log = logging.getLogger(__name__)
@@ -91,6 +91,9 @@ UNLOAD_CANCEL_TIMEOUT = 5
 # run_digest_once for the pacing story.
 DIGEST_TICK_HOURS = 1
 
+# Pages of daily.FAN_OUT_LIMIT candidates one daily pass may examine.
+DAILY_MAX_PAGES = 4
+
 # ... and how long the final flush itself gets. Without it the last write is
 # bounded only by the pool's command_timeout (core.main: 60s), so a wedged DB
 # would hold a clean shutdown open for a minute over statistics. Losing the
@@ -120,6 +123,7 @@ class ServerStats(commands.Cog):
             "pruned": 0,
             "dropped": 0,
             "digests": 0,
+            "dailies": 0,
         }
 
     async def cog_load(self):
@@ -436,12 +440,19 @@ class ServerStats(commands.Cog):
     # ------------------------------------------------------------------
     @tasks.loop(hours=DIGEST_TICK_HOURS)
     async def _digest_loop(self):
+        # ONE clock reading for both passes: a slow digest pass must not push
+        # the daily pass across midnight into the next UTC day.
+        now = datetime.datetime.now(datetime.timezone.utc)
         try:
-            await self.run_digest_once()
+            await self.run_digest_once(now)
         except Exception:
             # A pass that raises must not kill the loop: the next hour's pass
             # re-reads the same candidates, minus whatever was already claimed.
             log.exception("serverstats digest iteration failed")
+        try:
+            await self.run_daily_once(now)
+        except Exception:
+            log.exception("serverstats daily summary iteration failed")
 
     @_digest_loop.before_loop
     async def _before_digest_loop(self):
@@ -666,6 +677,109 @@ class ServerStats(commands.Cog):
                 return False
         return True
 
+    # ------------------------------------------------------------------
+    # V5b: the DAILY SUMMARY (Yasuho+), on the same hourly tick as the digest.
+    # Scale story: per tick ONE indexed candidate query (a partial index over
+    # the opted-in guilds, filtered to the guilds whose hour, guild_id % 24, has
+    # come, so the fleet spreads over 24 ticks instead of a 00:00 UTC burst);
+    # per delivered guild one claim, two PK range reads, one settings read for
+    # the locale and one message. At most daily.FAN_OUT_LIMIT guilds per tick.
+    # ------------------------------------------------------------------
+    async def run_daily_once(self, now=None):
+        """One bounded delivery pass of the daily summary. Returns how many posted."""
+        pool = getattr(self.bot, "db_pool", None)
+        if pool is None or not self.bot.is_ready():
+            return 0
+        now = now or datetime.datetime.now(datetime.timezone.utc)
+        today = now.date()
+        delivered = 0
+        # Lapsed guilds are NOT claimed (a failed premium load would otherwise
+        # burn a paying guild's day), so they stay candidates. To keep them from
+        # starving the LIMITed head, each page excludes every guild already
+        # looked at this tick; at most DAILY_MAX_PAGES pages of FAN_OUT_LIMIT
+        # (shortcut: past 200 lapsed-and-due guilds the tail waits for a later
+        # tick; raise the bound if that ever happens). Per lapsed guild per tick:
+        # one in-memory premium lookup, no Discord call.
+        seen = []
+        for _page in range(DAILY_MAX_PAGES):
+            rows = await daily.candidates(
+                pool, today, now.hour, daily.FAN_OUT_LIMIT, seen
+            )
+            for row in rows:
+                seen.append(int(row["guild_id"]))
+                try:
+                    if await self._deliver_daily(pool, row, today):
+                        delivered += 1
+                except Exception:
+                    log.exception(
+                        "serverstats daily: delivery to guild %s failed",
+                        row["guild_id"],
+                    )
+            if len(rows) < daily.FAN_OUT_LIMIT:
+                break
+        if delivered:
+            self._stats["dailies"] += delivered
+            log.info("serverstats daily: posted %d summary(ies)", delivered)
+        return delivered
+
+    async def _deliver_daily(self, pool, row, today):
+        """Deliver ONE guild's daily summary; True when a message was posted.
+
+        Premium check first and WITHOUT claiming (a lapsed server keeps its
+        configuration, the summary simply stops, and a failed premium load never
+        burns a paying server's day), then claim (exactly once per UTC day, no
+        retry storm); every permanent failure after it leaves the row claimed.
+        """
+        guild_id = int(row["guild_id"])
+        channel_id = coerce_id(row["channel_id"])
+        guild = self.bot.get_guild(guild_id)
+        if guild is not None and guild.unavailable:
+            return False
+        if not premium.resolve_guild_limits(self.bot, guild_id).serverstats_daily_summary:
+            log.debug("serverstats daily: guild %s is not on Yasuho+; skipped", guild_id)
+            return False
+        if not await daily.claim(pool, guild_id, today):
+            return False
+        if guild is None or guild.me is None:
+            return False
+        channel = guild.get_channel(channel_id) if channel_id else None
+        if channel is None or not callable(getattr(channel, "send", None)):
+            log.warning(
+                "serverstats daily: guild %s has no usable channel (%r)",
+                guild_id,
+                row["channel_id"],
+            )
+            return False
+        missing = digest.missing_permissions(channel.permissions_for(guild.me))
+        if missing:
+            log.warning(
+                "serverstats daily: missing %s in channel %s of guild %s",
+                ", ".join(missing),
+                channel.id,
+                guild_id,
+            )
+            return False
+        report = await daily.collect(pool, guild_id, today)
+        if not report.has_data:
+            return False
+        # A PUBLIC re-rendered post speaks the SERVER's one language.
+        locale = await i18n.resolve_guild_locale(self.bot, guild)
+        with i18n.locale(locale):
+            embed = daily.render(report, guild.name)
+        try:
+            await channel.send(
+                embed=embed, allowed_mentions=discord.AllowedMentions.none()
+            )
+        except discord.HTTPException as exc:
+            log.warning(
+                "serverstats daily: could not post in channel %s of guild %s: %r",
+                channel.id,
+                guild_id,
+                exc,
+            )
+            return False
+        return True
+
     def _leveling_enabled(self, guild_id):
         """Whether leveling runs here (in-memory read, no query)."""
         cog = self.bot.get_cog("Leveling")
@@ -866,6 +980,133 @@ class ServerStats(commands.Cog):
         # turned it on (see digest.clear_channel).
         await digest.clear_channel(self.bot.db_pool, ctx.guild.id)
         await ctx.send(_("Weekly digest off. Nothing else changes - I keep collecting."))
+
+    # -- V5b: the daily summary and the CSV export (Yasuho+) --------------
+    async def _refuse_with_upsell(self, ctx, text, limit_key):
+        """Refuse a Yasuho+ capability: the text, plus the house upsell."""
+        is_slash = premium_upsell.is_slash_context(ctx)
+        upsell = await premium_upsell.for_guild_refusal(
+            self.bot,
+            limit_key=limit_key,
+            guild_id=ctx.guild.id,
+            person_id=ctx.author.id,
+            is_admin=premium_upsell.invoker_is_admin(ctx.author),
+            already_top_tier=premium_upsell.is_guild_already_top_tier(
+                self.bot, ctx.guild.id
+            ),
+            kind="unlock",
+            allow_button=is_slash,
+        )
+        if upsell is None:
+            return await ctx.send(text)
+        if not is_slash:
+            return await ctx.send(text + "\n" + upsell.line)
+        await ctx.send(text)
+        kwargs = {"ephemeral": True}
+        view = upsell.view()
+        if view is not None:
+            kwargs["view"] = view
+        await ctx.interaction.followup.send(upsell.line, **kwargs)
+
+    @serverstats.group(name="daily")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def serverstats_daily(self, ctx):
+        """Configure the daily server summary (Yasuho+)."""
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
+
+    @serverstats_daily.command(name="set")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        channel="Where the daily summary is posted, once a day."
+    )
+    async def serverstats_daily_set(self, ctx, channel: discord.TextChannel):
+        """Turn the daily summary on and choose where it is posted."""
+        if not premium.resolve_guild_limits(
+            self.bot, ctx.guild.id
+        ).serverstats_daily_summary:
+            return await self._refuse_with_upsell(
+                ctx,
+                _("The daily summary is a Yasuho+ feature."),
+                "serverstats_daily_summary",
+            )
+        # Same two preflights as the weekly digest (see serverstats_digest_set).
+        author_missing = digest.missing_permissions(
+            channel.permissions_for(ctx.author),
+            required=digest.CONFIGURER_PERMISSIONS,
+        )
+        if author_missing:
+            return await ctx.send(
+                _(
+                    "You need these permissions in {channel} yourself before you "
+                    "can schedule a daily summary there: {permissions}."
+                ).format(
+                    channel=channel.mention,
+                    permissions=digest.describe_permissions(author_missing),
+                ),
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+        missing = digest.missing_permissions(channel.permissions_for(ctx.guild.me))
+        if missing:
+            return await ctx.send(
+                _("I need these permissions in {channel} first: {permissions}.").format(
+                    channel=channel.mention,
+                    permissions=digest.describe_permissions(missing),
+                ),
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+        await daily.set_channel(self.bot.db_pool, ctx.guild.id, channel.id)
+        await ctx.send(
+            _(
+                "Daily summary on - I will post yesterday's statistics in "
+                "{channel} once a day (UTC days). Days I did not observe are "
+                "skipped rather than reported as empty."
+            ).format(channel=channel.mention),
+            allowed_mentions=discord.AllowedMentions.none(),
+        )
+
+    @serverstats_daily.command(name="off")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def serverstats_daily_off(self, ctx):
+        """Turn the daily summary off."""
+        await daily.clear_channel(self.bot.db_pool, ctx.guild.id)
+        await ctx.send(_("Daily summary off. Nothing else changes - I keep collecting."))
+
+    @serverstats.command(name="export")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @commands.cooldown(1, 60, commands.BucketType.guild)
+    @discord.app_commands.describe(days="How many complete days to export (default 30).")
+    async def serverstats_export(self, ctx, days: int = export.DEFAULT_EXPORT_DAYS):
+        """Export the daily statistics of this server as a CSV file (Yasuho+)."""
+        limits = premium.resolve_guild_limits(self.bot, ctx.guild.id)
+        if not limits.serverstats_export:
+            return await self._refuse_with_upsell(
+                ctx,
+                _("The statistics export is a Yasuho+ feature."),
+                "serverstats_export",
+            )
+        await ctx.defer()
+        days = rollups.clamp_days(
+            days,
+            default=export.DEFAULT_EXPORT_DAYS,
+            max_days=min(limits.serverstats_retention_days, export.MAX_EXPORT_DAYS),
+        )
+        # Complete UTC days only: yesterday back, never the day in progress.
+        end = rollups.today_utc() - rollups.ONE_DAY
+        start = end - datetime.timedelta(days=days - 1)
+        text = await export.collect(self.bot.db_pool, ctx.guild.id, start, end)
+        await ctx.send(
+            ngettext(
+                "Daily statistics for the last complete day (UTC).",
+                "Daily statistics for the last {days} complete days (UTC).",
+                days,
+            ).format(days=days),
+            file=discord.File(io.BytesIO(text.encode("utf-8")), filename=export.FILENAME),
+        )
 
     async def cmd_serverstats(self, ctx):
         """The ``/serverstats`` body - gathers every read the card needs, then

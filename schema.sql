@@ -1489,6 +1489,19 @@ CREATE INDEX IF NOT EXISTS guild_settings_digest_channel_idx
     ON guild_settings (guild_id)
     WHERE settings ? 'serverstats_digest_channel';
 
+-- Daily summary (Yasuho+) delivery bookkeeping: the UTC day a guild last
+-- received its summary for. Owner: cogs/community/serverstats/daily.py. Same
+-- exactly-once claim as serverstats_digest_state, keyed on a DATE. The opt-in
+-- switch is the guild_settings key 'serverstats_daily_channel' (absent = off);
+-- the partial index holds only the guilds that carry it.
+CREATE TABLE IF NOT EXISTS serverstats_daily_state (
+    guild_id BIGINT PRIMARY KEY,
+    last_day DATE   NOT NULL
+);
+CREATE INDEX IF NOT EXISTS guild_settings_daily_channel_idx
+    ON guild_settings (guild_id)
+    WHERE settings ? 'serverstats_daily_channel';
+
 -- ============================================================
 -- Command usage (GLOBAL aggregates only)
 -- ============================================================
