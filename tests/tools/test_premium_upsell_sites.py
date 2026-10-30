@@ -51,6 +51,7 @@ _ALLOWED_IMPORTERS = {
     "cogs/system/premium_panel.py",
     "cogs/music/music.py",
     "cogs/music/views.py",
+    "cogs/music/requests.py",
     "cogs/music/playlists_shared.py",
     "cogs/community/reminders.py",
     "cogs/config/rolemenus.py",

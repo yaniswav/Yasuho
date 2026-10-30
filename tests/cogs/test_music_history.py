@@ -104,6 +104,11 @@ class _Cog:
     async def _snapshot(self, player, track=None):
         self.snapshots.append(player)
 
+    async def _queue_plan(self, player, actor):
+        return None
+
+    _put_requested = music.Music._put_requested
+
 
 class _Message:
     def __init__(self):

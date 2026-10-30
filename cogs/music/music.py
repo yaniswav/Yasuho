@@ -16,6 +16,7 @@ from cogs.music import (
     always_on,
     effects,
     failures,
+    fairqueue,
     guild_config,
     lyrics,
     playerinfo,
@@ -25,13 +26,6 @@ from cogs.music import (
     vibes,
     voteskip,
 )
-
-# The playback engine core (Player, its YouTube-seed autoplay handler, the
-# search-result normalisers and the voice-channel resolver) lives in player.py,
-# the package's lowest layer. The cog uses SEARCH_SOURCE / Player / _first_track
-# / _normalize_result_tracks directly; the rest are re-bound into this module's
-# namespace so the test suite (which references them as cogs.music.music.<name>)
-# and every runtime consumer keep working with no edit.
 from cogs.music.player import (
     SEARCH_SOURCE,
     Player,
@@ -51,6 +45,14 @@ from cogs.music.playlists_shared import (
     echo_name,
     normalize_name,
 )
+
+# The playback engine core (Player, its YouTube-seed autoplay handler, the
+# search-result normalisers and the voice-channel resolver) lives in player.py,
+# the package's lowest layer. The cog uses SEARCH_SOURCE / Player / _first_track
+# / _normalize_result_tracks directly; the rest are re-bound into this module's
+# namespace so the test suite (which references them as cogs.music.music.<name>)
+# and every runtime consumer keep working with no edit.
+from cogs.music.requests import RequestButton, RequestPanelMixin
 from tools import i18n, music_state, premium, premium_upsell, settings
 from tools.i18n import N_, _, ngettext
 from tools.premium import resolve_guild_limits
@@ -1198,7 +1200,7 @@ def is_bot_channel_move(
     )
 
 
-class Music(ServerPlaylistMixin, commands.Cog):
+class Music(RequestPanelMixin, ServerPlaylistMixin, commands.Cog):
     """Music playback commands powered by sonolink (Lavalink v4)."""
 
     # True once the startup restore (and its 24/7 bare joins) has finished: the
@@ -1271,8 +1273,10 @@ class Music(ServerPlaylistMixin, commands.Cog):
         # the old instance and will not run again: open the 24/7 playlist gate
         # now instead of leaving it shut until the next restart.
         self._restore_done = self.bot.is_ready()
+        self.bot.add_dynamic_items(RequestButton)
 
     def cog_unload(self) -> None:
+        self.bot.remove_dynamic_items(RequestButton)
         self._idle_check.cancel()
         self.lyrics_sessions.shutdown()
         self.track_failures.shutdown()
@@ -1787,6 +1791,67 @@ class Music(ServerPlaylistMixin, commands.Cog):
         is not up yet.
         """
         return getattr(getattr(self, "bot", None), "db_pool", None)
+
+    async def _queue_plan(
+        self, player: typing.Any, actor: typing.Any
+    ) -> typing.Optional[fairqueue.QueuePlan]:
+        """What this guild asks of an enqueue, or ``None`` for plain FIFO.
+
+        A free guild with the fair queue off costs one read of the cached guild
+        blob (the LRU every music setting shares) and nothing else. The Yasuho+
+        extras (DJ priority, per-member cap) are read only when the entitlement
+        is live, so a lapsed server's stored values are ignored, never erased.
+        """
+        guild_id = playerinfo.guild_id_of(player)
+        if guild_id is None:
+            return None
+        pool = self._settings_pool()
+        fair = await guild_config.fair_queue_enabled(pool, guild_id)
+        priority, cap = False, None
+        if resolve_guild_limits(self.bot, guild_id).music_queue_controls:
+            priority = await guild_config.dj_priority_enabled(pool, guild_id)
+            cap = await guild_config.member_cap(pool, guild_id)
+        if not (fair or priority or cap):
+            return None
+        manager = (
+            await self._is_music_manager(player, actor) if (priority or cap) else False
+        )
+        return fairqueue.QueuePlan(
+            fair=fair, dj_priority=priority, member_cap=cap, manager=manager
+        )
+
+    async def _put_requested(
+        self, player: typing.Any, tracks: typing.Sequence[typing.Any], actor: typing.Any
+    ) -> fairqueue.Placed:
+        """THE enqueue seam for a member's request: requester, cap, fair order.
+
+        With no plan this is the historical ``requester = actor.id`` then
+        ``queue.put``. The queue room is re-fitted here because the plan read may
+        have awaited since the caller's own check.
+        """
+        plan = await self._queue_plan(player, actor)
+        accepted, room_dropped = fit_queue_additions(player.queue, tracks)
+        for track in accepted:
+            track.extras.requester = actor.id
+        if plan is None:
+            # Legacy shape: a lone track goes in as itself, a batch as a list.
+            player.queue.put(accepted[0] if len(accepted) == 1 else accepted)
+            return fairqueue.Placed(
+                accepted, dropped=room_dropped, queue_cap=MAX_QUEUE_TRACKS
+            )
+        capped = 0
+        if plan.member_cap is not None and not plan.manager:
+            accepted, capped = fairqueue.apply_member_cap(
+                player.queue.tracks, accepted, actor.id, plan.member_cap
+            )
+        fairqueue.place(player.queue, accepted, actor.id, plan)
+        return fairqueue.Placed(
+            accepted,
+            capped,
+            plan.member_cap,
+            dropped=room_dropped,
+            queue_cap=MAX_QUEUE_TRACKS,
+        )
 
     async def _init_autoplay(self, player: Player, member_id: int) -> None:
         """Seed a NEW session's autoplay: personal preference, guild default, ON.
@@ -3527,9 +3592,13 @@ class Music(ServerPlaylistMixin, commands.Cog):
                 # plain refusal rather than "added the playlist (0 tracks)".
                 await ctx.send(queue_full_message())
                 return
-            for track in queued:
-                track.extras.requester = ctx.author.id
-            player.queue.put(queued)
+            placed = await self._put_requested(player, queued, ctx.author)
+            queued = placed.accepted
+            if not queued:
+                await ctx.send(
+                    placed.refusal() if placed.capped else queue_full_message()
+                )
+                return
             # Plural-aware: the cap can truncate a playlist down to exactly ONE
             # accepted track, so "(1 tracks)" is now an ordinary outcome rather
             # than the edge case a 1-track playlist used to be. Same ngettext
@@ -3541,6 +3610,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
                     len(queued),
                 ).format(name=data.name, count=len(queued))
                 + queue_full_suffix(dropped)
+                + placed.suffix()
             )
         else:
             # Re-checked at the put: the search above is an await, so a bulk load
@@ -3549,8 +3619,12 @@ class Music(ServerPlaylistMixin, commands.Cog):
                 await ctx.send(queue_full_message())
                 return
             track = data[0] if isinstance(data, list) else data
-            track.extras.requester = ctx.author.id
-            player.queue.put(track)
+            placed = await self._put_requested(player, [track], ctx.author)
+            if not placed.accepted:
+                await ctx.send(
+                    placed.refusal() if placed.capped else queue_full_message()
+                )
+                return
             await ctx.send(
                 _("Added **{title}** by `{author}` to the queue.").format(
                     title=safetext.public_echo(track.title, limit=TITLE_ECHO_LIMIT),
@@ -4401,6 +4475,61 @@ class Music(ServerPlaylistMixin, commands.Cog):
         await resume_after_track_change(player, was_paused)
         await self._snapshot(player)
         return track
+
+    # ------------------------------------------------------------------
+    # Request panels and the fair queue (configuration, Manage Server).
+    # HybridGroup parent checks never run for subcommands, so each one
+    # carries its own has_permissions.
+    # ------------------------------------------------------------------
+
+    @music.group(name="requests")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def requests_group(self, ctx: commands.Context) -> None:
+        """Song-request panels: a button members press to request a song."""
+        if ctx.invoked_subcommand is None:
+            await ctx.send(
+                _(
+                    "Use `{p}music requests post [channel]` to post a request "
+                    "panel and `{p}music requests remove [channel]` to remove it."
+                ).format(p=ctx.clean_prefix)
+            )
+
+    @requests_group.command(name="post")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @app_commands.describe(channel="Where to post the panel (default: this channel).")
+    async def requests_post_cmd(
+        self, ctx: commands.Context, channel: typing.Optional[discord.TextChannel] = None
+    ) -> None:
+        """Post a "Request a song" panel in a channel."""
+        await self.requests_post(ctx, channel)
+
+    @requests_group.command(name="remove")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @app_commands.describe(channel="The channel whose panel to remove (default: this one).")
+    async def requests_remove_cmd(
+        self, ctx: commands.Context, channel: typing.Optional[discord.TextChannel] = None
+    ) -> None:
+        """Remove the request panel of a channel."""
+        await self.requests_remove(ctx, channel)
+
+    @music.command(name="fairqueue")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @app_commands.describe(enabled="Interleave requesters instead of first come first served.")
+    async def fairqueue_cmd(self, ctx: commands.Context, enabled: bool) -> None:
+        """Turn the fair queue on or off (take turns between requesters)."""
+        await settings.set_guild(
+            self.bot.db_pool, ctx.guild.id, guild_config.KEY_FAIR_QUEUE, bool(enabled)
+        )
+        await ctx.send(
+            _("Fair queue is now on: requesters take turns.")
+            if enabled
+            else _("Fair queue is now off: tracks play first come first served."),
+            ephemeral=True,
+        )
 
     @music.command(name="previous")
     @commands.guild_only()
@@ -5431,9 +5560,11 @@ class Music(ServerPlaylistMixin, commands.Cog):
             await ctx.send(queue_full_message())
             return
 
-        for track in tracks:
-            track.extras.requester = ctx.author.id
-            player.queue.put(track)
+        placed = await self._put_requested(player, tracks, ctx.author)
+        tracks = placed.accepted
+        if not tracks:
+            await ctx.send(placed.refusal() if placed.capped else queue_full_message())
+            return
 
         # Playing favourites is an explicit choice: it ends any radio session.
         player.radio_genre = None
@@ -5468,7 +5599,7 @@ class Music(ServerPlaylistMixin, commands.Cog):
                 " to add them.",
                 deferred,
             ).format(deferred=deferred)
-        message += queue_full_suffix(over_cap)
+        message += queue_full_suffix(over_cap) + placed.suffix()
         await ctx.send(message)
 
     @playlist.command(name="add")

@@ -160,6 +160,12 @@ class _Bot:
         self.on_decode = None
         self.sl_client = types.SimpleNamespace(decode_tracks=self._decode)
 
+    def add_dynamic_items(self, *items):
+        pass
+
+    def remove_dynamic_items(self, *items):
+        pass
+
     async def _decode(self, *blobs):
         self.decoded.append(blobs)
         if self.on_decode is not None:

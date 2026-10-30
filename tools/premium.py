@@ -236,6 +236,12 @@ FREE_PREMIUM_CARD_THEMES = False
 FREE_PREMIUM_WELCOME_CARD = False
 # Saved audio effect (cogs/music): a server default effect applied once per player.
 FREE_MUSIC_SAVED_EFFECTS = False
+# Music request panels (cogs/music/requests): one persistent "Request a song"
+# panel per server is free; Yasuho+ may post several (several channels).
+FREE_MAX_REQUEST_PANELS = 1
+# Fair-queue extras (cogs/music/fairqueue): DJ priority and the per-member cap
+# on queued tracks are Yasuho+; the fair queue itself is free.
+FREE_MUSIC_QUEUE_CONTROLS = False
 
 FREE_MAX_FAVOURITES = 100  # cogs/music/music.MAX_FAVOURITES
 FREE_MAX_PENDING_REMINDERS = 25  # cogs/community/reminders.MAX_PENDING_REMINDERS
@@ -277,6 +283,7 @@ GUILD_CEILINGS = {
     "max_tickets_open_per_guild": 500,
     "serverstats_retention_days": 365,
     "max_scheduled_announcements": 50,
+    "max_request_panels": 10,
 }
 
 USER_CEILINGS = {
@@ -311,6 +318,8 @@ class GuildLimits:
     premium_card_themes: bool
     premium_welcome_card: bool
     music_saved_effects: bool
+    max_request_panels: int
+    music_queue_controls: bool
 
     def __post_init__(self):
         for name, ceiling in GUILD_CEILINGS.items():
@@ -358,6 +367,8 @@ GUILD_FREE = GuildLimits(
     premium_card_themes=FREE_PREMIUM_CARD_THEMES,
     premium_welcome_card=FREE_PREMIUM_WELCOME_CARD,
     music_saved_effects=FREE_MUSIC_SAVED_EFFECTS,
+    max_request_panels=FREE_MAX_REQUEST_PANELS,
+    music_queue_controls=FREE_MUSIC_QUEUE_CONTROLS,
 )
 
 # Yasuho+ (guild subscription). Values from the retained plan's table
@@ -384,6 +395,8 @@ GUILD_PREMIUM = GuildLimits(
     premium_card_themes=True,
     premium_welcome_card=True,
     music_saved_effects=True,
+    max_request_panels=3,
+    music_queue_controls=True,
 )
 
 USER_FREE = UserLimits(

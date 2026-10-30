@@ -79,6 +79,26 @@ KEY_SPONSORBLOCK = "music_sponsorblock"
 # on Yasuho+ and on a known preset key.
 KEY_DEFAULT_EFFECT = "music_default_effect"
 
+# Fair queue (bool, default False, free): the user lane interleaves requesters
+# round-robin instead of FIFO. In KEYS: the dashboard may write it directly.
+KEY_FAIR_QUEUE = "music_fair_queue"
+
+# DJ priority (bool, default False, Yasuho+): tracks queued by music managers go
+# to the front block of the lane. In KEYS, but GATED AT READ TIME on the
+# ``music_queue_controls`` limit, so a lapsed server's stored value is ignored
+# (kept, never erased) and a dashboard write can never bypass the entitlement.
+KEY_DJ_PRIORITY = "music_dj_priority"
+
+# Per-member cap of queued tracks (int 1..50, absent = off, Yasuho+). Same
+# read-time gating as KEY_DJ_PRIORITY.
+KEY_MEMBER_CAP = "music_member_cap"
+
+# Request panels posted by /music requests post: list of {"c": channel_id,
+# "m": message_id}, creation order. Deliberately NOT in KEYS: a panel only exists
+# if the bot actually posted its message, so only the bot writes the list (the
+# dashboard may READ it).
+KEY_REQUEST_PANELS = "music_request_panels"
+
 # Every key this module owns; the dashboard writes these and nothing else under
 # the ``music_config`` kind.
 KEYS = frozenset(
@@ -88,8 +108,16 @@ KEYS = frozenset(
         KEY_VOTESKIP,
         KEY_DJ_ROLE,
         KEY_SPONSORBLOCK,
+        KEY_FAIR_QUEUE,
+        KEY_DJ_PRIORITY,
+        KEY_MEMBER_CAP,
     }
 )
+
+MIN_MEMBER_CAP = 1
+MAX_MEMBER_CAP = 50
+# Hard bound on how many stored panel entries are ever read (GUILD_CEILINGS).
+MAX_STORED_PANELS = 10
 
 
 # The volume bounds. These are the bounds the ``/volume`` command itself declares
@@ -304,3 +332,64 @@ async def default_effect(pool: typing.Any, guild_id: typing.Any):
     if isinstance(raw, str) and raw.strip():
         return raw.strip()
     return None
+
+
+async def fair_queue_enabled(pool: typing.Any, guild_id: typing.Any) -> bool:
+    """Whether the fair queue is on (default: off, i.e. plain FIFO)."""
+    return bool(coerce_bool(await _read(pool, guild_id, KEY_FAIR_QUEUE), False))
+
+
+async def dj_priority_enabled(pool: typing.Any, guild_id: typing.Any) -> bool:
+    """Stored DJ priority flag. The CALLER gates it on the Yasuho+ limit."""
+    return bool(coerce_bool(await _read(pool, guild_id, KEY_DJ_PRIORITY), False))
+
+
+def coerce_member_cap(raw: typing.Any) -> typing.Optional[int]:
+    """Read a stored per-member cap: ``1..50`` (clamped high) or ``None`` (off).
+
+    Zero, negatives, bools and junk all mean "off" rather than a cap nobody
+    meant. Pure.
+    """
+    if raw is None or isinstance(raw, bool):
+        return None
+    try:
+        value = int(float(raw)) if isinstance(raw, (int, float, str)) else None
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if value is None or value < MIN_MEMBER_CAP:
+        return None
+    return min(value, MAX_MEMBER_CAP)
+
+
+async def member_cap(pool: typing.Any, guild_id: typing.Any):
+    """Stored per-member cap or ``None``. The CALLER gates it on Yasuho+."""
+    return coerce_member_cap(await _read(pool, guild_id, KEY_MEMBER_CAP))
+
+
+def coerce_panels(raw: typing.Any) -> typing.List[typing.Tuple[int, int]]:
+    """Read the stored panel list as ``[(channel_id, message_id), ...]``.
+
+    Order is kept (creation order decides which panel is "the first"), junk
+    entries and duplicates are dropped, and at most ``MAX_STORED_PANELS`` are
+    read. Pure.
+    """
+    out: typing.List[typing.Tuple[int, int]] = []
+    if not isinstance(raw, list):
+        return out
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        pair = (coerce_id(entry.get("c")), coerce_id(entry.get("m")))
+        if pair[0] is None or pair[1] is None:
+            continue
+        if any(pair[1] == m for _, m in out):
+            continue
+        out.append(pair)
+        if len(out) >= MAX_STORED_PANELS:
+            break
+    return out
+
+
+async def request_panels(pool: typing.Any, guild_id: typing.Any):
+    """The guild's stored request panels, creation order (empty when none)."""
+    return coerce_panels(await _read(pool, guild_id, KEY_REQUEST_PANELS))

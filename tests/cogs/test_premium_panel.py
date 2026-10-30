@@ -98,6 +98,8 @@ def _synthetic_guild_plus():
         premium_card_themes=True,
         premium_welcome_card=True,
         music_saved_effects=True,
+        max_request_panels=3,
+        music_queue_controls=True,
     )
 
 

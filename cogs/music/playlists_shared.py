@@ -859,9 +859,11 @@ class ServerPlaylistMixin:
             await ctx.send(queue_full_message())
             return
 
-        for track in usable:
-            track.extras.requester = ctx.author.id
-            player.queue.put(track)
+        placed = await self._put_requested(player, usable, ctx.author)
+        usable = placed.accepted
+        if not usable:
+            await ctx.send(placed.refusal() if placed.capped else queue_full_message())
+            return
 
         # Loading a playlist is an explicit choice: it ends any radio session.
         player.radio_genre = None
@@ -883,7 +885,7 @@ class ServerPlaylistMixin:
                 " {skipped} tracks were skipped - they could not be loaded.",
                 skipped,
             ).format(skipped=skipped)
-        message += queue_full_suffix(over_cap)
+        message += queue_full_suffix(over_cap) + placed.suffix()
         await ctx.send(message, allowed_mentions=NO_PINGS)
 
     @serverplaylist_play.autocomplete("name")

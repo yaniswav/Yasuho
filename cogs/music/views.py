@@ -291,8 +291,13 @@ class AddSongModal(LocaleModal, title="Add a song"):
                 )
                 return
 
-            track.extras.requester = interaction.user.id
-            player.queue.put(track)
+            placed = await self.cog._put_requested(player, [track], interaction.user)
+            if not placed.accepted:
+                await interaction.response.send_message(
+                    placed.refusal() if placed.capped else queue_full_message(),
+                    ephemeral=True,
+                )
+                return
             # An explicit add turns a radio session into a normal one: the station
             # select disappears on the rerender below.
             player.radio_genre = None
@@ -2210,8 +2215,15 @@ class HistoryCard(PinnedRenderLocale, LocaleLayoutView):
                     queue_full_message(), ephemeral=True
                 )
                 return
-            entry.extras.requester = interaction.user.id
-            self.player.queue.put(entry)
+            placed = await self.cog._put_requested(
+                self.player, [entry], interaction.user
+            )
+            if not placed.accepted:
+                await interaction.response.send_message(
+                    placed.refusal() if placed.capped else queue_full_message(),
+                    ephemeral=True,
+                )
+                return
             # An explicit add turns a radio session into a normal one, exactly as
             # the add-track modal does.
             self.player.radio_genre = None
@@ -2661,8 +2673,13 @@ class FavouritesCard(AuthorLayoutView):
                 await interaction.followup.send(queue_full_message(), ephemeral=True)
                 return False
 
-            track.extras.requester = interaction.user.id
-            player.queue.put(track)
+            placed = await self.cog._put_requested(player, [track], interaction.user)
+            if not placed.accepted:
+                await interaction.followup.send(
+                    placed.refusal() if placed.capped else queue_full_message(),
+                    ephemeral=True,
+                )
+                return False
             # An explicit pick ends any radio session, as every other add does.
             player.radio_genre = None
             if should_start_now(player):

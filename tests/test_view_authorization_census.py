@@ -1103,6 +1103,19 @@ CLASSIFIED: dict[str, tuple[str, str]] = {
         "card's gate), and nothing here is a claimable/transferable "
         "resource - the same accepted-residual shape as AddSongModal.",
     ),
+    "cogs.music.requests.RequestButton": (
+        "PUBLIC",
+        "Any member may request a song from a panel, exactly as any member may "
+        "/play; the callback re-reads the panel status (active, paused or "
+        "unknown) from the live settings, and the submit runs Music._play_query, "
+        "which re-checks the voice channel, the queue cap and the SSRF guard.",
+    ),
+    "cogs.music.requests.RequestModal": (
+        "PUBLIC",
+        "Opened only from RequestButton; Music.submit_request acts for "
+        "interaction.user alone and runs the same /play core (voice gate, queue "
+        "cap, fair queue and member cap), behind a per-member debounce.",
+    ),
     "cogs.music.voteskip.SkipVoteView": (
         "PUBLIC",
         "Docstring: 'Multi-user by nature (any listener in the channel may "
