@@ -122,7 +122,9 @@ EXPORT_COOLDOWN_SECONDS = 3600
 # v19 adds the temporary-room settings remembered for this user (`room_prefs_saved`:
 # server, hub, name, user limit, locked, hidden, updated_at; `room_prefs_opted_out` lists the servers
 # where saving is turned off), erased on request.
-EXPORT_VERSION = 19
+# v20 adds the satisfaction rating, the optional comment and the rating time to each
+# `tickets_opened` row (the comment is text the user wrote), erased on request.
+EXPORT_VERSION = 20
 
 # THE list of tables a profile lives in, deleted together. This mirrors
 # retention.GUILD_DELETE_QUERIES for the USER side: profile data is keyed by
@@ -224,6 +226,15 @@ USER_DELETE_QUERIES = PROFILE_DELETE_QUERIES + (
     # room_prefs_off (the opt-out: only an on/off choice, no settings) is NOT in
     # this list on purpose, so erasing the profile never turns saving back on.
     ("room_prefs", "DELETE FROM room_prefs WHERE user_id = $1"),
+    # The satisfaction ratings and comments this user left on tickets they opened
+    # (cogs/config/tickets/rating). An UPDATE, not a DELETE: the ticket row is the
+    # server's bookkeeping (who asked, when) and stays; what the member WROTE or
+    # SCORED is cleared, so the server's counts simply lose that one vote.
+    (
+        "tickets_ratings",
+        "UPDATE tickets SET rating = NULL, rating_comment = NULL, rated_at = NULL "
+        "WHERE opener_id = $1 AND rating IS NOT NULL",
+    ),
     # This user's OWN Pack Confort rows (tools/premium.py) - WHERE user_id
     # only, same carve-out the export query above uses, so a Yasuho+ row
     # (guild-scoped, user_id NULL) is never reachable from here. Safe to erase
@@ -587,7 +598,8 @@ async def collect_user_export(pool, user_id):
     # user's.
     tickets = await pool.fetch(
         "SELECT guild_id, ticket_number, thread_id, status, opened_at, "
-        "closed_at FROM tickets WHERE opener_id = $1 ORDER BY opened_at",
+        "closed_at, rating, rating_comment, rated_at "
+        "FROM tickets WHERE opener_id = $1 ORDER BY opened_at",
         user_id,
     )
     announcements = await pool.fetch(

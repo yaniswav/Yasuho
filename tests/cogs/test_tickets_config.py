@@ -43,7 +43,7 @@ class _RaisingPool:
 # ---------------------------------------------------------------------------
 
 
-def test_the_six_keys_are_the_declared_contract():
+def test_the_seven_keys_are_the_declared_contract():
     assert guild_config.KEYS == {
         "tickets_panel_channel",
         "tickets_support_role",
@@ -51,6 +51,7 @@ def test_the_six_keys_are_the_declared_contract():
         "tickets_max_open_per_user",
         "tickets_inactivity_hours",
         "tickets_panel_message",
+        "tickets_rating",
     }
 
 

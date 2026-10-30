@@ -107,6 +107,8 @@ def _synthetic_guild_plus():
         max_starboards=5,
         max_temp_roles=100,
         max_youtube_follows=25,
+        ticket_stats_days=365,
+        ticket_stats_export=True,
     )
 
 

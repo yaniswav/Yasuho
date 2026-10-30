@@ -973,6 +973,31 @@ CLASSIFIED: dict[str, tuple[str, str]] = {
         "consults this view's own check for a dynamic item's click, so it "
         "has no actionable component of its own.",
     ),
+    "cogs.config.tickets.rating.RatingStarButton": (
+        "CALLBACK_CHECKS",
+        "callback -> _run_rate, whose single UPDATE (storage.rate_ticket) carries "
+        "opener_id = interaction.user.id: a click by anyone else matches no row.",
+    ),
+    "cogs.config.tickets.rating.RatingCommentButton": (
+        "CALLBACK_CHECKS",
+        "Only opens RatingCommentModal; the submit's UPDATE "
+        "(storage.comment_ticket) carries opener_id = interaction.user.id.",
+    ),
+    "cogs.config.tickets.rating.RatingCommentModal": (
+        "CALLBACK_CHECKS",
+        "on_submit -> _run_comment -> storage.comment_ticket, whose UPDATE "
+        "carries opener_id = interaction.user.id, re-checked FRESH at submit.",
+    ),
+    "cogs.config.tickets.rating.RatingPromptView": (
+        "DISPLAY_ONLY",
+        "Its only children are RatingStarButton DynamicItems (classified on "
+        "their own); dispatch never consults this view for a dynamic item.",
+    ),
+    "cogs.config.tickets.rating.RatingCommentView": (
+        "DISPLAY_ONLY",
+        "Its only child is RatingCommentButton, a DynamicItem classified on "
+        "its own.",
+    ),
     "cogs.config.tickets.open.TicketPanelView": (
         "PUBLIC",
         "Hosts only the public 'Open a ticket' button (open.py:155-170, a "

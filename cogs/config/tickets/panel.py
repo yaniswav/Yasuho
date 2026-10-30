@@ -50,15 +50,18 @@ Typography rule: ASCII '-' and '...' only.
 
 from __future__ import annotations
 
+import datetime
+import io
 import logging
 import typing
 
 import discord
 from discord.ext import commands
 
-from . import guild_config, preflight
+from . import guild_config, preflight, stats, stats_render, storage
 from .open import TicketPanelView
-from tools import forumsolved, i18n, interactions, premium
+from tools import forumsolved, i18n, interactions, premium, premium_upsell
+from tools.cooldowns import Cooldowns
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.modchecks import everyone_can_read
@@ -66,6 +69,9 @@ from tools.snowflake import coerce_id
 from tools.views import AuthorLayoutView, LocaleLayoutView, LocaleModal
 
 log = logging.getLogger(__name__)
+
+# One /ticket stats per guild per 30 s (in-memory debounce, spent after the refusals).
+_STATS_COOLDOWN = Cooldowns(30)
 
 
 class TicketStatusView(LocaleLayoutView):
@@ -983,6 +989,96 @@ class Tickets(commands.Cog):
         view = TicketConfigPanel(self, ctx.guild, ctx.author.id, raw)
         view.message = await ctx.send(
             view=view, allowed_mentions=discord.AllowedMentions.none()
+        )
+
+    @ticket.command(name="rating")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        enabled="Ask the member who opened a ticket to rate the support when it closes."
+    )
+    async def ticket_rating(self, ctx, enabled: bool):
+        """Turn the satisfaction rating on closed tickets on or off."""
+        # Off DELETES the key (absent means default, see guild_config.set_key).
+        await guild_config.set_key(
+            self.bot.db_pool,
+            ctx.guild.id,
+            guild_config.KEY_RATING,
+            True if enabled else None,
+        )
+        if enabled:
+            await ctx.send(
+                _(
+                    "Ratings are on. When a ticket closes, the member who opened "
+                    "it can rate the support from 1 to 5 stars and add a short "
+                    "comment."
+                )
+            )
+        else:
+            await ctx.send(_("Ratings are off. Ratings already given are kept."))
+
+    @ticket.command(name="stats")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        days="How many days back to look (30 for free, up to 365 with Yasuho+).",
+        export="Also attach a CSV of the tickets (Yasuho+).",
+    )
+    async def ticket_stats(
+        self, ctx, days: int = stats.DEFAULT_DAYS, export: bool = False
+    ):
+        """Show ticket statistics: volumes, response times, ratings, staff claims."""
+        limits = premium.resolve_guild_limits(self.bot, ctx.guild.id)
+        days = max(1, min(stats.MAX_DAYS, days))
+        if days > limits.ticket_stats_days:
+            return await premium_upsell.refuse_in_context(
+                self.bot,
+                ctx,
+                _("Ticket statistics go back {n} days on the free plan.").format(
+                    n=limits.ticket_stats_days
+                ),
+                limit_key="ticket_stats_days",
+                kind="unlock",
+                benefit=str(premium.GUILD_PREMIUM.ticket_stats_days),
+            )
+        if export and not limits.ticket_stats_export:
+            return await premium_upsell.refuse_in_context(
+                self.bot,
+                ctx,
+                _("The ticket CSV export is a Yasuho+ feature."),
+                limit_key="ticket_stats_export",
+                kind="unlock",
+            )
+        # Spent only now: a refusal above costs the manager nothing.
+        if _STATS_COOLDOWN.is_active(ctx.guild.id):
+            return await ctx.send(
+                _("Please wait a moment before asking for statistics again."),
+                ephemeral=True,
+            )
+        _STATS_COOLDOWN.touch(ctx.guild.id)
+        await ctx.defer(ephemeral=True)
+        since = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
+            days=days
+        )
+        rows = await storage.fetch_stats_rows(
+            self.bot.db_pool, ctx.guild.id, since, stats.ROW_CAP + 1
+        )
+        truncated = len(rows) > stats.ROW_CAP
+        rows = rows[: stats.ROW_CAP]
+        embed = stats_render.build_embed(
+            stats.summarize(rows), days, truncated=truncated
+        )
+        kwargs = {}
+        if export:
+            kwargs["file"] = discord.File(
+                io.BytesIO(stats.build_csv(rows).encode("utf-8")),
+                filename=stats.FILENAME,
+            )
+        await ctx.send(
+            embed=embed,
+            allowed_mentions=discord.AllowedMentions.none(),
+            ephemeral=True,
+            **kwargs,
         )
 
     @ticket.command(name="solved")

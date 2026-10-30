@@ -303,6 +303,8 @@ class ProfileDeletionView(AuthorView):
                 + "\n"
                 + _("Your remembered voice room settings are gone.")
                 + "\n"
+                + _("Your ticket ratings and comments are gone.")
+                + "\n"
                 + _("Your top.gg vote record is gone too.")
                 + "\n"
                 + _("So is your personal rank card.")
@@ -805,6 +807,8 @@ class UserSettings(commands.Cog):
             )
             + "\n"
             + _("It also forgets your remembered voice room settings, in every server.")
+            + "\n"
+            + _("It also erases the ratings and comments you left on support tickets, in every server.")
             + "\n"
             + _(
                 "And your personal rank card: the background image you "

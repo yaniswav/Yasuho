@@ -35,8 +35,8 @@ cannot erase it, and the whole log dies with the server when the bot is removed
 (it is also aged out on the schedule below meanwhile).
 
 **Support tickets** (per server): metadata only - the ticket number, the private
-thread's ID, who opened it, which staff member claimed it, who closed it, when
-it was opened and closed, and whether it is still open. The bot never stores the
+thread's ID, who opened it, which staff member claimed it and when, who closed
+it, when it was opened and closed, and whether it is still open. The bot never stores the
 conversation: it has no database column for it, and none of it is written
 anywhere the bot keeps.
 
@@ -52,6 +52,23 @@ there without its transcript, and the bot says so. A server with no ticket log
 channel gets no transcript at all. The closing message in the thread tells you
 which of the two happened, every time: that no transcript was saved, or that
 one was just saved to that server's ticket log.
+
+Ratings. If a server manager turns ticket ratings on (they are off by default),
+the member who opened a ticket is sent one prompt by direct message when it
+closes: a rating from 1 to 5 stars and, optionally, a comment of up to 300
+characters. Only the opener can answer, once, within 7 days of the close. Ratings
+are not anonymous: the rating and the comment are stored with the ticket row
+under your user ID, the prompt says that staff can see your rating, and a
+server's managers can see which rating each ticket got. The ticket statistics
+show averages and counts, never the comment. If the server has a staff-only
+ticket log channel, the bot also posts the rating and your comment there, like
+the transcript: that copy lives in that Discord channel, under that server's
+control, and `?mydata deleteprofile` cannot erase it. What the bot stores is
+included in your data export, and `?mydata deleteprofile` erases it (the
+ticket's own record, kept by the server, stays). The ticket statistics and their
+CSV export (the last 30 days, or up to 365 days with Yasuho+) list tickets by
+number with their times, the claiming staff member's ID and the rating - never
+the opener, the comment or the conversation.
 
 **Leveling**: your user ID with XP totals, levels, and monthly season results
 per server. If you customise your own rank card (`/rankcard`), the accent colour
@@ -168,8 +185,8 @@ ID, no server ID.
   configures without reading messages. The only text we keep is text
   explicitly given to a command for that purpose, all listed above: reminder
   texts, AFK status messages, moderation case reasons, and custom command
-  replies and scheduled announcements written by server managers, and
-  suggestions. Our own technical logs never contain message text; mod-log and
+  replies and scheduled announcements written by server managers,
+  suggestions, and ticket rating comments. Our own technical logs never contain message text; mod-log and
   ticket-log channels are Discord channels that belong to the server, not logs
   we keep.
 - We do not use any data to train machine learning or AI models.

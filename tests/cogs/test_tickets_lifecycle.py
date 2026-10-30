@@ -30,7 +30,7 @@ import types
 import discord
 import pytest
 
-from cogs.config.tickets import guild_config, lifecycle
+from cogs.config.tickets import guild_config, lifecycle, rating
 from cogs.config.tickets import open as ticket_open
 from tools import settings
 
@@ -1169,14 +1169,16 @@ async def test_the_cog_registers_both_dynamic_items_and_drops_them_on_unload():
     cog.sweep_stale_tickets = types.SimpleNamespace(cancel=lambda: None)
 
     await cog.cog_load()
-    assert world.bot.dynamic == [
-        lifecycle.TicketClaimButton, lifecycle.TicketCloseButton
+    items = [
+        lifecycle.TicketClaimButton,
+        lifecycle.TicketCloseButton,
+        rating.RatingStarButton,
+        rating.RatingCommentButton,
     ]
+    assert world.bot.dynamic == items
 
     cog.cog_unload()
-    assert world.bot.removed == [
-        lifecycle.TicketClaimButton, lifecycle.TicketCloseButton
-    ]
+    assert world.bot.removed == items
 
 
 class _MessageAuthor:
@@ -1337,3 +1339,50 @@ async def test_a_public_log_channel_gets_no_transcript_and_says_why():
     args, kwargs = world.channel.sends[0]
     assert "file" not in kwargs or kwargs["file"] is None
     assert "everyone can read" in kwargs["embed"].footer.text
+
+
+# ---------------------------------------------------------------------------
+# V5a: the rating prompt is a DM on every close path, never a thread button
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("sent", [True, False])
+async def test_the_notice_points_to_the_dms_only_when_the_dm_went_through(monkeypatch, sent):
+    _configured()
+    calls = []
+
+    async def offer(bot, guild, closed):
+        calls.append(closed["opener_id"])
+        return sent
+
+    monkeypatch.setattr(lifecycle.rating, "offer_rating", offer)
+    world = _world(pool_kwargs={"by_thread": _row()})
+    await lifecycle.perform_close(
+        world.bot, world.guild, world.thread, _row(),
+        closed_by=_Member(OPENER_ID), reason=lifecycle.REASON_MANUAL,
+    )
+    text = world.thread.sends[0][0][0]
+    assert calls and ("Check your DMs" in text) is sent
+    assert "view" not in world.thread.sends[0][1]  # never buttons in a thread about to lock
+
+
+@pytest.mark.parametrize(
+    "reason", [lifecycle.REASON_INACTIVITY, lifecycle.REASON_DELETED]
+)
+async def test_the_dm_is_offered_even_with_no_thread_or_an_archived_one(monkeypatch, reason):
+    _configured()
+    calls = []
+
+    async def offer(bot, guild, closed):
+        calls.append(closed["id"])
+        return True
+
+    monkeypatch.setattr(lifecycle.rating, "offer_rating", offer)
+    for thread_archived in (None, True):
+        world = _world(archived=bool(thread_archived), pool_kwargs={"by_thread": _row()})
+        thread = None if thread_archived is None else world.thread
+        await lifecycle.perform_close(
+            world.bot, world.guild, thread, _row(), closed_by=None, reason=reason
+        )
+        assert world.thread.sends == []
+    assert len(calls) == 2

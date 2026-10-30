@@ -1736,6 +1736,17 @@ ALTER TABLE tickets ADD COLUMN IF NOT EXISTS claimed_by BIGINT;
 -- PostgreSQL: a 50-row pass over 2300 rows (2000 of them closed) is an index
 -- scan touching 2 shared buffers.
 CREATE INDEX IF NOT EXISTS tickets_open_sweep_idx ON tickets (id) WHERE status = 'open';
+-- Lot V5a. When the ticket was claimed (NULL = never claimed, or claimed before
+-- this column existed: no backfill, a median ignores NULL rather than reading 0).
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMPTZ;
+-- The opener's satisfaction rating, 1..5, NULL = not rated. The comment is a
+-- short free text WRITTEN BY A MEMBER (personal data: exported by /mydata and
+-- erased with the rest of the user's data; never shown in stats or CSV).
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS rating SMALLINT CHECK (rating BETWEEN 1 AND 5);
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS rating_comment TEXT;
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS rated_at TIMESTAMPTZ;
+-- /ticket stats reads one guild's tickets over a window of opened_at (<= 365 days).
+CREATE INDEX IF NOT EXISTS tickets_guild_opened_idx ON tickets (guild_id, opened_at);
 
 -- ============================================================
 -- Premium entitlements (Discord Premium Apps projection)

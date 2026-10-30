@@ -145,7 +145,7 @@ _BY_THREAD = (
 # which is the fourth answer. All four outcomes probed on PostgreSQL.
 _CLAIM_TICKET = (
     "WITH claimed AS ("
-    "UPDATE tickets SET claimed_by = $2 "
+    "UPDATE tickets SET claimed_by = $2, claimed_at = now() "
     "WHERE thread_id = $1 AND status = 'open' AND claimed_by IS NULL "
     "AND opener_id <> $2 "
     "RETURNING ticket_number, status, opener_id, claimed_by"
@@ -192,6 +192,39 @@ _SWEEP_CANDIDATES = (
     "WHERE status = 'open' AND id > $1 "
     "AND opened_at < now() - make_interval(hours => $2) "
     "ORDER BY id LIMIT $3"
+)
+
+# Lot V5a. The opener's rating, claimed exactly once by the statement itself:
+# only the opener, only a CLOSED ticket, only while unrated, only inside the
+# window. A second click, another member or a late click matches no row.
+_RATE_TICKET = (
+    "UPDATE tickets SET rating = $2, rated_at = now() "
+    "WHERE id = $1 AND opener_id = $3 AND status = 'closed' AND rating IS NULL "
+    "AND closed_at > now() - make_interval(days => $4) "
+    "RETURNING guild_id, ticket_number"
+)
+
+# The optional comment, same gates, plus "already rated" and "no comment yet".
+_COMMENT_TICKET = (
+    "UPDATE tickets SET rating_comment = $2 "
+    "WHERE id = $1 AND opener_id = $3 AND rating IS NOT NULL "
+    "AND rating_comment IS NULL "
+    "AND closed_at > now() - make_interval(days => $4) "
+    "RETURNING guild_id, ticket_number"
+)
+
+# Why a rating was refused (failure path only, so one extra read is fine).
+_RATING_STATE = (
+    "SELECT guild_id, opener_id, status, rating, closed_at FROM tickets WHERE id = $1"
+)
+
+# One guild's tickets opened since a cutoff, newest first, bounded. Served by
+# tickets_guild_opened_idx (guild_id, opened_at). Never selects the opener, the
+# comment or anything typed: stats and the CSV are built from these columns only.
+_STATS_ROWS = (
+    "SELECT id, ticket_number, opened_at, claimed_at, closed_at, claimed_by, "
+    "rating FROM tickets "
+    "WHERE guild_id = $1 AND opened_at >= $2 ORDER BY opened_at DESC LIMIT $3"
 )
 
 
@@ -298,3 +331,25 @@ async def fetch_sweep_candidates(pool, *, after_id, min_age_hours, limit):
     coerced in Python, never inside this statement.
     """
     return await pool.fetch(_SWEEP_CANDIDATES, after_id, min_age_hours, limit)
+
+
+async def rate_ticket(pool, ticket_id, user_id, rating, *, window_days):
+    """Record ``user_id``'s rating; the row (guild_id, ticket_number) or ``None``."""
+    return await pool.fetchrow(_RATE_TICKET, ticket_id, rating, user_id, window_days)
+
+
+async def comment_ticket(pool, ticket_id, user_id, comment, *, window_days):
+    """Attach the one optional comment to an already-rated ticket, or ``None``."""
+    return await pool.fetchrow(
+        _COMMENT_TICKET, ticket_id, comment, user_id, window_days
+    )
+
+
+async def rating_state(pool, ticket_id):
+    """The columns that explain a refused rating, or ``None`` for an unknown id."""
+    return await pool.fetchrow(_RATING_STATE, ticket_id)
+
+
+async def fetch_stats_rows(pool, guild_id, since, limit):
+    """The bounded, newest-first ticket rows behind ``/ticket stats``."""
+    return await pool.fetch(_STATS_ROWS, guild_id, since, limit)

@@ -78,6 +78,11 @@ KEY_INACTIVITY_HOURS = "tickets_inactivity_hours"
 # The blurb shown on the panel above the button (optional free text).
 KEY_PANEL_MESSAGE = "tickets_panel_message"
 
+# Lot V5a: ask the opener for a satisfaction rating when a ticket closes. A real
+# JSON ``true`` turns it on; absent (or anything else) is OFF - a server nobody
+# configured must behave as before, and a rating prompt is a visible change.
+KEY_RATING = "tickets_rating"
+
 # Every key this module owns, in the order the surfaces display them; the
 # dashboard writes these and nothing else under the tickets kind. ORDERED
 # because :func:`read_raw` builds a dict from it and a frozenset's iteration
@@ -90,6 +95,7 @@ KEY_ORDER = (
     KEY_MAX_OPEN_PER_USER,
     KEY_INACTIVITY_HOURS,
     KEY_PANEL_MESSAGE,
+    KEY_RATING,
 )
 
 KEYS = frozenset(KEY_ORDER)
@@ -311,6 +317,11 @@ async def panel_message(pool: typing.Any, guild_id: typing.Any):
     )
 
 
+async def rating_enabled(pool: typing.Any, guild_id: typing.Any) -> bool:
+    """Whether closed tickets ask their opener for a rating (default OFF)."""
+    return (await _read(pool, guild_id, KEY_RATING)) is True
+
+
 # ---------------------------------------------------------------------------
 # Whole-configuration read + write, for the surfaces that show or edit ALL six
 # keys at once (``/ticket status``, ``/ticket config``).
@@ -383,6 +394,7 @@ def resolve(raw: typing.Any, *, ceiling: int = MAX_OPEN_PER_USER) -> dict:
         "panel_message": coerce_text(
             raw.get(KEY_PANEL_MESSAGE), limit=MAX_PANEL_MESSAGE_LENGTH
         ),
+        "rating": raw.get(KEY_RATING) is True,
     }
 
 

@@ -1653,7 +1653,7 @@ def test_every_inactivity_preset_is_storable_and_the_default_is_one_of_them():
 
 def test_the_key_order_is_stable_and_covers_every_key():
     assert set(guild_config.KEY_ORDER) == guild_config.KEYS
-    assert len(guild_config.KEY_ORDER) == len(guild_config.KEYS) == 6
+    assert len(guild_config.KEY_ORDER) == len(guild_config.KEYS) == 7
 
 
 async def test_set_key_removes_the_key_instead_of_storing_a_null():
@@ -1696,6 +1696,7 @@ def test_resolve_of_a_failed_read_is_exactly_the_bot_defaults():
         "max_open": guild_config.DEFAULT_MAX_OPEN_PER_USER,
         "inactivity_hours": guild_config.DEFAULT_INACTIVITY_HOURS,
         "panel_message": None,
+        "rating": False,
     }
 
 

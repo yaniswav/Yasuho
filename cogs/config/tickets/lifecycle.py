@@ -121,7 +121,7 @@ import logging
 import discord
 from discord.ext import commands, tasks
 
-from . import guild_config, storage, transcripts
+from . import guild_config, rating, storage, transcripts
 from tools import i18n, interactions
 from tools.formats import format_dt, random_colour
 from tools.i18n import _
@@ -631,6 +631,10 @@ async def _close_now(bot, guild, thread, row, *, closed_by, reason):
     # 3 and 4. Talk in the room, then shut it. Both skipped for a thread that is
     # gone, and for one Discord already archived (which cannot be posted in, and
     # whose only accepted edit is the unarchive this flow deliberately refuses).
+    # The rating prompt is a DM, on EVERY close path (thread or not): buttons in
+    # a thread that is about to be archived and locked cannot be answered.
+    with i18n.locale(locale_code):
+        rating_sent = await rating.offer_rating(bot, guild, closed)
     if thread is not None and not thread.archived:
         # The GUILD's locale, not the closer's: this line is read by everybody
         # in the room, the same reasoning that renders the panel per guild.
@@ -640,6 +644,7 @@ async def _close_now(bot, guild, thread, row, *, closed_by, reason):
                 number,
                 no_log_channel=channel is None,
                 transcript_saved=transcript is not None,
+                rating_sent=rating_sent,
             )
         try:
             await thread.edit(
@@ -665,7 +670,9 @@ async def _close_now(bot, guild, thread, row, *, closed_by, reason):
     return closed
 
 
-async def _post_closing_notice(thread, number, *, no_log_channel, transcript_saved):
+async def _post_closing_notice(
+    thread, number, *, no_log_channel, transcript_saved, rating_sent=False
+):
     """The last message in the room, so the lock is not a surprise.
 
     BOTH answers are stated, and that symmetry is the point. The room used to be
@@ -692,6 +699,8 @@ async def _post_closing_notice(thread, number, *, no_log_channel, transcript_sav
             "A transcript of this conversation was saved to this server's "
             "ticket log channel, where its staff team keeps it."
         )
+    if rating_sent:
+        text += "\n-# " + _("Check your DMs to rate this ticket.")
     try:
         await thread.send(text, allowed_mentions=discord.AllowedMentions.none())
     except discord.HTTPException:
@@ -880,7 +889,12 @@ class TicketLifecycle(commands.Cog):
         # Process-wide registration, so a click on a ticket opened before this
         # start still dispatches - the whole point of DynamicItem.
         try:
-            self.bot.add_dynamic_items(TicketClaimButton, TicketCloseButton)
+            self.bot.add_dynamic_items(
+                TicketClaimButton,
+                TicketCloseButton,
+                rating.RatingStarButton,
+                rating.RatingCommentButton,
+            )
         except Exception:
             log.exception("tickets: failed to register the in-thread controls")
 
@@ -889,7 +903,12 @@ class TicketLifecycle(commands.Cog):
         # Drop the registration so a reload does not leave a stale template
         # behind; the next cog_load adds it again.
         try:
-            self.bot.remove_dynamic_items(TicketClaimButton, TicketCloseButton)
+            self.bot.remove_dynamic_items(
+                TicketClaimButton,
+                TicketCloseButton,
+                rating.RatingStarButton,
+                rating.RatingCommentButton,
+            )
         except Exception:
             log.debug("tickets: could not unregister the controls", exc_info=True)
 
