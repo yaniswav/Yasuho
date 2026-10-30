@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-30 09:49+0000\n"
+"POT-Creation-Date: 2026-10-30 10:50+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -597,7 +597,8 @@ msgstr "そのタイプに一致するタイトルがありません。"
 #: cogs/community/serverstats/views.py:678 cogs/config/announcements.py:345
 #: cogs/config/rolemenus.py:732 cogs/config/welcome.py:144
 #: cogs/config/welcome.py:202 cogs/config/welcome.py:397
-#: cogs/config/welcome.py:653 cogs/system/botstats.py:1358
+#: cogs/config/welcome.py:653 cogs/music/playlists_shared.py:415
+#: cogs/system/botstats.py:1358
 msgid "Something went wrong."
 msgstr "問題が発生しました。"
 
@@ -778,7 +779,7 @@ msgstr "このサーバーにはまだAniListフィードがありません。`/
 #: cogs/anilist/feed_views.py:953 cogs/anilist/feed_views.py:1349
 #: cogs/anilist/feed_views.py:1399 cogs/community/reminders.py:723
 #: cogs/config/rooms.py:1116 cogs/config/rooms_config.py:430
-#: cogs/music/playlists_shared.py:312 cogs/music/views.py:2475
+#: cogs/music/playlists_shared.py:355 cogs/music/views.py:2475
 msgid "(archived)"
 msgstr "(アーカイブ済み)"
 
@@ -839,7 +840,7 @@ msgid "Removed the AniList feed in {channel}."
 msgstr "{channel} のAniListフィードを削除しました。"
 
 #: cogs/anilist/feed_delivery.py:100 cogs/anilist/feed_views.py:339
-#: cogs/music/music.py:5710 cogs/music/search.py:342 cogs/music/views.py:2266
+#: cogs/music/music.py:5727 cogs/music/search.py:342 cogs/music/views.py:2266
 #: cogs/music/views.py:2449 cogs/music/views.py:2583 cogs/music/views.py:2716
 msgid "Unknown title"
 msgstr "不明なタイトル"
@@ -1223,7 +1224,8 @@ msgstr "削除"
 #: cogs/anilist/feed_views.py:1065 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
 #: cogs/community/usersettings.py:246 cogs/community/usersettings.py:355
-#: cogs/config/tickets/lifecycle.py:280 cogs/system/arg_completion.py:286
+#: cogs/config/tickets/lifecycle.py:280 cogs/music/playlists_shared.py:399
+#: cogs/system/arg_completion.py:286
 msgid "Cancel"
 msgstr "キャンセル"
 
@@ -8195,7 +8197,7 @@ msgid "You already have the maximum of {cap} track in the queue. Wait for one to
 msgid_plural "You already have the maximum of {cap} tracks in the queue. Wait for one to play first."
 msgstr[0] "キューに入れられる曲数の上限（{cap} 曲）に達しています。先に1曲が再生されるまでお待ちください。"
 
-#: cogs/music/fairqueue.py:101 cogs/music/music.py:803
+#: cogs/music/fairqueue.py:101 cogs/music/music.py:804
 #, python-brace-format
 msgid " {dropped} track was not added - the queue is full at {cap}."
 msgid_plural " {dropped} tracks were not added - the queue is full at {cap}."
@@ -8293,49 +8295,49 @@ msgstr "+5s"
 msgid "Stop"
 msgstr "停止"
 
-#: cogs/music/music.py:227
+#: cogs/music/music.py:228
 msgid "shuffle"
 msgstr "シャッフル"
 
-#: cogs/music/music.py:227
+#: cogs/music/music.py:228
 msgid "in order"
 msgstr "順番通り"
 
-#: cogs/music/music.py:787
+#: cogs/music/music.py:788
 #, python-brace-format
 msgid "The queue is full ({cap} tracks). Skip or clear a few first."
 msgstr "キューが満杯です ({cap}曲)。先にスキップするか削除してください。"
 
-#: cogs/music/music.py:1324
+#: cogs/music/music.py:1329
 msgid "I'm not connected to a voice channel."
 msgstr "ボイスチャンネルに接続していません。"
 
-#: cogs/music/music.py:1327 cogs/music/music.py:3549
-#: cogs/music/playlists_shared.py:612
+#: cogs/music/music.py:1332 cogs/music/music.py:3566
+#: cogs/music/playlists_shared.py:901
 msgid "You must be in my voice channel to do that."
 msgstr "それを行うには、私のボイスチャンネルにいる必要があります。"
 
-#: cogs/music/music.py:1337 cogs/music/views.py:219
+#: cogs/music/music.py:1342 cogs/music/views.py:219
 #, python-brace-format
 msgid "Only the DJ ({dj}) or a moderator can control playback."
 msgstr "再生を操作できるのは DJ ({dj}) かモデレーターだけです。"
 
-#: cogs/music/music.py:1383
+#: cogs/music/music.py:1388 cogs/music/playlists_shared.py:1574
 msgid "I can only play public links - I can't reach that one."
 msgstr "再生できるのは公開リンクのみです。そのリンクにはアクセスできません。"
 
-#: cogs/music/music.py:2203
+#: cogs/music/music.py:2217
 #, python-brace-format
 msgid "There was a problem playing **{title}**, skipping it."
 msgstr "**{title}** の再生に問題が発生したため、スキップします。"
 
-#: cogs/music/music.py:2237
+#: cogs/music/music.py:2251
 #, python-brace-format
 msgid "{count} more track could not be played, skipping it."
 msgid_plural "{count} more tracks could not be played, skipping them."
 msgstr[0] "さらに {count} 曲を再生できなかったため、スキップします。"
 
-#: cogs/music/music.py:3315
+#: cogs/music/music.py:3332
 #, python-brace-format
 msgid ""
 "Secondary music controls (the everyday ones - play, queue, skip, pause, resume, stop, volume, nowplaying - stay on their own):\n"
@@ -8362,400 +8364,402 @@ msgstr ""
 "- `{p}music filter <preset>` - オーディオエフェクトを適用\n"
 "- `{p}music disconnect` - ボイスチャンネルから退出"
 
-#: cogs/music/music.py:3431
+#: cogs/music/music.py:3448
 msgid "Here is the player."
 msgstr "プレイヤーはこちらです。"
 
-#: cogs/music/music.py:3434 cogs/music/music.py:3556
+#: cogs/music/music.py:3451 cogs/music/music.py:3573
 #, python-brace-format
 msgid "The player is already active in {channel}."
 msgstr "プレイヤーはすでに {channel} でアクティブです。"
 
-#: cogs/music/music.py:3512 cogs/music/music.py:3575 cogs/music/music.py:4108
-#: cogs/music/music.py:5495 cogs/music/music.py:5625
-#: cogs/music/playlists_shared.py:773 cogs/music/playlists_shared.py:825
+#: cogs/music/music.py:3529 cogs/music/music.py:3592 cogs/music/music.py:4125
+#: cogs/music/music.py:5512 cogs/music/music.py:5642
+#: cogs/music/playlists_shared.py:1062 cogs/music/playlists_shared.py:1114
+#: cogs/music/playlists_shared.py:1506 cogs/music/playlists_shared.py:1579
 #: cogs/music/search.py:516 cogs/music/views.py:2640
 msgid "Music is currently unavailable - no Lavalink node is connected."
 msgstr "音楽は現在利用できません - Lavalinkノードが接続されていません。"
 
-#: cogs/music/music.py:3522 cogs/music/music.py:4103 cogs/music/music.py:5521
-#: cogs/music/playlists_shared.py:619
+#: cogs/music/music.py:3539 cogs/music/music.py:4120 cogs/music/music.py:5538
+#: cogs/music/playlists_shared.py:908
 msgid "You must be in a voice channel first."
 msgstr "まずボイスチャンネルに参加する必要があります。"
 
-#: cogs/music/music.py:3580 cogs/music/music.py:5631
+#: cogs/music/music.py:3597 cogs/music/music.py:5648
 msgid "Could not find any tracks for that query."
 msgstr "そのクエリに該当するトラックが見つかりませんでした。"
 
-#: cogs/music/music.py:3608
+#: cogs/music/music.py:3625
 #, python-brace-format
 msgid "Added the playlist **{name}** ({count} track) to the queue."
 msgid_plural "Added the playlist **{name}** ({count} tracks) to the queue."
 msgstr[0] "プレイリスト **{name}** をキューに追加しました ({count}曲)。"
 
-#: cogs/music/music.py:3629
+#: cogs/music/music.py:3646
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to the queue."
 msgstr "`{author}` の **{title}** をキューに追加しました。"
 
-#: cogs/music/music.py:4143 cogs/music/views.py:1215
+#: cogs/music/music.py:4160 cogs/music/views.py:1215
 #, python-brace-format
 msgid "Only the DJ ({dj}) can change the station."
 msgstr "ステーションを変更できるのは DJ ({dj}) だけです。"
 
-#: cogs/music/music.py:4160 cogs/music/views.py:1235
+#: cogs/music/music.py:4177 cogs/music/views.py:1235
 #, python-brace-format
 msgid "I couldn't find any {genre} tracks right now."
 msgstr "{genre}の曲は今のところ見つかりませんでした。"
 
-#: cogs/music/music.py:4169 cogs/music/views.py:1242
+#: cogs/music/music.py:4186 cogs/music/views.py:1242
 #, python-brace-format
 msgid "Switched to the {genre} station ({count} track(s))."
 msgstr "{genre} ステーションに切り替えました ({count}曲)。"
 
-#: cogs/music/music.py:4176
+#: cogs/music/music.py:4193
 #, python-brace-format
 msgid "Starting a {genre} session with {count} track(s). Enjoy!"
 msgstr "{genre}のセッションを{count}件のトラックでスタートします。楽しんでください！"
 
-#: cogs/music/music.py:4218
+#: cogs/music/music.py:4235
 msgid "The player is already paused."
 msgstr "プレイヤーはすでに一時停止しています。"
 
-#: cogs/music/music.py:4223
+#: cogs/music/music.py:4240
 msgid "Paused the player."
 msgstr "プレイヤーを一時停止しました。"
 
-#: cogs/music/music.py:4233
+#: cogs/music/music.py:4250
 msgid "The player is not paused."
 msgstr "プレイヤーは一時停止していません。"
 
-#: cogs/music/music.py:4238
+#: cogs/music/music.py:4255
 msgid "Resumed the player."
 msgstr "プレイヤーを再開しました。"
 
-#: cogs/music/music.py:4418 cogs/music/voteskip.py:168
+#: cogs/music/music.py:4435 cogs/music/voteskip.py:168
 msgid "There are no more tracks in the queue to skip to."
 msgstr "キューにスキップできるトラックがもうありません。"
 
-#: cogs/music/music.py:4421
+#: cogs/music/music.py:4438
 #, python-brace-format
 msgid "Skipped to **{title}** by `{author}`."
 msgstr "`{author}` の **{title}** にスキップしました。"
 
-#: cogs/music/music.py:4427
+#: cogs/music/music.py:4444
 msgid "Skipped. The queue is now empty."
 msgstr "スキップしました。キューは空になりました。"
 
-#: cogs/music/music.py:4493
+#: cogs/music/music.py:4510
 #, python-brace-format
 msgid "Use `{p}music requests post [channel]` to post a request panel and `{p}music requests remove [channel]` to remove it."
 msgstr "リクエストパネルを投稿するには `{p}music requests post [channel]`、削除するには `{p}music requests remove [channel]` を使ってください。"
 
-#: cogs/music/music.py:4528
+#: cogs/music/music.py:4545
 msgid "Fair queue is now on: requesters take turns."
 msgstr "公平キューをオンにしました。リクエストした人が順番に再生されます。"
 
-#: cogs/music/music.py:4530
+#: cogs/music/music.py:4547
 msgid "Fair queue is now off: tracks play first come first served."
 msgstr "公平キューをオフにしました。曲は届いた順に再生されます。"
 
-#: cogs/music/music.py:4545 cogs/music/views.py:967
+#: cogs/music/music.py:4562 cogs/music/views.py:967
 msgid "There's no previous track to go back to."
 msgstr "戻れる前の曲がありません。"
 
-#: cogs/music/music.py:4550 cogs/music/views.py:973
+#: cogs/music/music.py:4567 cogs/music/views.py:973
 msgid "I can't go back - the previous track is no longer available."
 msgstr "戻れません。前の曲はもう利用できません。"
 
-#: cogs/music/music.py:4554 cogs/music/views.py:978
+#: cogs/music/music.py:4571 cogs/music/views.py:978
 #, python-brace-format
 msgid "Went back to **{title}** by `{author}`."
 msgstr "**{title}** - `{author}` に戻りました。"
 
-#: cogs/music/music.py:4572 cogs/music/music.py:5306
+#: cogs/music/music.py:4589 cogs/music/music.py:5323
 msgid "There's nothing playing right now."
 msgstr "今は何も再生されていません。"
 
-#: cogs/music/music.py:4575
+#: cogs/music/music.py:4592
 msgid "I can't seek within a live stream."
 msgstr "ライブ配信内では移動できません。"
 
-#: cogs/music/music.py:4580
+#: cogs/music/music.py:4597
 msgid "I couldn't read that position. Try `1:23`, `90`, or `+30`."
 msgstr "その位置を読み取れませんでした。`1:23`、`90`、`+30` の形式で試してくださいね。"
 
-#: cogs/music/music.py:4592
+#: cogs/music/music.py:4609
 #, python-brace-format
 msgid "Jumped to {position}."
 msgstr "{position} にジャンプしました。"
 
-#: cogs/music/music.py:4607
+#: cogs/music/music.py:4624
 msgid "Stopped playback and cleared the queue."
 msgstr "再生を停止してキューをクリアしました。"
 
-#: cogs/music/music.py:4620
+#: cogs/music/music.py:4637
 #, python-brace-format
 msgid "Set the volume to {volume}%."
 msgstr "音量を {volume}% に設定しました。"
 
-#: cogs/music/music.py:4630
+#: cogs/music/music.py:4647
 msgid "Add a few more tracks to the queue before shuffling."
 msgstr "シャッフルする前に、キューにもう少しトラックを追加してください。"
 
-#: cogs/music/music.py:4633 cogs/music/views.py:1077 cogs/music/views.py:1928
+#: cogs/music/music.py:4650 cogs/music/views.py:1077 cogs/music/views.py:1928
 msgid "Shuffled the queue."
 msgstr "キューをシャッフルしました。"
 
-#: cogs/music/music.py:4644 cogs/music/views.py:1945
+#: cogs/music/music.py:4661 cogs/music/views.py:1945
 msgid "The queue is already empty."
 msgstr "キューはすでに空です。"
 
-#: cogs/music/music.py:4654 cogs/music/views.py:1953
+#: cogs/music/music.py:4671 cogs/music/views.py:1953
 #, python-brace-format
 msgid "Cleared {count} track(s) from the queue."
 msgstr "キューから{count}曲を削除しました。"
 
-#: cogs/music/music.py:4675
+#: cogs/music/music.py:4692
 #, python-brace-format
 msgid "Loop mode set to `{mode}`."
 msgstr "ループモードを `{mode}` に設定しました。"
 
-#: cogs/music/music.py:4710 cogs/music/views.py:2062
+#: cogs/music/music.py:4727 cogs/music/views.py:2062
 msgid "Nothing has played yet in this session."
 msgstr "このセッションではまだ何も再生されていません。"
 
-#: cogs/music/music.py:4724 cogs/music/views.py:460
+#: cogs/music/music.py:4741 cogs/music/views.py:460
 msgid "Nothing is playing right now."
 msgstr "現在再生中の曲はありません。"
 
-#: cogs/music/music.py:4754
+#: cogs/music/music.py:4771
 msgid "Disconnected from the voice channel. 24/7 is paused for this server until you /play again or re-enable it."
 msgstr "ボイスチャンネルから切断しました。次に/playするか再度有効にするまで、このサーバーの24/7は一時停止します。"
 
-#: cogs/music/music.py:4759
+#: cogs/music/music.py:4776
 msgid "Disconnected from the voice channel."
 msgstr "ボイスチャンネルから切断しました。"
 
-#: cogs/music/music.py:4786
+#: cogs/music/music.py:4803
 msgid "24/7 music is part of Yasuho+. See /premium for options."
 msgstr "24/7音楽はYasuho+の機能です。詳しくは /premium をご覧ください。"
 
-#: cogs/music/music.py:4826 cogs/music/music.py:4898
+#: cogs/music/music.py:4843 cogs/music/music.py:4915
 #, python-brace-format
 msgid "I do not have permission to join {channel} (I need Connect and Speak there). 24/7 was not enabled."
 msgstr "{channel}に参加する権限がありません(接続と発言の権限が必要です)。24/7は有効になりませんでした。"
 
-#: cogs/music/music.py:4845
+#: cogs/music/music.py:4862
 #, python-brace-format
 msgid "Yasuho+ 24/7 is at capacity right now ({max} servers). Please try again later."
 msgstr "Yasuho+の24/7は現在満員です({max}サーバー)。しばらくしてからもう一度お試しください。"
 
-#: cogs/music/music.py:4865 cogs/music/music.py:4881
+#: cogs/music/music.py:4882 cogs/music/music.py:4898
 #, python-brace-format
 msgid "24/7 is now configured for {channel}, but I could not join yet: {reason}"
 msgstr "24/7を{channel}に設定しましたが、まだ参加できませんでした: {reason}"
 
-#: cogs/music/music.py:4886 cogs/music/player.py:257
+#: cogs/music/music.py:4903 cogs/music/player.py:257
 msgid "I was unable to join your voice channel. Please try again."
 msgstr "あなたのボイスチャンネルに参加できませんでした。もう一度お試しください。"
 
-#: cogs/music/music.py:4905
+#: cogs/music/music.py:4922
 #, python-brace-format
 msgid "24/7 is on for {channel}. I will stay connected there."
 msgstr "{channel}で24/7をオンにしました。そこに接続し続けます。"
 
-#: cogs/music/music.py:4917
+#: cogs/music/music.py:4934
 msgid "24/7 is already off for this server."
 msgstr "このサーバーの24/7はすでにオフです。"
 
-#: cogs/music/music.py:4922
+#: cogs/music/music.py:4939
 msgid "24/7 is now off for this server. I will leave like normal when idle or empty."
 msgstr "このサーバーの24/7をオフにしました。今後は通常どおり、無操作時や誰もいないときに退出します。"
 
-#: cogs/music/music.py:4983
+#: cogs/music/music.py:5000
 msgid "24/7 is not on yet. Use /music alwayson enable first."
 msgstr "24/7はまだ有効になっていません。先に /music alwayson enable を実行してください。"
 
-#: cogs/music/music.py:4988 cogs/music/playlists_shared.py:781
-#: cogs/music/playlists_shared.py:964 cogs/music/playlists_shared.py:1005
+#: cogs/music/music.py:5005 cogs/music/playlists_shared.py:1070
+#: cogs/music/playlists_shared.py:1254 cogs/music/playlists_shared.py:1295
+#: cogs/music/playlists_shared.py:1683
 #, python-brace-format
 msgid "There's no server playlist called **{name}**."
 msgstr "**{name}** というサーバープレイリストはありません。"
 
-#: cogs/music/music.py:4995
+#: cogs/music/music.py:5012
 msgid "The 24/7 playlist is off."
 msgstr "24/7プレイリストはオフになりました。"
 
-#: cogs/music/music.py:4998
+#: cogs/music/music.py:5015
 #, python-brace-format
 msgid "The 24/7 playlist is now **{name}** ({order})."
 msgstr "24/7プレイリストは **{name}** ({order}) になりました。"
 
-#: cogs/music/music.py:5015
+#: cogs/music/music.py:5032
 msgid "24/7 playlist: off"
 msgstr "24/7プレイリスト: オフ"
 
-#: cogs/music/music.py:5020
+#: cogs/music/music.py:5037
 #, python-brace-format
 msgid "24/7 playlist: **{name}** ({order})"
 msgstr "24/7プレイリスト: **{name}** ({order})"
 
-#: cogs/music/music.py:5038
+#: cogs/music/music.py:5055
 msgid "24/7 is off for this server. See /premium to turn it on."
 msgstr "このサーバーの24/7はオフです。オンにするには /premium をご覧ください。"
 
-#: cogs/music/music.py:5043
+#: cogs/music/music.py:5060
 msgid "an unknown channel"
 msgstr "不明なチャンネル"
 
-#: cogs/music/music.py:5050
+#: cogs/music/music.py:5067
 #, python-brace-format
 msgid "24/7 is configured for {channel} (inactive - needs Yasuho+)."
 msgstr "24/7は{channel}に設定されています(無効 - Yasuho+が必要です)。"
 
-#: cogs/music/music.py:5060
+#: cogs/music/music.py:5077
 #, python-brace-format
 msgid "24/7 is configured for {channel}, but paused until the next /play or restart (someone disconnected me)."
 msgstr "24/7は{channel}に設定されていますが、次の/playまたは再起動まで一時停止中です(誰かに切断されました)。"
 
-#: cogs/music/music.py:5068
+#: cogs/music/music.py:5085
 #, python-brace-format
 msgid "24/7 is on for {channel}."
 msgstr "{channel}で24/7がオンになっています。"
 
-#: cogs/music/music.py:5090
+#: cogs/music/music.py:5107
 #, python-brace-format
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count}秒"
 
-#: cogs/music/music.py:5094
+#: cogs/music/music.py:5111
 #, python-brace-format
 msgid "{count} minute"
 msgid_plural "{count} minutes"
 msgstr[0] "{count}分"
 
-#: cogs/music/music.py:5118 cogs/music/music.py:5234
+#: cogs/music/music.py:5135 cogs/music/music.py:5251
 msgid "That effect isn't available."
 msgstr "そのエフェクトは利用できません。"
 
-#: cogs/music/music.py:5127
+#: cogs/music/music.py:5144
 #, python-brace-format
 msgid "You're changing effects too quickly. Try again in {delay}."
 msgstr "エフェクトの変更が早すぎます。{delay} 後にもう一度お試しください。"
 
-#: cogs/music/music.py:5132
+#: cogs/music/music.py:5149
 msgid "A lot of servers are using effects right now - try again in a moment."
 msgstr "現在多くのサーバーがエフェクトを使用中です。少し待ってからお試しください。"
 
-#: cogs/music/music.py:5135
+#: cogs/music/music.py:5152
 msgid "Something went wrong applying that effect."
 msgstr "エフェクトの適用中に問題が発生しました。"
 
-#: cogs/music/music.py:5144
+#: cogs/music/music.py:5161
 msgid "Effects cleared."
 msgstr "エフェクトを解除しました。"
 
-#: cogs/music/music.py:5145
+#: cogs/music/music.py:5162
 #, python-brace-format
 msgid "Effect set to {emoji} {label}."
 msgstr "エフェクトを {emoji} {label} に設定しました。"
 
-#: cogs/music/music.py:5208
+#: cogs/music/music.py:5225
 msgid "Only members with Manage Server or the DJ role can save the server's default effect."
 msgstr "サーバー管理の権限を持つメンバーか DJ ロールを持つメンバーだけが、サーバーの既定エフェクトを保存できます。"
 
-#: cogs/music/music.py:5215
+#: cogs/music/music.py:5232
 msgid "Saving a default effect is a Yasuho+ perk."
 msgstr "既定エフェクトの保存は Yasuho+ の特典です。"
 
-#: cogs/music/music.py:5231
+#: cogs/music/music.py:5248
 msgid "Saved as this server's default effect."
 msgstr "このサーバーの既定エフェクトとして保存しました。"
 
-#: cogs/music/music.py:5233
+#: cogs/music/music.py:5250
 msgid "The server's default effect was cleared."
 msgstr "サーバーの既定エフェクトを消去しました。"
 
-#: cogs/music/music.py:5321
+#: cogs/music/music.py:5338
 #, python-brace-format
 msgid "You've looked up lyrics too many times. Try again in {delay}."
 msgstr "歌詞の検索が多すぎます。{delay} 後にもう一度お試しください。"
 
-#: cogs/music/music.py:5332
+#: cogs/music/music.py:5349
 #, python-brace-format
 msgid "This server has looked up too many lyrics. Try again in {delay}."
 msgstr "このサーバーでは歌詞の検索が多すぎます。{delay} 後にもう一度お試しください。"
 
-#: cogs/music/music.py:5346
+#: cogs/music/music.py:5363
 msgid "I couldn't find any lyrics for this track."
 msgstr "この曲の歌詞は見つかりませんでした。"
 
-#: cogs/music/music.py:5454 cogs/music/views.py:2440
+#: cogs/music/music.py:5471 cogs/music/views.py:2440
 msgid "You have no saved favourites yet."
 msgstr "保存されたお気に入りはまだありません。"
 
-#: cogs/music/music.py:5457
+#: cogs/music/music.py:5474
 #, python-brace-format
 msgid "{name} has no saved favourites yet."
 msgstr "{name} には保存されたお気に入りがまだありません。"
 
-#: cogs/music/music.py:5510
+#: cogs/music/music.py:5527
 msgid "You have no saved favourites to play."
 msgstr "再生できる保存済みのお気に入りがありません。"
 
-#: cogs/music/music.py:5536
+#: cogs/music/music.py:5553
 msgid "None of your favourites could be loaded right now."
 msgstr "現在、お気に入りを1つも読み込めませんでした。"
 
-#: cogs/music/music.py:5542 cogs/music/music.py:5596
+#: cogs/music/music.py:5559 cogs/music/music.py:5613
 #, python-brace-format
 msgid " {deferred} older favourite is still waiting - run this again to add it."
 msgid_plural " {deferred} older favourites are still waiting - run this again to add them."
 msgstr[0] " 古いお気に入りが{deferred}件残っています。もう一度実行すると追加されます。"
 
-#: cogs/music/music.py:5579
+#: cogs/music/music.py:5596
 #, python-brace-format
 msgid "Queued {count} track from your favourites."
 msgid_plural "Queued {count} tracks from your favourites."
 msgstr[0] "お気に入りから{count}曲をキューに追加しました。"
 
-#: cogs/music/music.py:5587 cogs/music/playlists_shared.py:884
+#: cogs/music/music.py:5604 cogs/music/playlists_shared.py:1173
 #, python-brace-format
 msgid " {skipped} track was skipped - it could not be loaded."
 msgid_plural " {skipped} tracks were skipped - they could not be loaded."
 msgstr[0] " {skipped}曲は読み込めなかったためスキップされました。"
 
-#: cogs/music/music.py:5618
+#: cogs/music/music.py:5635
 msgid "Nothing is playing - give me a song name or URL to save."
 msgstr "再生中の曲がありません - 保存する曲名またはURLを指定してください。"
 
-#: cogs/music/music.py:5637
+#: cogs/music/music.py:5654
 #, python-brace-format
 msgid "Added **{title}** by `{author}` to your favourites."
 msgstr "`{author}` の **{title}** をお気に入りに追加しました。"
 
-#: cogs/music/music.py:5647 cogs/music/views.py:1124
+#: cogs/music/music.py:5664 cogs/music/views.py:1124
 #, python-brace-format
 msgid "Your favourites are full (max {max}). Remove some first."
 msgstr "お気に入りはすでに上限({max}件)に達しています。まずいくつか削除してください。"
 
-#: cogs/music/music.py:5679 cogs/music/views.py:1144
+#: cogs/music/music.py:5696 cogs/music/views.py:1144
 #, python-brace-format
 msgid "**{title}** is already in your favourites."
 msgstr "**{title}** はすでにお気に入りに入っています。"
 
-#: cogs/music/music.py:5697
+#: cogs/music/music.py:5714
 msgid "You have no saved favourites to remove."
 msgstr "削除できる保存済みのお気に入りがありません。"
 
-#: cogs/music/music.py:5701
+#: cogs/music/music.py:5718
 #, python-brace-format
 msgid "Pick a number between 1 and {max}."
 msgstr "1から {max} までの数を選んでください。"
 
-#: cogs/music/music.py:5708 cogs/music/views.py:2718
+#: cogs/music/music.py:5725 cogs/music/views.py:2718
 #, python-brace-format
 msgid "Removed **{title}** from your favourites."
 msgstr "**{title}** をお気に入りから削除しました。"
@@ -8764,94 +8768,218 @@ msgstr "**{title}** をお気に入りから削除しました。"
 msgid "I am still starting up - try again in a moment."
 msgstr "まだ起動中です。少ししてからもう一度お試しください。"
 
-#: cogs/music/playlists_shared.py:289
+#: cogs/music/playlists_shared.py:295
+#, python-brace-format
+msgid "-# linked to {domain} - sync paused"
+msgstr "-# {domain} にリンク済み - 同期を一時停止中"
+
+#: cogs/music/playlists_shared.py:298
+#, python-brace-format
+msgid "-# linked to {domain}"
+msgstr "-# {domain} にリンク済み"
+
+#: cogs/music/playlists_shared.py:299
+#, python-brace-format
+msgid "-# linked to {domain} - last synced {when}"
+msgstr "-# {domain} にリンク済み - 最終同期 {when}"
+
+#: cogs/music/playlists_shared.py:332
 #, python-brace-format
 msgid "### 🎵 Server Playlists - {guild}"
 msgstr "### 🎵 サーバープレイリスト - {guild}"
 
-#: cogs/music/playlists_shared.py:298
+#: cogs/music/playlists_shared.py:341
 #, python-brace-format
 msgid "**{name}** - {count} track - {duration}"
 msgid_plural "**{name}** - {count} tracks - {duration}"
 msgstr[0] "**{name}** - {count}曲 - {duration}"
 
-#: cogs/music/playlists_shared.py:313
+#: cogs/music/playlists_shared.py:356
 #, python-brace-format
 msgid "-# by {creator} - saved {date}"
 msgstr "-# 作成: {creator} - 保存日 {date}"
 
-#: cogs/music/playlists_shared.py:658 cogs/music/playlists_shared.py:1067
+#: cogs/music/playlists_shared.py:368
+#, python-brace-format
+msgid "... and {count} more playlist"
+msgid_plural "... and {count} more playlists"
+msgstr[0] "... ほか {count} 件のプレイリスト"
+
+#: cogs/music/playlists_shared.py:395
+msgid "Replace"
+msgstr "置き換え"
+
+#: cogs/music/playlists_shared.py:430 cogs/music/playlists_shared.py:454
+msgid "That playlist no longer exists."
+msgstr "そのプレイリストはもう存在しません。"
+
+#: cogs/music/playlists_shared.py:431
+msgid "That playlist changed, nothing was replaced."
+msgstr "そのプレイリストは変わっていたため、何も置き換えていません。"
+
+#: cogs/music/playlists_shared.py:440 cogs/music/playlists_shared.py:1264
+#: cogs/music/playlists_shared.py:1305 cogs/music/playlists_shared.py:1516
+#: cogs/music/playlists_shared.py:1693
+msgid "Only the playlist's creator or a moderator can do that."
+msgstr "プレイリストの作成者かモデレーターのみ実行できます。"
+
+#: cogs/music/playlists_shared.py:451
+msgid "Replaced the tracks of the playlist."
+msgstr "プレイリストのトラックを置き換えました。"
+
+#: cogs/music/playlists_shared.py:452
+msgid "This server already has the maximum of linked playlists."
+msgstr "このサーバーはリンク済みプレイリストの上限に達しています。"
+
+#: cogs/music/playlists_shared.py:458
+msgid "Cancelled - the playlist was not changed."
+msgstr "キャンセルしました - プレイリストは変更されていません。"
+
+#: cogs/music/playlists_shared.py:947 cogs/music/playlists_shared.py:1357
+#: cogs/music/playlists_shared.py:1473
 msgid "Give the playlist a name."
 msgstr "プレイリストに名前を付けてください。"
 
-#: cogs/music/playlists_shared.py:662 cogs/music/playlists_shared.py:1071
+#: cogs/music/playlists_shared.py:951 cogs/music/playlists_shared.py:1361
+#: cogs/music/playlists_shared.py:1477
 #, python-brace-format
 msgid "Keep the playlist name under {max} characters."
 msgstr "プレイリスト名は {max} 文字未満にしてください。"
 
-#: cogs/music/playlists_shared.py:675 cogs/music/playlists_shared.py:687
+#: cogs/music/playlists_shared.py:964 cogs/music/playlists_shared.py:976
 msgid "Nothing is playing - start some music before saving a playlist."
 msgstr "何も再生されていません。プレイリストを保存する前に音楽を再生してください。"
 
-#: cogs/music/playlists_shared.py:694
+#: cogs/music/playlists_shared.py:983
 #, python-brace-format
 msgid "The queue is too long to save - a server playlist holds up to {max} tracks. Trim it and try again."
 msgstr "キューが長すぎて保存できません。サーバープレイリストは最大 {max} 曲までです。減らしてからお試しください。"
 
-#: cogs/music/playlists_shared.py:708 cogs/music/playlists_shared.py:738
+#: cogs/music/playlists_shared.py:997 cogs/music/playlists_shared.py:1027
+#: cogs/music/playlists_shared.py:1543 cogs/music/playlists_shared.py:1639
 #, python-brace-format
 msgid "This server already has the maximum of {max} playlists. Delete one first."
 msgstr "このサーバーはすでに上限の {max} 件のプレイリストがあります。先に1件削除してください。"
 
-#: cogs/music/playlists_shared.py:728 cogs/music/playlists_shared.py:1085
+#: cogs/music/playlists_shared.py:1017 cogs/music/playlists_shared.py:1375
+#: cogs/music/playlists_shared.py:1620
 #, python-brace-format
 msgid "A playlist called **{name}** already exists here. Pick another name or delete it first."
 msgstr "**{name}** という名前のプレイリストはすでに存在します。別の名前にするか、先に削除してください。"
 
-#: cogs/music/playlists_shared.py:751
+#: cogs/music/playlists_shared.py:1040
 #, python-brace-format
 msgid "Saved **{name}** with {count} track ({duration})."
 msgid_plural "Saved **{name}** with {count} tracks ({duration})."
 msgstr[0] "**{name}** を {count}曲で保存しました ({duration})。"
 
-#: cogs/music/playlists_shared.py:809
+#: cogs/music/playlists_shared.py:1098
 #, python-brace-format
 msgid "**{name}** is archived - this server is over its current playlist limit. It can be deleted, but not loaded. See /premium for options."
 msgstr "**{name}** はアーカイブされています - このサーバーは現在のプレイリスト上限を超えています。削除はできますが、読み込むことはできません。詳しくは /premium をご覧ください。"
 
-#: cogs/music/playlists_shared.py:832
+#: cogs/music/playlists_shared.py:1121
 #, python-brace-format
 msgid "None of **{name}**'s tracks could be loaded right now."
 msgstr "**{name}** の曲は今のところ1曲も読み込めませんでした。"
 
-#: cogs/music/playlists_shared.py:878
+#: cogs/music/playlists_shared.py:1167
 #, python-brace-format
 msgid "Queued {count} track from **{name}**."
 msgid_plural "Queued {count} tracks from **{name}**."
 msgstr[0] "**{name}** から {count}曲をキューに追加しました。"
 
-#: cogs/music/playlists_shared.py:918
+#: cogs/music/playlists_shared.py:1207
 msgid "This server has no saved playlists yet. Use `/serverplaylist save` to create one."
 msgstr "このサーバーにはまだプレイリストがありません。`/serverplaylist save` で作成できます。"
 
-#: cogs/music/playlists_shared.py:974 cogs/music/playlists_shared.py:1015
-msgid "Only the playlist's creator or a moderator can do that."
-msgstr "プレイリストの作成者かモデレーターのみ実行できます。"
-
-#: cogs/music/playlists_shared.py:979
+#: cogs/music/playlists_shared.py:1269
 #, python-brace-format
 msgid "Deleted the server playlist **{name}**."
 msgstr "サーバープレイリスト **{name}** を削除しました。"
 
-#: cogs/music/playlists_shared.py:1030
+#: cogs/music/playlists_shared.py:1320
 #, python-brace-format
 msgid "**{name}** is archived - this server is over its current playlist limit. It can be deleted, but not renamed. See /premium for options."
 msgstr "**{name}** はアーカイブされています - このサーバーは現在のプレイリスト上限を超えています。削除はできますが、名前を変更することはできません。詳しくは /premium をご覧ください。"
 
-#: cogs/music/playlists_shared.py:1096
+#: cogs/music/playlists_shared.py:1386
 #, python-brace-format
 msgid "Renamed **{old}** to **{new}**."
 msgstr "**{old}** を **{new}** に名前変更しました。"
+
+#: cogs/music/playlists_shared.py:1408
+#, python-brace-format
+msgid "Imported **{name}** with {count} track ({duration})."
+msgid_plural "Imported **{name}** with {count} tracks ({duration})."
+msgstr[0] "**{name}** を取り込みました（{count} 曲、{duration}）。"
+
+#: cogs/music/playlists_shared.py:1416
+#, python-brace-format
+msgid " {over} track was over the playlist limit and left out."
+msgid_plural " {over} tracks were over the playlist limit and left out."
+msgstr[0] " 上限を超えた {over} 曲は除外されました。"
+
+#: cogs/music/playlists_shared.py:1422
+#, python-brace-format
+msgid "It is linked to {domain} and refreshes every week."
+msgstr "{domain} にリンクされており、毎週更新されます。"
+
+#: cogs/music/playlists_shared.py:1453
+#, python-brace-format
+msgid "You're importing too fast. Try again in {delay}."
+msgstr "取り込みが速すぎます。{delay} 後にもう一度お試しください。"
+
+#: cogs/music/playlists_shared.py:1460
+#, python-brace-format
+msgid "This server has imported too many playlists lately. Try again in {delay}."
+msgstr "このサーバーは最近プレイリストを取り込みすぎました。{delay} 後にもう一度お試しください。"
+
+#: cogs/music/playlists_shared.py:1488
+msgid "Only moderators can keep a playlist synced with a link."
+msgstr "リンクと同期したプレイリストを維持できるのはモデレーターだけです。"
+
+#: cogs/music/playlists_shared.py:1495
+msgid "Keeping a playlist synced with its link is a Yasuho+ feature. You can still import it without `keep_synced`."
+msgstr "プレイリストをリンクと同期し続けるのは Yasuho+ の機能です。`keep_synced` を付けなくても取り込めます。"
+
+#: cogs/music/playlists_shared.py:1528
+#, python-brace-format
+msgid "**{name}** is archived - this server is over its current playlist limit. It can be deleted, but not replaced. See /premium for options."
+msgstr "**{name}** はアーカイブされています - このサーバーは現在のプレイリスト上限を超えています。削除はできますが、差し替えはできません。選択肢は /premium をご覧ください。"
+
+#: cogs/music/playlists_shared.py:1559 cogs/music/playlists_shared.py:1629
+#, python-brace-format
+msgid "This server already has the maximum of {max} linked playlists. Unlink one first."
+msgstr "このサーバーはリンク済みプレイリストの上限 {max} 件に達しています。先にいずれかのリンクを解除してください。"
+
+#: cogs/music/playlists_shared.py:1576 cogs/music/playlists_shared.py:1577
+msgid "That link isn't a playlist I can import."
+msgstr "そのリンクは取り込めるプレイリストではありません。"
+
+#: cogs/music/playlists_shared.py:1581
+msgid "That playlist has no tracks I can import."
+msgstr "そのプレイリストには取り込めるトラックがありません。"
+
+#: cogs/music/playlists_shared.py:1583 cogs/music/playlists_shared.py:1586
+msgid "I couldn't load that link - it may be private or unavailable."
+msgstr "そのリンクを読み込めませんでした - 非公開か、利用できない可能性があります。"
+
+#: cogs/music/playlists_shared.py:1662
+#, python-brace-format
+msgid "**{name}** already exists. Replace it with the {count} track from this link?"
+msgid_plural "**{name}** already exists. Replace it with the {count} tracks from this link?"
+msgstr[0] "**{name}** は既に存在します。このリンクの {count} 曲で置き換えますか？"
+
+#: cogs/music/playlists_shared.py:1698
+#, python-brace-format
+msgid "**{name}** isn't linked to a source."
+msgstr "**{name}** は取り込み元にリンクされていません。"
+
+#: cogs/music/playlists_shared.py:1705
+#, python-brace-format
+msgid "**{name}** is no longer linked; it keeps its current tracks."
+msgstr "**{name}** はリンクが解除されました。現在のトラックはそのまま残ります。"
 
 #: cogs/music/requests.py:89
 msgid ""
@@ -10571,8 +10699,8 @@ msgstr "キューが空のときも、Yasuhoがボイスチャンネルに残り
 msgid "**Extended server playlists**"
 msgstr "**拡張されたサーバープレイリスト**"
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:160
-#: tests/cogs/test_premium_panel.py:164
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:161
+#: tests/cogs/test_premium_panel.py:165
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr "最大{count}件のプレイリスト(各{tracks}曲)。"
