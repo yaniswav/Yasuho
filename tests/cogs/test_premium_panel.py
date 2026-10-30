@@ -103,6 +103,9 @@ def _synthetic_guild_plus():
         music_queue_controls=True,
         serverstats_daily_summary=True,
         serverstats_export=True,
+        max_command_buttons=3,
+        max_starboards=5,
+        max_temp_roles=100,
     )
 
 

@@ -500,6 +500,12 @@ NOT_MIRRORED = {
         "message_id -> [asyncio.Lock, waiters], popped when the last waiter "
         "leaves. Not guild-keyed and not state."
     ),
+    ("Starboard", "_extra"): (
+        "guild_id -> {emoji key: Board} of the Yasuho+ extra boards. The table "
+        "starboard_boards is written by the bot alone; the dashboard only writes "
+        "board 1 (`starboard`), and deleting it cascades to the extras, which "
+        "dashboard_sync's starboard invalidation and resync re-read."
+    ),
     ("TemporaryRooms", "_locks"): (
         "guild_id -> asyncio.Lock serialising room creation. A lock is not "
         "state: dropping one mid-creation would break the serialisation it "

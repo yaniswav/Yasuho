@@ -1,13 +1,15 @@
 import asyncio
 import logging
+import re
+from collections import namedtuple
 from contextlib import asynccontextmanager
 
 import discord
 from discord.ext import commands
 
-from tools import embed_creator
+from tools import embed_creator, premium, premium_upsell
 from tools.formats import random_colour
-from tools.i18n import _
+from tools.i18n import _, ngettext
 from tools.paginator import Paginator, paginate_lines
 from tools.views import AuthorView, LocaleModal
 
@@ -32,12 +34,49 @@ def _keep_floor(threshold):
     return max(1, threshold - _UNSTAR_MARGIN)
 
 
-def _star_count(message):
-    """How many stars ``message`` carries right now (0 if none)."""
+def emoji_key(value):
+    """The identity of a reaction emoji: a custom emoji's id, else its unicode
+    with the variation selector stripped. The animated flag and the name can
+    differ between add and remove events, so neither is part of the key."""
+    eid = getattr(value, "id", None)
+    if eid:
+        return str(eid)
+    text = value if isinstance(value, str) else str(value)
+    match = _CUSTOM_EMOJI.match(text)
+    if match:
+        return match.group(1)
+    return text.replace("\ufe0f", "")
+
+
+def _star_count(message, emoji=STAR):
+    """How many ``emoji`` reactions ``message`` carries right now (0 if none)."""
+    key = emoji_key(emoji)
     for reaction in message.reactions:
-        if str(reaction.emoji) == STAR:
+        if emoji_key(reaction.emoji) == key:
             return reaction.count
     return 0
+
+
+# One starboard. Board #1 is the original single board (table ``starboard``, the
+# emoji is always the star); boards 2..N are Yasuho+ extras (``starboard_boards``).
+Board = namedtuple("Board", "slot channel_id emoji threshold")
+
+_CUSTOM_EMOJI = re.compile(r"^<a?:\w{2,32}:(\d{15,25})>$")
+
+
+def parse_emoji(raw):
+    """The reaction string for ``raw`` (a unicode or custom emoji), or None.
+
+    The result is compared against ``str(payload.emoji)``, so a custom emoji
+    keeps its ``<:name:id>`` form and a unicode one must not be plain text.
+    """
+    raw = (raw or "").strip()
+    if _CUSTOM_EMOJI.match(raw):
+        return raw
+    raw = raw.replace("\ufe0f", "")
+    if not raw or len(raw) > 16 or raw.isascii() or any(c.isspace() for c in raw):
+        return None
+    return raw
 
 
 # ----------------------------------------------------------------------
@@ -234,6 +273,9 @@ class Starboard(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._config = {}
+        # guild_id -> {emoji: Board} for the Yasuho+ extra boards. Loaded whole in
+        # cog_load, so a miss means "no extra board" and never costs a query.
+        self._extra = {}
         # message_id -> [lock, waiter_count]; serializes concurrent star
         # reactions on the same message and is pruned once nobody holds it, so
         # it cannot grow without bound.
@@ -252,6 +294,37 @@ class Starboard(commands.Cog):
             entry[1] -= 1
             if entry[1] == 0:
                 self._locks.pop(message_id, None)
+
+    async def cog_load(self):
+        try:
+            rows = await self.bot.db_pool.fetch(
+                "SELECT guild_id, slot, channel_id, emoji, threshold "
+                "FROM starboard_boards ORDER BY guild_id, slot"
+            )
+        except Exception:
+            log.exception("Starboard extra boards failed to load")
+            return
+        extra = {}
+        for row in rows:
+            extra.setdefault(row["guild_id"], {})[emoji_key(row["emoji"])] = Board(
+                row["slot"], row["channel_id"], row["emoji"], row["threshold"]
+            )
+        self._extra = extra
+
+    async def _reload_extra(self, guild_id):
+        """Re-read one guild's extra boards after a write (one indexed query)."""
+        rows = await self.bot.db_pool.fetch(
+            "SELECT slot, channel_id, emoji, threshold FROM starboard_boards "
+            "WHERE guild_id = $1 ORDER BY slot",
+            guild_id,
+        )
+        if rows:
+            self._extra[guild_id] = {
+                emoji_key(r["emoji"]): Board(r["slot"], r["channel_id"], r["emoji"], r["threshold"])
+                for r in rows
+            }
+        else:
+            self._extra.pop(guild_id, None)
 
     async def get_config(self, guild_id):
         if guild_id in self._config:
@@ -334,9 +407,15 @@ class Starboard(commands.Cog):
     @starboard.command(name="threshold")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
-    @discord.app_commands.describe(value="How many stars a message needs to reach the starboard.")
-    async def starboard_threshold(self, ctx, value: int):
+    @discord.app_commands.describe(
+        value="How many stars a message needs to reach the starboard.",
+        board="Which starboard (1 is the main one).",
+    )
+    async def starboard_threshold(self, ctx, value: int, board: int = 1):
         """Update the amount of stars needed to reach the starboard."""
+
+        if board != 1:
+            return await self._set_extra_threshold(ctx, board, value)
 
         query = """
             UPDATE starboard SET threshold = $2
@@ -365,14 +444,161 @@ class Starboard(commands.Cog):
             "DELETE FROM starboard_entries WHERE guild_id = $1;", ctx.guild.id
         )
         await self.bot.db_pool.execute(
+            "DELETE FROM starboard_boards WHERE guild_id = $1;", ctx.guild.id
+        )
+        await self.bot.db_pool.execute(
             "DELETE FROM starboard WHERE guild_id = $1;", ctx.guild.id
         )
         self._config[ctx.guild.id] = None
+        self._extra.pop(ctx.guild.id, None)
         embed = discord.Embed(
             title=_("Starboard"), colour=random_colour()
         )
         embed.add_field(
             name=_("Starboard has been disabled for this guild"), value="​"
+        )
+        await ctx.send(embed=embed)
+
+    # -- Yasuho+: extra boards -------------------------------------------
+    async def _refuse_boards(self, ctx, text):
+        """Refuse another board: the text, plus the house upsell."""
+        await premium_upsell.refuse_in_context(
+            self.bot,
+            ctx,
+            text,
+            limit_key="max_starboards",
+            benefit=str(premium.GUILD_PREMIUM.max_starboards),
+        )
+
+    @starboard.command(name="add")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        channel="The channel where this board posts.",
+        emoji="The reaction that fills this board.",
+        threshold="How many reactions a message needs (default 3).",
+    )
+    async def starboard_add(
+        self, ctx, channel: discord.TextChannel, emoji: str, threshold: int = 3
+    ):
+        """Add another starboard with its own channel, emoji and threshold (Yasuho+)."""
+        await ctx.defer()
+        if threshold < 1:
+            return await ctx.send(_("The star threshold must be a positive whole number."))
+        reaction = parse_emoji(emoji)
+        if reaction is None or emoji_key(reaction) == STAR:
+            return await ctx.send(
+                _("Pick a different emoji: a real emoji that is not {star}.").format(star=STAR)
+            )
+        if not await self.get_config(ctx.guild.id):
+            return await ctx.send(
+                _("Set up the main starboard first with `/starboard set`.")
+            )
+        mine = self._extra.get(ctx.guild.id) or {}
+        if emoji_key(reaction) in mine:
+            return await ctx.send(_("Another board already uses that emoji."))
+        limit = premium.resolve_guild_limits(self.bot, ctx.guild.id).max_starboards
+        taken = {b.slot for b in mine.values()}
+        slot = next((n for n in range(2, limit + 1) if n not in taken), None)
+        if slot is None:
+            return await self._refuse_boards(
+                ctx,
+                ngettext(
+                    "This server already has the maximum of {n} starboard.",
+                    "This server already has the maximum of {n} starboards.",
+                    limit,
+                ).format(n=limit),
+            )
+        row = await self.bot.db_pool.fetchrow(
+            "INSERT INTO starboard_boards (guild_id, slot, channel_id, emoji, threshold) "
+            "VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING RETURNING slot;",
+            ctx.guild.id,
+            slot,
+            channel.id,
+            reaction,
+            threshold,
+        )
+        if row is None:
+            return await ctx.send(_("Something changed meanwhile, please try again."))
+        await self._reload_extra(ctx.guild.id)
+        await ctx.send(
+            ngettext(
+                "Board {slot} added: {emoji} in {channel}, from {threshold} reaction.",
+                "Board {slot} added: {emoji} in {channel}, from {threshold} reactions.",
+                threshold,
+            ).format(
+                slot=slot, emoji=reaction, channel=channel.mention, threshold=threshold
+            )
+        )
+
+    @starboard.command(name="remove")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(board="The board number to remove (2 or more).")
+    async def starboard_remove(self, ctx, board: int):
+        """Remove one extra starboard. Its posts stay where they are."""
+        await ctx.defer()
+        row = await self.bot.db_pool.fetchrow(
+            "DELETE FROM starboard_boards WHERE guild_id = $1 AND slot = $2 "
+            "RETURNING slot;",
+            ctx.guild.id,
+            board,
+        )
+        if row is None:
+            return await ctx.send(_("There is no extra board with that number."))
+        await self.bot.db_pool.execute(
+            "DELETE FROM starboard_entries WHERE guild_id = $1 AND slot = $2;",
+            ctx.guild.id,
+            board,
+        )
+        await self._reload_extra(ctx.guild.id)
+        await ctx.send(_("Board {slot} removed.").format(slot=board))
+
+    async def _set_extra_threshold(self, ctx, board, value):
+        if value < 1:
+            return await ctx.send(_("The star threshold must be a positive whole number."))
+        row = await self.bot.db_pool.fetchrow(
+            "UPDATE starboard_boards SET threshold = $3 "
+            "WHERE guild_id = $1 AND slot = $2 RETURNING slot;",
+            ctx.guild.id,
+            board,
+            value,
+        )
+        if row is None:
+            return await ctx.send(_("There is no extra board with that number."))
+        await self._reload_extra(ctx.guild.id)
+        await ctx.send(
+            ngettext(
+                "Board {slot} now needs {threshold} reaction.",
+                "Board {slot} now needs {threshold} reactions.",
+                value,
+            ).format(slot=board, threshold=value)
+        )
+
+    @starboard.command(name="boards")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def starboard_boards(self, ctx):
+        """List this server's starboards and which are active."""
+        await ctx.defer()
+        cfg = await self.get_config(ctx.guild.id)
+        if not cfg:
+            return await ctx.send(_("No starboard is set up yet."))
+        limit = premium.resolve_guild_limits(self.bot, ctx.guild.id).max_starboards
+        boards = [Board(1, cfg[0], STAR, cfg[1])]
+        boards += sorted(
+            (self._extra.get(ctx.guild.id) or {}).values(), key=lambda b: b.slot
+        )
+        lines = []
+        for b in boards:
+            line = _("`{slot}` {emoji} in <#{channel}>, from {threshold}").format(
+                slot=b.slot, emoji=b.emoji, channel=b.channel_id, threshold=b.threshold
+            )
+            if b.slot > limit:
+                line += " - " + _("inactive (Yasuho+ needed)")
+            lines.append(line)
+        embed = discord.Embed(
+            title=_("Starboards"), description="\n".join(lines), colour=random_colour()
         )
         await ctx.send(embed=embed)
 
@@ -387,7 +613,7 @@ class Starboard(commands.Cog):
         query = """
             SELECT message_id, star_message_id, channel_id, star_count
             FROM starboard_entries
-            WHERE guild_id = $1 AND star_count > 0
+            WHERE guild_id = $1 AND star_count > 0 AND slot = 1
             ORDER BY star_count DESC
             LIMIT $2;
             """
@@ -485,16 +711,37 @@ class Starboard(commands.Cog):
         The listener itself stays O(1) per event: two cache dict lookups, one
         bounded scan of the message deque, one row read.
         """
-        if str(payload.emoji) != STAR or payload.guild_id is None:
+        if payload.guild_id is None:
+            return
+
+        key = emoji_key(payload.emoji)
+        boards = self._extra.get(payload.guild_id)
+        # Every reaction that is neither the star nor one of this guild's own
+        # board emojis leaves here: one dict lookup, nothing awaited.
+        if key != STAR and not (boards and key in boards):
             return
 
         cfg = await self.get_config(payload.guild_id)
-        if not cfg:
-            return
+        if key == STAR:
+            if not cfg:
+                return
+            board = Board(1, cfg[0], STAR, cfg[1])
+        else:
+            # An extra board needs the main one (the dashboard can delete it).
+            board = boards[key] if cfg else None
+            if board is None:
+                return
+            # Lapse: boards past the entitlement stay configured but silent.
+            limits = premium.resolve_guild_limits(self.bot, payload.guild_id)
+            if board.slot > limits.max_starboards:
+                return
 
-        channel_id, threshold = cfg
+        channel_id, threshold = board.channel_id, board.threshold
 
-        if payload.channel_id == channel_id:
+        # Never repost a board's own posts, on any of the guild's boards.
+        if payload.channel_id == cfg[0] or any(
+            payload.channel_id == b.channel_id for b in (boards or {}).values()
+        ):
             return
 
         guild = self.bot.get_guild(payload.guild_id)
@@ -520,7 +767,7 @@ class Starboard(commands.Cog):
         # post to take down.
         if not _may_republish(src, star_ch):
             async with self._message_lock(payload.message_id):
-                await self._retract(payload.message_id, star_ch)
+                await self._retract(payload.message_id, star_ch, board.slot)
             return
 
         msg = self._cached_message(payload.message_id)
@@ -538,10 +785,11 @@ class Starboard(commands.Cog):
         # writes the count as of its turn rather than as of its arrival.
         async with self._message_lock(msg.id):
             await self._sync_star(
-                msg, guild, star_ch, channel_id, _star_count(msg), threshold
+                msg, guild, star_ch, channel_id,
+                _star_count(msg, board.emoji), threshold, board.slot, board.emoji,
             )
 
-    def _star_embed(self, msg, count):
+    def _star_embed(self, msg, count, emoji=STAR):
         # Author, channel, star count and a jump link - never the message text
         # or its attachments: the bot reads message content for moderation
         # only (the Message Content intent is requested for nothing else), so
@@ -560,14 +808,17 @@ class Starboard(commands.Cog):
             name=_("Source"),
             value=_("[Jump]({url})").format(url=msg.jump_url),
         )
-        embed.set_footer(text=f"{count} {STAR}")
+        embed.set_footer(text=f"{count} {emoji}")
         return embed
 
-    async def _sync_star(self, msg, guild, star_ch, channel_id, count, threshold):
+    async def _sync_star(
+        self, msg, guild, star_ch, channel_id, count, threshold, slot=1, emoji=STAR
+    ):
         row = await self.bot.db_pool.fetchrow(
             "SELECT star_message_id, star_count FROM starboard_entries "
-            "WHERE message_id = $1;",
+            "WHERE message_id = $1 AND slot = $2;",
             msg.id,
+            slot,
         )
         entry = row["star_message_id"] if row else None
         stored = row["star_count"] if row else None
@@ -582,7 +833,7 @@ class Starboard(commands.Cog):
                 # Nothing on screen would change: spend no request.
                 return
 
-            embed = self._star_embed(msg, count)
+            embed = self._star_embed(msg, count, emoji)
 
             if entry is not None:
                 try:
@@ -592,21 +843,24 @@ class Starboard(commands.Cog):
                     star_message = await star_ch.send(embed=embed)
                     await self.bot.db_pool.execute(
                         "UPDATE starboard_entries SET star_message_id = $2, "
-                        "star_count = $3, channel_id = $4 WHERE message_id = $1;",
+                        "star_count = $3, channel_id = $4 "
+                        "WHERE message_id = $1 AND slot = $5;",
                         msg.id,
                         star_message.id,
                         count,
                         channel_id,
+                        slot,
                     )
                 except Exception:
                     log.exception("Failed to edit star message %s", entry)
                 else:
                     await self.bot.db_pool.execute(
                         "UPDATE starboard_entries SET star_count = $2, "
-                        "channel_id = $3 WHERE message_id = $1;",
+                        "channel_id = $3 WHERE message_id = $1 AND slot = $4;",
                         msg.id,
                         count,
                         channel_id,
+                        slot,
                     )
                 return
 
@@ -614,13 +868,13 @@ class Starboard(commands.Cog):
             try:
                 query = """
                     INSERT INTO starboard_entries
-                    (message_id, guild_id, star_message_id, channel_id, star_count)
-                    VALUES ($1, $2, $3, $4, $5)
-                    ON CONFLICT (message_id) DO UPDATE
+                    (message_id, guild_id, star_message_id, channel_id, star_count, slot)
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                    ON CONFLICT (message_id, slot) DO UPDATE
                     SET star_message_id = $3, channel_id = $4, star_count = $5;
                     """
                 await self.bot.db_pool.execute(
-                    query, msg.id, guild.id, star_message.id, channel_id, count
+                    query, msg.id, guild.id, star_message.id, channel_id, count, slot
                 )
             except Exception:
                 log.exception("Failed to record entry, rolling back")
@@ -628,9 +882,9 @@ class Starboard(commands.Cog):
             return
 
         if entry is not None:
-            await self._drop_entry(star_ch, msg.id, entry)
+            await self._drop_entry(star_ch, msg.id, entry, slot)
 
-    async def _retract(self, message_id, star_ch):
+    async def _retract(self, message_id, star_ch, slot=1):
         """Take a starboard post down, if there is one. Costs one row read.
 
         The audience-gate path: it has no message and no count, only the id that
@@ -639,15 +893,17 @@ class Starboard(commands.Cog):
         Discord request at all.
         """
         row = await self.bot.db_pool.fetchrow(
-            "SELECT star_message_id FROM starboard_entries WHERE message_id = $1;",
+            "SELECT star_message_id FROM starboard_entries "
+            "WHERE message_id = $1 AND slot = $2;",
             message_id,
+            slot,
         )
         entry = row["star_message_id"] if row else None
         if entry is None:
             return
-        await self._drop_entry(star_ch, message_id, entry)
+        await self._drop_entry(star_ch, message_id, entry, slot)
 
-    async def _drop_entry(self, star_ch, message_id, entry):
+    async def _drop_entry(self, star_ch, message_id, entry, slot=1):
         """Delete the starboard post and forget the entry. One REST at most."""
         try:
             await star_ch.get_partial_message(entry).delete()
@@ -657,7 +913,9 @@ class Starboard(commands.Cog):
             log.exception("Failed to delete star message %s", entry)
 
         await self.bot.db_pool.execute(
-            "DELETE FROM starboard_entries WHERE message_id = $1;", message_id
+            "DELETE FROM starboard_entries WHERE message_id = $1 AND slot = $2;",
+            message_id,
+            slot,
         )
 
     @commands.Cog.listener()

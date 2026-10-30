@@ -426,6 +426,11 @@ async def _invalidate_starboard(bot, gid):
         "SELECT channel_id, threshold FROM starboard WHERE guild_id = $1", gid
     )
     cache[gid] = (row["channel_id"], row["threshold"]) if row else None
+    # Deleting board 1 cascades to starboard_boards in the database; re-read this
+    # guild's extra boards too so the cached ones do not outlive it.
+    reload_extra = getattr(cog, "_reload_extra", None)
+    if reload_extra is not None:
+        await reload_extra(gid)
 
 
 async def _invalidate_automod(bot, gid):
@@ -760,6 +765,9 @@ async def _resync_starboard(bot):
     config = getattr(cog, "_config", None)
     if isinstance(config, dict):
         config.clear()
+    reload_all = getattr(cog, "cog_load", None)
+    if reload_all is not None:
+        await reload_all()  # re-reads every extra board (keeps the old on error)
 
 
 async def _resync_automod(bot):

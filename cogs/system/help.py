@@ -113,7 +113,7 @@ CATEGORIES = [
         "🛡️",
         "Moderation",
         N_("Kicks, bans, warnings, automod and mod logs."),
-        ["Moderation", "Warns", "AutoMod", "ModLog", "Blacklist"],
+        ["Moderation", "Warns", "TempRole", "AutoMod", "ModLog", "Blacklist"],
     ),
     (
         "⚙️",

@@ -117,7 +117,9 @@ EXPORT_COOLDOWN_SECONDS = 3600
 # on request; the posted messages are deleted best effort by the confirm view.
 # v17 adds birthdays: the day and month this user shared per server
 # (`birthdays_shared`, no year is ever stored), erased on request.
-EXPORT_VERSION = 17
+# v18 adds the temporary roles a moderator gave this user (`temp_roles_held`: server,
+# role, expiry), erased on request; the scheduled removal (a timers row) is kept.
+EXPORT_VERSION = 18
 
 # THE list of tables a profile lives in, deleted together. This mirrors
 # retention.GUILD_DELETE_QUERIES for the USER side: profile data is keyed by
@@ -210,6 +212,11 @@ USER_DELETE_QUERIES = PROFILE_DELETE_QUERIES + (
     ("suggestions", "DELETE FROM suggestions WHERE author_id = $1"),
     # Birthdays (cogs/community/birthdays): one row per server the user shared it in.
     ("birthdays", "DELETE FROM birthdays WHERE user_id = $1"),
+    # Temporary roles (cogs/moderation/temprole): the record only. The scheduled
+    # removal lives in its own `timers` row, which is NOT touched here, so the
+    # role still comes off on time - forgetting the record must never turn a
+    # temporary role into a permanent one.
+    ("temp_roles", "DELETE FROM temp_roles WHERE user_id = $1"),
     # This user's OWN Pack Confort rows (tools/premium.py) - WHERE user_id
     # only, same carve-out the export query above uses, so a Yasuho+ row
     # (guild-scoped, user_id NULL) is never reachable from here. Safe to erase
@@ -597,6 +604,11 @@ async def collect_user_export(pool, user_id):
         "WHERE user_id = $1 ORDER BY guild_id",
         user_id,
     )
+    temp_roles = await pool.fetch(
+        "SELECT guild_id, role_id, expires_at FROM temp_roles "
+        "WHERE user_id = $1 ORDER BY expires_at",
+        user_id,
+    )
     reminders = await pool.fetch(
         "SELECT id, expires, created, extra FROM timers "
         "WHERE event = 'reminder' "
@@ -734,6 +746,7 @@ async def collect_user_export(pool, user_id):
         "suggestions_authored": _records(suggestions),
         "suggestion_votes_cast": _records(suggestion_votes),
         "birthdays_shared": _records(birthdays),
+        "temp_roles_held": _records(temp_roles),
         "pending_reminders": _records(reminders),
         "guild_playlists_created": _records(playlists),
         "custom_commands_created": _records(custom_commands),

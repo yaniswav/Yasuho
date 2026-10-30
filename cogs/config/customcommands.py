@@ -20,9 +20,9 @@ import discord
 from discord.ext import commands
 
 from . import command_naming as cc
-from tools import embed_creator
+from tools import embed_creator, premium, premium_upsell
 from tools.formats import random_colour
-from tools.i18n import N_, _
+from tools.i18n import N_, _, ngettext
 from tools.views import AuthorView, LocaleModal
 
 log = logging.getLogger(__name__)
@@ -57,6 +57,13 @@ _NAME_ERRORS = {
     "reserved": lambda: _("That name is already one of my built-in commands."),
     "exists": lambda: _("This server already has a custom command with that name."),
 }
+
+
+def _with_buttons(response, buttons):
+    """Carry the stored link buttons through an edit that rebuilds the blob."""
+    if buttons:
+        response["buttons"] = buttons
+    return response
 
 
 def build_substitution(author, guild):
@@ -195,6 +202,7 @@ class EditTextModal(LocaleModal):
         super().__init__(title=_("Edit: {name}").format(name=name)[:45])
         self.panel = panel
         self.name = name
+        self.buttons = response.get("buttons")
         self.content_field = discord.ui.TextInput(
             label=_("Response text"),
             style=discord.TextStyle.paragraph,
@@ -228,12 +236,15 @@ class EditTextModal(LocaleModal):
             await self.panel.cog.save_command(
                 self.panel.guild.id,
                 self.name,
-                {
-                    "type": "text",
-                    "content": self.content_field.value.strip(),
-                    "aliases": aliases,
-                    "cooldown": resolve_cooldown(self.cooldown_radio, self.cooldown_custom),
-                },
+                _with_buttons(
+                    {
+                        "type": "text",
+                        "content": self.content_field.value.strip(),
+                        "aliases": aliases,
+                        "cooldown": resolve_cooldown(self.cooldown_radio, self.cooldown_custom),
+                    },
+                    self.buttons,
+                ),
                 interaction.user.id,
             )
             await self.panel.refresh(interaction, selected=self.name)
@@ -363,15 +374,25 @@ class CustomEmbedPanel(AuthorView):
             return await interaction.response.send_message(
                 _("Add some content to the embed first."), ephemeral=True
             )
+        if len(embed) > cc.MAX_EMBED_TOTAL:
+            return await interaction.response.send_message(
+                _("The embed is too long: Discord allows {n} characters in total.").format(
+                    n=cc.MAX_EMBED_TOTAL
+                ),
+                ephemeral=True,
+            )
         await self.cog.save_command(
             self.guild.id,
             self.draft["name"],
-            {
-                "type": "embed",
-                "embed": self.draft["embed"],
-                "aliases": self.draft.get("aliases") or [],
-                "cooldown": int(self.draft.get("cooldown") or 0),
-            },
+            _with_buttons(
+                {
+                    "type": "embed",
+                    "embed": self.draft["embed"],
+                    "aliases": self.draft.get("aliases") or [],
+                    "cooldown": int(self.draft.get("cooldown") or 0),
+                },
+                self.draft.get("buttons"),
+            ),
             interaction.user.id,
         )
         for child in self.children:
@@ -481,6 +502,7 @@ class _EditButton(discord.ui.Button):
                 "embed": embed_creator.merge_embed(response.get("embed")),
                 "aliases": response.get("aliases") or [],
                 "cooldown": int(response.get("cooldown") or 0),
+                "buttons": response.get("buttons"),
             }
             view = CustomEmbedPanel(
                 self._owner.cog, self._owner.guild, self._owner.author_id, draft
@@ -493,6 +515,94 @@ class _EditButton(discord.ui.Button):
             await interaction.response.send_modal(
                 EditTextModal(self._owner, name, response)
             )
+
+
+_BUTTON_ERRORS = {
+    "too_many": lambda: _("At most {n} buttons.").format(n=cc.MAX_BUTTONS),
+    "format": lambda: _("Write each button as: label | https://link"),
+    "label": lambda: _("A button label must be 1 to {n} characters.").format(
+        n=cc.MAX_BUTTON_LABEL
+    ),
+    "url": lambda: _("A button link must be a valid https:// address."),
+}
+
+
+class ButtonsModal(LocaleModal):
+    """Set the link buttons shown under a command's reply (Yasuho+)."""
+
+    def __init__(self, panel, name, response, limit):
+        super().__init__(title=_("Buttons: {name}").format(name=name)[:45])
+        self.panel = panel
+        self.name = name
+        self.limit = limit
+        current = "\n".join(
+            f"{b['label']} | {b['url']}" for b in cc.read_buttons(response.get("buttons"), limit)
+        )
+        self.buttons_field = discord.ui.TextInput(
+            label=_("Link buttons (one per line)"),
+            style=discord.TextStyle.paragraph,
+            default=current or None,
+            placeholder="Rules | https://example.com/rules",
+            max_length=1000,
+            required=False,
+        )
+        self.add_item(self.buttons_field)
+
+    async def on_submit(self, interaction):
+        try:
+            buttons, err = cc.parse_buttons(self.buttons_field.value)
+            if err is None and len(buttons) > self.limit:
+                err = "too_many"
+            if err:
+                return await interaction.response.send_message(
+                    _BUTTON_ERRORS[err](), ephemeral=True
+                )
+            # Re-read: the command may have been edited while the modal was open.
+            response = (await self.panel.cog.get_custom_commands(self.panel.guild.id)).get(
+                self.name
+            )
+            if response is None:
+                return await self.panel.refresh(interaction, selected=None)
+            response = dict(response)
+            if buttons:
+                response["buttons"] = buttons
+            else:
+                response.pop("buttons", None)
+            await self.panel.cog.save_command(
+                self.panel.guild.id, self.name, response, interaction.user.id
+            )
+            await self.panel.refresh(interaction, selected=self.name)
+        except Exception:
+            log.exception("Custom command buttons modal failed")
+            await embed_creator.notify_failure(interaction)
+
+
+class _ButtonsButton(discord.ui.Button):
+    def __init__(self, panel):
+        self._owner = panel
+        super().__init__(
+            label=_("Buttons"),
+            style=discord.ButtonStyle.secondary,
+            row=2,
+            disabled=panel.selected is None,
+        )
+
+    async def callback(self, interaction):
+        try:
+            name = self._owner.selected
+            cog, guild = self._owner.cog, self._owner.guild
+            response = (await cog.get_custom_commands(guild.id)).get(name) if name else None
+            if response is None:
+                return await self._owner.refresh(interaction, selected=None)
+            limit = premium.resolve_guild_limits(cog.bot, guild.id).max_command_buttons
+            if limit <= 0:
+                return await cog.refuse_buttons(interaction)
+            await interaction.response.send_modal(
+                ButtonsModal(self._owner, name, response, limit)
+            )
+        except Exception:
+            log.exception("Custom command buttons button failed")
+            await embed_creator.notify_failure(interaction)
 
 
 class _DeleteButton(discord.ui.Button):
@@ -529,6 +639,7 @@ class CustomCommandsPanel(AuthorView):
         self.add_item(_AddTextButton(self))
         self.add_item(_AddEmbedButton(self))
         self.add_item(_EditButton(self))
+        self.add_item(_ButtonsButton(self))
         self.add_item(_DeleteButton(self))
 
     def build_embed(self):
@@ -582,6 +693,13 @@ class CustomCommandsPanel(AuthorView):
             cooldown = int(resp.get("cooldown") or 0)
             if cooldown:
                 meta.append(_("cooldown: {sec}s").format(sec=cooldown))
+            n_buttons = len(cc.read_buttons(resp.get("buttons"), cc.MAX_BUTTONS))
+            if n_buttons:
+                meta.append(
+                    ngettext("{count} button", "{count} buttons", n_buttons).format(
+                        count=n_buttons
+                    )
+                )
             if meta:
                 detail = detail + "\n" + " | ".join(meta)
             embed.add_field(
@@ -674,6 +792,31 @@ class CustomCommands(commands.Cog):
             clean.append(alias)
         return clean[:5], None
 
+    async def refuse_buttons(self, interaction):
+        """Refuse the Yasuho+ link buttons: the text, plus the house upsell."""
+        upsell = await premium_upsell.for_guild_refusal(
+            self.bot,
+            limit_key="max_command_buttons",
+            guild_id=interaction.guild.id,
+            person_id=interaction.user.id,
+            is_admin=premium_upsell.invoker_is_admin(interaction.user),
+            already_top_tier=premium_upsell.is_guild_already_top_tier(
+                self.bot, interaction.guild.id
+            ),
+            kind="unlock",
+        )
+        text = _("Link buttons under a command's reply are a Yasuho+ feature.")
+        kwargs = {"ephemeral": True}
+        if upsell is not None:
+            text += "\n" + upsell.line
+            view = upsell.view()
+            if view is not None:
+                kwargs["view"] = view
+        await interaction.response.send_message(text, **kwargs)
+
+    def _max_buttons(self, guild):
+        return premium.resolve_guild_limits(self.bot, guild.id).max_command_buttons
+
     async def at_capacity(self, guild_id):
         return len(await self.get_custom_commands(guild_id)) >= cc.MAX_COMMANDS_PER_GUILD
 
@@ -758,7 +901,7 @@ class CustomCommands(commands.Cog):
                 ephemeral=True,
             )
             return
-        payload = self._payload(response, ctx.author, ctx.guild)
+        payload = self._payload(response, ctx.author, ctx.guild, self._max_buttons(ctx.guild))
         if payload is None:
             await ctx.send(_("That command has nothing to say."), ephemeral=True)
             return
@@ -824,14 +967,28 @@ class CustomCommands(commands.Cog):
         return False
 
     @staticmethod
-    def _payload(response, member, guild):
-        """Build the send kwargs for a response, or None when it renders empty."""
+    def _payload(response, member, guild, max_buttons=0):
+        """Build the send kwargs for a response, or None when it renders empty.
+
+        ``max_buttons`` is the guild's entitlement: 0 (free or lapsed) leaves the
+        stored link buttons unrendered but untouched.
+        """
         substitute = build_substitution(member, guild)
+        extra = {}
+        buttons = cc.read_buttons(response.get("buttons"), max_buttons)
+        if buttons:
+            view = discord.ui.View(timeout=None)
+            for button in buttons:
+                view.add_item(discord.ui.Button(label=button["label"], url=button["url"]))
+            extra["view"] = view
         if response.get("type") == "embed":
             embed = embed_creator.render(
                 response.get("embed") or {}, substitute=substitute
             )
-            return {"embed": embed} if embed_creator.embed_has_content(embed) else None
+            # Placeholders can grow the text past Discord's summed limit.
+            if len(embed) > cc.MAX_EMBED_TOTAL:
+                return None
+            return {"embed": embed, **extra} if embed_creator.embed_has_content(embed) else None
         content = substitute(response.get("content") or "")
         if not content:
             return None
@@ -844,10 +1001,11 @@ class CustomCommands(commands.Cog):
             "allowed_mentions": discord.AllowedMentions(
                 everyone=False, roles=False, users=[member], replied_user=False,
             ),
+            **extra,
         }
 
     async def _run(self, message, name, response):
-        payload = self._payload(response, message.author, message.guild)
+        payload = self._payload(response, message.author, message.guild, self._max_buttons(message.guild))
         if payload is None:
             return
         try:

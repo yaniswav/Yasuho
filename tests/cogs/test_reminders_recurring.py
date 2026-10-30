@@ -906,7 +906,7 @@ async def test_tempban_path_is_untouched_by_recurrence():
 async def test_generic_events_take_the_unchanged_at_most_once_path():
     # vote_reminder (cogs/community/votes.py), announcement and temprole all go
     # through the generic dispatch. None of them may gain a reschedule.
-    for event in ("vote_reminder", "announcement", "temprole"):
+    for event in ("vote_reminder", "announcement", "temprole", "temprole_grant"):
         result = await _run_one_dispatch(
             _due_row(event, extra={"user_id": 20, "voted_at": "2026-01-01"})
         )

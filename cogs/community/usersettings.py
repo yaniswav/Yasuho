@@ -299,6 +299,8 @@ class ProfileDeletionView(AuthorView):
                 + "\n"
                 + _("Your shared birthdays are gone, in every server.")
                 + "\n"
+                + _("Your temporary-role records are gone.")
+                + "\n"
                 + _("Your top.gg vote record is gone too.")
                 + "\n"
                 + _("So is your personal rank card.")
@@ -794,6 +796,11 @@ class UserSettings(commands.Cog):
             )
             + "\n"
             + _("It also deletes your shared birthdays, in every server.")
+            + "\n"
+            + _(
+                "It also forgets your temporary roles; the scheduled removal "
+                "is kept until it runs (at most 90 days)."
+            )
             + "\n"
             + _(
                 "And your personal rank card: the background image you "

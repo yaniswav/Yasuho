@@ -90,6 +90,8 @@ GUILD_DELETE_QUERIES = (
         "starboard_entries",
         "DELETE FROM starboard_entries WHERE guild_id = $1",
     ),
+    ("starboard_boards", "DELETE FROM starboard_boards WHERE guild_id = $1"),
+    ("temp_roles", "DELETE FROM temp_roles WHERE guild_id = $1"),
     ("starboard", "DELETE FROM starboard WHERE guild_id = $1"),
     ("prefixes", "DELETE FROM prefixes WHERE guild_id = $1"),
     ("autorole", "DELETE FROM autorole WHERE guild_id = $1"),
@@ -261,6 +263,7 @@ UNION SELECT guild_id FROM season_podiums
 UNION SELECT guild_id FROM rank_cards
 UNION SELECT guild_id FROM starboard
 UNION SELECT guild_id FROM starboard_entries
+UNION SELECT guild_id FROM temp_roles
 UNION SELECT guild_id FROM welcome
 UNION SELECT guild_id FROM reaction_roles
 UNION SELECT guild_id FROM automod
@@ -790,6 +793,7 @@ def invalidate_guild_caches(bot, guild_id):
     starboard = bot.get_cog("Starboard")
     if starboard is not None:
         starboard._config.pop(guild_id, None)
+        starboard._extra.pop(guild_id, None)
 
     milestones = bot.get_cog("Milestones")
     if milestones is not None:

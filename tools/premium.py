@@ -249,6 +249,13 @@ FREE_MUSIC_QUEUE_CONTROLS = False
 # summary post and the CSV export of the daily aggregates. Yasuho+ only.
 FREE_SERVERSTATS_DAILY_SUMMARY = False
 FREE_SERVERSTATS_EXPORT = False
+# Custom commands (cogs/config/customcommands): link buttons under a reply are
+# Yasuho+ only (free keeps the text/embed reply it always had).
+FREE_MAX_COMMAND_BUTTONS = 0
+# Starboards (cogs/config/starboard): one board per server is free.
+FREE_MAX_STARBOARDS = 1
+# Temporary roles (cogs/moderation/temprole): active grants per server.
+FREE_MAX_TEMP_ROLES = 5
 
 FREE_MAX_FAVOURITES = 100  # cogs/music/music.MAX_FAVOURITES
 FREE_MAX_PENDING_REMINDERS = 25  # cogs/community/reminders.MAX_PENDING_REMINDERS
@@ -292,6 +299,9 @@ GUILD_CEILINGS = {
     "max_scheduled_announcements": 50,
     "max_request_panels": 10,
     "max_linked_playlists": 25,
+    "max_command_buttons": 5,
+    "max_starboards": 10,
+    "max_temp_roles": 500,
 }
 
 USER_CEILINGS = {
@@ -331,6 +341,9 @@ class GuildLimits:
     music_queue_controls: bool
     serverstats_daily_summary: bool
     serverstats_export: bool
+    max_command_buttons: int
+    max_starboards: int
+    max_temp_roles: int
 
     def __post_init__(self):
         for name, ceiling in GUILD_CEILINGS.items():
@@ -383,6 +396,9 @@ GUILD_FREE = GuildLimits(
     music_queue_controls=FREE_MUSIC_QUEUE_CONTROLS,
     serverstats_daily_summary=FREE_SERVERSTATS_DAILY_SUMMARY,
     serverstats_export=FREE_SERVERSTATS_EXPORT,
+    max_command_buttons=FREE_MAX_COMMAND_BUTTONS,
+    max_starboards=FREE_MAX_STARBOARDS,
+    max_temp_roles=FREE_MAX_TEMP_ROLES,
 )
 
 # Yasuho+ (guild subscription). Values from the retained plan's table
@@ -414,6 +430,9 @@ GUILD_PREMIUM = GuildLimits(
     music_queue_controls=True,
     serverstats_daily_summary=True,
     serverstats_export=True,
+    max_command_buttons=3,
+    max_starboards=5,
+    max_temp_roles=100,
 )
 
 USER_FREE = UserLimits(

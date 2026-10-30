@@ -1,6 +1,6 @@
 # Yasuho - Privacy Policy
 
-_Last updated: October 7, 2026_
+_Last updated: October 30, 2026_
 
 Yasuho ("the bot") is a Discord community bot. This document explains what data
 the bot processes, what it stores, for how long, and how you can see or delete
@@ -133,6 +133,14 @@ and, if the server set one, a role for the day). Other members of that server
 can see it in `/birthday list`. It is deleted with `/birthday remove`, when you
 leave the server, when the server's data is purged, or with
 `/mydata deleteprofile`.
+
+**Temporary roles** (per server): when a moderator gives you a role for a set
+time with `/temprole`, we store the server, the role and when it ends, until it
+ends (at most 90 days), when the server's data is purged, or with
+`/mydata deleteprofile`. That deletes the record, but the scheduled removal
+(server, your user ID, the role and the end time) is kept until it runs, at most
+90 days, so the role still comes off when it expires. The bot does not keep who
+gave it or why.
 
 **Command usage**: anonymous aggregate counters (command name x day). No user
 ID, no server ID.
@@ -269,8 +277,9 @@ complaint with the French data protection authority, the CNIL
   record, your personal rank card, your AniList link (the stored OAuth token),
   your AniList / MangaDex alert opt-ins, your limit notes, your suggestions and
   votes (with the votes cast on your suggestions), your shared birthdays in
-  every server and our copy of your own premium purchases. The posted
-  suggestion messages are removed where the bot can; their discussion threads
+  every server, your temporary-role records (the scheduled removal itself is
+  kept until it runs, at most 90 days) and our copy of your own premium
+  purchases. The posted suggestion messages are removed where the bot can; their discussion threads
   hold other members' replies, so they stay, renamed to the suggestion number
   and locked. A purchase that is still active on Discord is copied again at the
   next check, because the perk depends on it.

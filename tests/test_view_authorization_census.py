@@ -851,6 +851,11 @@ CLASSIFIED: dict[str, tuple[str, str]] = {
         "Opened only from CustomCommandsPanel (customcommands.py:440); same "
         "residual as AddEmbedNameModal.",
     ),
+    "cogs.config.customcommands.ButtonsModal": (
+        "GATED_FLOW_MODAL",
+        "Opened only from CustomCommandsPanel (an AuthorView) after re-reading "
+        "the entitlement; same residual as AddEmbedNameModal.",
+    ),
     "cogs.config.customcommands.EditTextModal": (
         "GATED_FLOW_MODAL",
         "Opened only from CustomCommandsPanel (customcommands.py:494); same "

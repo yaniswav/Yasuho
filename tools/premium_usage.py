@@ -290,6 +290,9 @@ EXCLUDED_GUILD_FIELDS = {
     "music_queue_controls": "binary capability gated at READ time (a lapsed server's stored value is ignored), nothing to refuse",
     "serverstats_daily_summary": "binary capability refused at the command; the delivery tick skips a lapsed server; LIMIT-REACHED is its measure",
     "serverstats_export": "binary capability refused at the command; LIMIT-REACHED is its measure",
+    "max_command_buttons": "FREE is 0 (a capability gate, no 80%-of-free reading); LIMIT-REACHED is its measure",
+    "max_starboards": "boards live in a small per-guild table; LIMIT-REACHED is its measure",
+    "max_temp_roles": "short-lived rows swept at expiry, a point-in-time count says little; LIMIT-REACHED is its measure",
 }
 EXCLUDED_USER_FIELDS = {}
 

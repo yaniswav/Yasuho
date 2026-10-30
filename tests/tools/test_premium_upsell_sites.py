@@ -69,6 +69,10 @@ _ALLOWED_IMPORTERS = {
     "cogs/anilist/feed_views.py",
     # V5b: the serverstats daily summary / export are Yasuho+ capabilities.
     "cogs/community/serverstats/cog.py",
+    # V5c: link buttons, extra starboards and the temp-role cap are Yasuho+.
+    "cogs/config/customcommands.py",
+    "cogs/config/starboard.py",
+    "cogs/moderation/temprole.py",
 }
 
 

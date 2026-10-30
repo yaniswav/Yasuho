@@ -239,6 +239,9 @@ def test_scheduled_announcement_limits_are_three_free_and_25_premium():
     assert premium.GUILD_PREMIUM.serverstats_daily_summary
     assert not premium.GUILD_FREE.serverstats_export
     assert premium.GUILD_PREMIUM.serverstats_export
+    assert (premium.GUILD_FREE.max_command_buttons, premium.GUILD_PREMIUM.max_command_buttons) == (0, 3)
+    assert (premium.GUILD_FREE.max_starboards, premium.GUILD_PREMIUM.max_starboards) == (1, 5)
+    assert (premium.GUILD_FREE.max_temp_roles, premium.GUILD_PREMIUM.max_temp_roles) == (5, 100)
 
 
 def test_guild_free_dataclass_is_built_from_the_checked_constants():
@@ -269,6 +272,9 @@ def test_guild_free_dataclass_is_built_from_the_checked_constants():
         music_queue_controls=premium.FREE_MUSIC_QUEUE_CONTROLS,
         serverstats_daily_summary=premium.FREE_SERVERSTATS_DAILY_SUMMARY,
         serverstats_export=premium.FREE_SERVERSTATS_EXPORT,
+        max_command_buttons=premium.FREE_MAX_COMMAND_BUTTONS,
+        max_starboards=premium.FREE_MAX_STARBOARDS,
+        max_temp_roles=premium.FREE_MAX_TEMP_ROLES,
     )
 
 
@@ -336,6 +342,9 @@ def test_guild_limits_clamps_a_value_over_its_ceiling():
         music_queue_controls=False,
         serverstats_daily_summary=False,
         serverstats_export=False,
+        max_command_buttons=0,
+        max_starboards=1,
+        max_temp_roles=5,
     )
     assert limits.max_guild_playlists == premium.GUILD_CEILINGS["max_guild_playlists"]
 

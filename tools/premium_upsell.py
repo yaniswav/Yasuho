@@ -419,3 +419,34 @@ async def for_user_refusal(
         "PREMIUM-UPSELL key=%s scope=user scope_id=%s shown=1", limit_key, person_id
     )
     return Upsell(line=line, button=button)
+
+
+async def refuse_in_context(bot, ctx, text, *, limit_key, kind="raise", benefit=None):
+    """Send a guild-limit refusal ``text`` through ``ctx`` plus the house upsell.
+
+    The shared tail of every hybrid command that refuses on a Yasuho+ limit: the
+    refusal is always sent; the upsell line follows inline for a prefix command
+    and as a separate ephemeral follow-up (with the SKU button) for a slash one.
+    """
+    is_slash = is_slash_context(ctx)
+    upsell = await for_guild_refusal(
+        bot,
+        limit_key=limit_key,
+        guild_id=ctx.guild.id,
+        person_id=ctx.author.id,
+        is_admin=invoker_is_admin(ctx.author),
+        already_top_tier=is_guild_already_top_tier(bot, ctx.guild.id),
+        benefit=benefit,
+        kind=kind,
+        allow_button=is_slash,
+    )
+    if upsell is None:
+        return await ctx.send(text)
+    if not is_slash:
+        return await ctx.send(text + "\n" + upsell.line)
+    await ctx.send(text)
+    kwargs = {"ephemeral": True}
+    view = upsell.view()
+    if view is not None:
+        kwargs["view"] = view
+    await ctx.interaction.followup.send(upsell.line, **kwargs)

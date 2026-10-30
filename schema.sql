@@ -422,6 +422,39 @@ CREATE TABLE IF NOT EXISTS starboard_entries (
 ALTER TABLE starboard_entries ADD COLUMN IF NOT EXISTS star_count INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE starboard_entries ADD COLUMN IF NOT EXISTS channel_id BIGINT;
 
+-- Yasuho+ extra starboards (boards 2..N; board 1 stays the `starboard` row, which
+-- the dashboard also writes). A post is keyed by (message, board slot) so one
+-- message can sit on several boards. The slot column defaults to 1: every
+-- existing entry is board 1.
+CREATE TABLE IF NOT EXISTS starboard_boards (
+    guild_id   BIGINT   NOT NULL REFERENCES starboard(guild_id) ON DELETE CASCADE,
+    slot       SMALLINT NOT NULL CHECK (slot >= 2),
+    channel_id BIGINT   NOT NULL,
+    emoji      TEXT     NOT NULL,
+    threshold  INTEGER  NOT NULL DEFAULT 3 CHECK (threshold >= 1),
+    PRIMARY KEY (guild_id, slot)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS starboard_boards_emoji_uidx
+    ON starboard_boards (guild_id, emoji);
+ALTER TABLE starboard_entries ADD COLUMN IF NOT EXISTS slot SMALLINT NOT NULL DEFAULT 1;
+-- ROLLBACK NOTE: reverting the code does NOT undo the key below (the old code's
+-- ON CONFLICT (message_id) needs a unique key on message_id alone). Restore it by
+-- hand first: DELETE FROM starboard_entries WHERE slot <> 1;
+-- ALTER TABLE starboard_entries DROP CONSTRAINT starboard_entries_pkey;
+-- ALTER TABLE starboard_entries ADD PRIMARY KEY (message_id);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint c
+        JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
+        WHERE c.conrelid = 'starboard_entries'::regclass AND c.contype = 'p'
+          AND a.attname = 'slot'
+    ) THEN
+        ALTER TABLE starboard_entries DROP CONSTRAINT starboard_entries_pkey;
+        ALTER TABLE starboard_entries ADD PRIMARY KEY (message_id, slot);
+    END IF;
+END $$;
+
 -- Configurable welcome message per guild.  welcome.py
 CREATE TABLE IF NOT EXISTS welcome (
     guild_id   BIGINT PRIMARY KEY,
@@ -903,6 +936,19 @@ CREATE TABLE IF NOT EXISTS custom_commands (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (guild_id, name)
 );
+
+-- Temporary roles granted with /temprole. One row per (server, member, role); the
+-- matching `timers` row (event temprole_grant) only wakes the removal. Short-lived
+-- by design (the cog caps a grant at 90 days) and deleted at expiry.
+-- cogs/moderation/temprole.py
+CREATE TABLE IF NOT EXISTS temp_roles (
+    guild_id   BIGINT      NOT NULL,
+    user_id    BIGINT      NOT NULL,
+    role_id    BIGINT      NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (guild_id, user_id, role_id)
+);
+CREATE INDEX IF NOT EXISTS temp_roles_user_idx ON temp_roles (user_id);
 
 -- Self-assignable role menus (Components V2). One row per posted menu message;
 -- config is a JSONB blob holding the menu kind (buttons/select), its options
