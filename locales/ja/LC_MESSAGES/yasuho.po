@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-30 13:40+0000\n"
+"POT-Creation-Date: 2026-10-30 14:32+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -1226,8 +1226,8 @@ msgstr "削除"
 #: cogs/anilist/feed_views.py:1065 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
 #: cogs/community/usersettings.py:246 cogs/community/usersettings.py:361
-#: cogs/config/tickets/lifecycle.py:280 cogs/music/playlists_shared.py:399
-#: cogs/system/arg_completion.py:286
+#: cogs/config/config_transfer.py:886 cogs/config/tickets/lifecycle.py:280
+#: cogs/music/playlists_shared.py:399 cogs/system/arg_completion.py:286
 msgid "Cancel"
 msgstr "キャンセル"
 
@@ -1285,7 +1285,7 @@ msgstr "このサーバーにはまだAniListフィードがありません。�
 
 #: cogs/anilist/feed_views.py:1391 cogs/community/birthdays/panel.py:170
 #: cogs/community/suggestions/panel.py:195 cogs/config/event_reminders.py:260
-#: cogs/config/milestones.py:247 cogs/config/settings.py:53
+#: cogs/config/milestones.py:247 cogs/config/settings.py:54
 #: cogs/config/tickets/panel.py:98 cogs/config/tickets/panel.py:495
 #: cogs/config/twitch.py:424 cogs/config/verification.py:111
 #: cogs/config/welcome.py:557 cogs/config/welcome.py:680
@@ -1295,7 +1295,7 @@ msgstr "有効"
 
 #: cogs/anilist/feed_views.py:1391 cogs/community/birthdays/panel.py:170
 #: cogs/community/suggestions/panel.py:195 cogs/config/event_reminders.py:260
-#: cogs/config/milestones.py:247 cogs/config/settings.py:53
+#: cogs/config/milestones.py:247 cogs/config/settings.py:54
 #: cogs/config/tickets/panel.py:100 cogs/config/tickets/panel.py:497
 #: cogs/config/twitch.py:426 cogs/config/verification.py:113
 #: cogs/config/welcome.py:559 cogs/config/welcome.py:682
@@ -1421,9 +1421,9 @@ msgstr "アカウントの連携中に問題が発生しました。"
 msgid "Could not open the code form."
 msgstr "コードフォームを開けませんでした。"
 
-#: cogs/anilist/lookup.py:39 cogs/config/settings.py:52
-#: cogs/config/settings.py:173 cogs/config/settings.py:182
-#: cogs/config/settings.py:196 cogs/config/settings.py:204
+#: cogs/anilist/lookup.py:39 cogs/config/settings.py:53
+#: cogs/config/settings.py:174 cogs/config/settings.py:183
+#: cogs/config/settings.py:197 cogs/config/settings.py:205
 #: cogs/system/help.py:518 cogs/utility/info.py:36 cogs/utility/info.py:148
 msgid "Unknown"
 msgstr "不明"
@@ -2444,7 +2444,7 @@ msgstr "カスタマイズ"
 msgid "You need the Manage Server permission for this."
 msgstr "これにはサーバー管理権限が必要です。"
 
-#: cogs/community/birthdays/panel.py:164
+#: cogs/community/birthdays/panel.py:164 cogs/config/config_transfer.py:363
 msgid "Birthdays"
 msgstr "誕生日"
 
@@ -2835,7 +2835,7 @@ msgstr "メンバーのカードスタイル"
 #: cogs/community/leveling/seasons_views.py:185
 #: cogs/community/leveling/seasons_views.py:431
 #: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:769
-#: cogs/config/settings.py:265 cogs/config/tickets/panel.py:609
+#: cogs/config/settings.py:266 cogs/config/tickets/panel.py:609
 #: cogs/moderation/automod_panel.py:401 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "これらの操作はあなただけが使用できます"
@@ -2844,7 +2844,7 @@ msgstr "これらの操作はあなただけが使用できます"
 #: cogs/community/leveling/seasons_views.py:187
 #: cogs/community/leveling/seasons_views.py:433
 #: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:771
-#: cogs/config/settings.py:267 cogs/config/tickets/panel.py:611
+#: cogs/config/settings.py:268 cogs/config/tickets/panel.py:611
 #: cogs/moderation/automod_panel.py:403 cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
 msgstr "3分後にタイムアウトします"
@@ -3006,8 +3006,8 @@ msgstr ""
 msgid "The leveling system isn't loaded right now."
 msgstr "レベルシステムは現在読み込まれていません。"
 
-#: cogs/community/leveling/level_config_ui.py:1275 cogs/config/settings.py:89
-#: cogs/config/settings.py:215
+#: cogs/community/leveling/level_config_ui.py:1275 cogs/config/settings.py:90
+#: cogs/config/settings.py:216
 msgid "Leveling"
 msgstr "レベリング"
 
@@ -4962,6 +4962,198 @@ msgstr "ボタンロールパネルを削除しました"
 msgid "Removed `{count}` role button(s) for message `{mid}`."
 msgstr "メッセージ `{mid}` の `{count}` 個のロールボタンを削除しました。"
 
+#: cogs/config/config_transfer.py:312
+msgid "Language"
+msgstr "言語"
+
+#: cogs/config/config_transfer.py:315 cogs/config/settings.py:126
+#: cogs/config/settings.py:231
+msgid "Welcome"
+msgstr "ウェルカム"
+
+#: cogs/config/config_transfer.py:331
+msgid "Tickets"
+msgstr "チケット"
+
+#: cogs/config/config_transfer.py:342
+msgid "Music"
+msgstr "音楽"
+
+#: cogs/config/config_transfer.py:354 cogs/config/milestones.py:239
+msgid "Member milestones"
+msgstr "メンバー数マイルストーン"
+
+#: cogs/config/config_transfer.py:375
+msgid "Suggestions"
+msgstr "提案"
+
+#: cogs/config/config_transfer.py:384 cogs/config/event_reminders.py:252
+msgid "Event reminders"
+msgstr "イベントリマインダー"
+
+#: cogs/config/config_transfer.py:395 cogs/config/youtube.py:450
+msgid "YouTube alerts"
+msgstr "YouTube通知"
+
+#: cogs/config/config_transfer.py:403
+msgid "Server statistics"
+msgstr "サーバー統計"
+
+#: cogs/config/config_transfer.py:720
+#, python-brace-format
+msgid "{field}: {name} -> {target} (matched by name)"
+msgstr "{field}: {name} -> {target}（名前で一致）"
+
+#: cogs/config/config_transfer.py:724
+#, python-brace-format
+msgid "{field}: {target} dropped, it has powerful permissions"
+msgstr "{field}: {target}を破棄しました。強力な権限を持っています"
+
+#: cogs/config/config_transfer.py:728
+#, python-brace-format
+msgid "{field}: {target} dropped, it can't be used for this"
+msgstr "{field}: {target}を破棄しました。これには使えません"
+
+#: cogs/config/config_transfer.py:732
+#, python-brace-format
+msgid "{field}: {name} dropped, it is not the right kind here"
+msgstr "{field}: {name}を破棄しました。ここでは種類が合いません"
+
+#: cogs/config/config_transfer.py:735
+#, python-brace-format
+msgid "{field}: {name} dropped, nothing with that name here"
+msgstr "{field}: {name}を破棄しました。ここにはその名前のものがありません"
+
+#: cogs/config/config_transfer.py:748
+#, python-brace-format
+msgid "**{section}**: no change"
+msgstr "**{section}**: 変更はありません"
+
+#: cogs/config/config_transfer.py:752
+#, python-brace-format
+msgid "**{section}**: skipped, I need {permissions} in {channel}"
+msgstr "**{section}**: スキップしました。私には{channel}で{permissions}が必要です"
+
+#: cogs/config/config_transfer.py:757
+#, python-brace-format
+msgid "**{section}**: skipped, you need {permissions} in {channel}"
+msgstr "**{section}**: スキップしました。あなたには{channel}で{permissions}が必要です"
+
+#: cogs/config/config_transfer.py:762
+#, python-brace-format
+msgid "**{section}**: will be updated ({keys})"
+msgstr "**{section}**: 更新されます ({keys})"
+
+#: cogs/config/config_transfer.py:830
+#, python-brace-format
+msgid "**{section}**: applied"
+msgstr "**{section}**: 適用しました"
+
+#: cogs/config/config_transfer.py:832
+#, python-brace-format
+msgid "**{section}**: failed, try again later"
+msgstr "**{section}**: 失敗しました。後でもう一度お試しください"
+
+#: cogs/config/config_transfer.py:841
+#, python-brace-format
+msgid "That file is too large (the limit is {kb} KB)."
+msgstr "このファイルは大きすぎます（上限は{kb} KBです）。"
+
+#: cogs/config/config_transfer.py:843
+msgid "That export comes from a version of Yasuho this one can't read."
+msgstr "このエクスポートは、私が読み込めないバージョンのYasuhoから作られています。"
+
+#: cogs/config/config_transfer.py:844
+msgid "That file is not a Yasuho configuration export."
+msgstr "このファイルはYasuhoの設定エクスポートではありません。"
+
+#: cogs/config/config_transfer.py:866 cogs/config/config_transfer.py:933
+msgid "Configuration import and templates are a Yasuho+ feature."
+msgstr "設定のインポートとテンプレートはYasuho+の機能です。"
+
+#: cogs/config/config_transfer.py:885
+msgid "Apply"
+msgstr "適用"
+
+#: cogs/config/config_transfer.py:902
+msgid "You need the Manage Server permission to do that."
+msgstr "その操作にはサーバー管理の権限が必要です。"
+
+#: cogs/config/config_transfer.py:911
+msgid "Import finished"
+msgstr "インポートが完了しました"
+
+#: cogs/config/config_transfer.py:920
+msgid "Import cancelled. Nothing was changed."
+msgstr "インポートをキャンセルしました。何も変更していません。"
+
+#: cogs/config/config_transfer.py:950
+msgid "This configuration matches the current one: there is nothing to import."
+msgstr "この設定は現在の設定と同じです。インポートするものはありません。"
+
+#: cogs/config/config_transfer.py:954
+msgid "Import preview"
+msgstr "インポートのプレビュー"
+
+#: cogs/config/config_transfer.py:957
+msgid "Nothing is saved until you press Apply."
+msgstr "「適用」を押すまで何も保存されません。"
+
+#: cogs/config/config_transfer.py:969
+msgid "Please use the slash command for this, so the answer stays private."
+msgstr "回答を非公開にするため、この操作はスラッシュコマンドを使ってください。"
+
+#: cogs/config/config_transfer.py:979
+msgid "Here is this server's configuration. Load it with `/config import`."
+msgstr "このサーバーの設定です。`/config import`で読み込めます。"
+
+#: cogs/config/config_transfer.py:992 cogs/config/config_transfer.py:1097
+msgid "Please wait a moment before importing a configuration again."
+msgstr "設定を再度インポートする前に、少しお待ちください。"
+
+#: cogs/config/config_transfer.py:1066
+#, python-brace-format
+msgid "A template name is 1 to {n} characters."
+msgstr "テンプレート名は1から{n}文字で入力してください。"
+
+#: cogs/config/config_transfer.py:1076
+#, python-brace-format
+msgid "This server already has {n} template. Delete one first."
+msgid_plural "This server already has {n} templates. Delete one first."
+msgstr[0] "このサーバーにはすでに{n}個のテンプレートがあります。先に1つ削除してください。"
+
+#: cogs/config/config_transfer.py:1083
+#, python-brace-format
+msgid "Replaced the template **{name}**."
+msgstr "テンプレート**{name}**を置き換えました。"
+
+#: cogs/config/config_transfer.py:1085
+#, python-brace-format
+msgid "Saved the template **{name}**."
+msgstr "テンプレート**{name}**を保存しました。"
+
+#: cogs/config/config_transfer.py:1104 cogs/config/config_transfer.py:1142
+#, python-brace-format
+msgid "No template is called **{name}**."
+msgstr "**{name}**という名前のテンプレートはありません。"
+
+#: cogs/config/config_transfer.py:1114
+msgid "That template can no longer be read. Delete it and save it again."
+msgstr "このテンプレートはもう読み込めません。削除してから保存し直してください。"
+
+#: cogs/config/config_transfer.py:1125
+msgid "This server has no configuration templates yet. Save one with `/config template save`."
+msgstr "このサーバーにはまだ設定テンプレートがありません。`/config template save`で保存できます。"
+
+#: cogs/config/config_transfer.py:1132
+msgid "Configuration templates"
+msgstr "設定テンプレート"
+
+#: cogs/config/config_transfer.py:1141
+#, python-brace-format
+msgid "Deleted the template **{name}**."
+msgstr "テンプレート**{name}**を削除しました。"
+
 #: cogs/config/customcommands.py:35
 msgid "10s"
 msgstr "10s"
@@ -5275,10 +5467,6 @@ msgstr "リマインドのタイミング..."
 msgid "Role to ping (optional)..."
 msgstr "メンションするロール（任意）..."
 
-#: cogs/config/event_reminders.py:252
-msgid "Event reminders"
-msgstr "イベントリマインダー"
-
 #: cogs/config/event_reminders.py:254
 msgid "Yasuho reminds your members before a scheduled event starts."
 msgstr "予定されたイベントが始まる前に、Yasuho がメンバーにお知らせします。"
@@ -5336,10 +5524,6 @@ msgstr "1 から {maximum} までの整数を {count} 個まで、カンマ区�
 #: cogs/config/milestones.py:179
 msgid "Celebration channel..."
 msgstr "お祝いチャンネル..."
-
-#: cogs/config/milestones.py:239
-msgid "Member milestones"
-msgstr "メンバー数マイルストーン"
 
 #: cogs/config/milestones.py:241
 msgid "Yasuho celebrates when your server reaches a member milestone."
@@ -6074,160 +6258,156 @@ msgstr "ルームのオーナー権限を {name} に譲渡しました。"
 msgid "Could not complete that action."
 msgstr "そのアクションを完了できませんでした。"
 
-#: cogs/config/settings.py:23
+#: cogs/config/settings.py:24
 msgid "Use `/prefix set <prefix>` to change the command prefix for this server."
 msgstr "`/prefix set <prefix>` を使ってこのサーバーのコマンドプレフィックスを変更します。"
 
-#: cogs/config/settings.py:27
+#: cogs/config/settings.py:28
 msgid "Use `/autorole set <role>` to choose the role new members receive on join."
 msgstr "`/autorole set <role>` を使って、新しいメンバーが参加時に受け取るロールを選びます。"
 
-#: cogs/config/settings.py:31
+#: cogs/config/settings.py:32
 msgid "Use `/automod` to open the interactive AutoMod control panel (custom + native filters)."
 msgstr "`/automod` を使って、インタラクティブなAutoMod管理パネル (カスタム + ネイティブフィルター) を開きます。"
 
-#: cogs/config/settings.py:35
+#: cogs/config/settings.py:36
 msgid "Use `/modlog` to open the interactive mod-log control panel (channel + event toggles)."
 msgstr "`/modlog` を使って、インタラクティブなモッドログ管理パネル (チャンネル + イベントの切り替え) を開きます。"
 
-#: cogs/config/settings.py:39
+#: cogs/config/settings.py:40
 msgid "Use `/starboard set <channel> [threshold]` to set up the starboard."
 msgstr "`/starboard set <channel> [threshold]` を使ってスターボードを設定します。"
 
-#: cogs/config/settings.py:42
+#: cogs/config/settings.py:43
 #, python-brace-format
 msgid "Use `/welcome set <channel> <message>` to configure welcome messages. Placeholders: {user}, {server}, {count}."
 msgstr "`/welcome set <channel> <message>` を使ってウェルカムメッセージを設定します。プレースホルダー: {user}、{server}、{count}。"
 
-#: cogs/config/settings.py:81
+#: cogs/config/settings.py:82
 msgid "Current state unknown"
 msgstr "現在の状態は不明です"
 
-#: cogs/config/settings.py:83
+#: cogs/config/settings.py:84
 msgid "Currently enabled - select to disable"
 msgstr "現在有効 - 選択すると無効になります"
 
-#: cogs/config/settings.py:85
+#: cogs/config/settings.py:86
 msgid "Currently disabled - select to enable"
 msgstr "現在無効 - 選択すると有効になります"
 
-#: cogs/config/settings.py:95 cogs/config/settings.py:212
+#: cogs/config/settings.py:96 cogs/config/settings.py:213
 msgid "Prefix"
 msgstr "プレフィックス"
 
-#: cogs/config/settings.py:98
+#: cogs/config/settings.py:99
 msgid "Change the command prefix"
 msgstr "コマンドプレフィックスを変更"
 
-#: cogs/config/settings.py:101 cogs/config/settings.py:218
-#: cogs/config/settings.py:455 cogs/config/settings.py:483
-#: cogs/config/settings.py:490
+#: cogs/config/settings.py:102 cogs/config/settings.py:219
+#: cogs/config/settings.py:456 cogs/config/settings.py:484
+#: cogs/config/settings.py:491
 msgid "Auto-role"
 msgstr "オートロール"
 
-#: cogs/config/settings.py:104
+#: cogs/config/settings.py:105
 msgid "Role granted to new members"
 msgstr "新しいメンバーに付与されるロール"
 
-#: cogs/config/settings.py:107 cogs/config/settings.py:224
+#: cogs/config/settings.py:108 cogs/config/settings.py:225
 #: cogs/moderation/automod.py:272
 msgid "AutoMod"
 msgstr "AutoMod"
 
-#: cogs/config/settings.py:110
+#: cogs/config/settings.py:111
 msgid "Open the AutoMod control panel"
 msgstr "AutoMod管理パネルを開く"
 
-#: cogs/config/settings.py:113 cogs/config/settings.py:227
+#: cogs/config/settings.py:114 cogs/config/settings.py:228
 msgid "Mod-log"
 msgstr "モッドログ"
 
-#: cogs/config/settings.py:116
+#: cogs/config/settings.py:117
 msgid "Open the mod-log control panel"
 msgstr "モッドログ管理パネルを開く"
 
-#: cogs/config/settings.py:119 cogs/config/settings.py:221
+#: cogs/config/settings.py:120 cogs/config/settings.py:222
 #: cogs/config/starboard.py:356 cogs/config/starboard.py:393
 #: cogs/config/starboard.py:430 cogs/config/starboard.py:455
 msgid "Starboard"
 msgstr "スターボード"
 
-#: cogs/config/settings.py:122 cogs/config/starboard.py:175
+#: cogs/config/settings.py:123 cogs/config/starboard.py:175
 #: cogs/config/starboard.py:257
 msgid "Configure the starboard"
 msgstr "スターボードを設定"
 
-#: cogs/config/settings.py:125 cogs/config/settings.py:230
-msgid "Welcome"
-msgstr "ウェルカム"
-
-#: cogs/config/settings.py:128
+#: cogs/config/settings.py:129
 msgid "Configure welcome messages"
 msgstr "ウェルカムメッセージを設定"
 
-#: cogs/config/settings.py:132
+#: cogs/config/settings.py:133
 msgid "Configure a feature..."
 msgstr "機能を設定..."
 
-#: cogs/config/settings.py:168 cogs/config/settings.py:175
-#: cogs/config/settings.py:184 cogs/config/settings.py:200
-#: cogs/config/settings.py:208
+#: cogs/config/settings.py:169 cogs/config/settings.py:176
+#: cogs/config/settings.py:185 cogs/config/settings.py:201
+#: cogs/config/settings.py:209
 msgid "Not set up"
 msgstr "未設定"
 
-#: cogs/config/settings.py:188
+#: cogs/config/settings.py:189
 msgid "Anti-link"
 msgstr "リンク禁止"
 
-#: cogs/config/settings.py:190
+#: cogs/config/settings.py:191
 msgid "Anti-spam"
 msgstr "スパム禁止"
 
-#: cogs/config/settings.py:236
+#: cogs/config/settings.py:237
 msgid "Configuration"
 msgstr "設定"
 
-#: cogs/config/settings.py:240
+#: cogs/config/settings.py:241
 msgid "An overview of every feature for this server. Use the menu below to toggle **Leveling** or jump to a feature's setup command."
 msgstr "このサーバーのすべての機能の概要です。下のメニューを使って **レベリング** を切り替えるか、機能の設定コマンドに移動してください。"
 
-#: cogs/config/settings.py:245
+#: cogs/config/settings.py:246
 msgid "Full leveling setup lives in `/levelconfig`."
 msgstr "レベリングの詳細設定は `/levelconfig` にあります。"
 
-#: cogs/config/settings.py:352
+#: cogs/config/settings.py:353
 msgid "The prefix can't be blank."
 msgstr "プレフィックスを空にすることはできません。"
 
-#: cogs/config/settings.py:355
+#: cogs/config/settings.py:356
 msgid "The prefix can't be longer than 10 characters."
 msgstr "プレフィックスは10文字を超えることはできません。"
 
-#: cogs/config/settings.py:369 cogs/config/settings.py:393
+#: cogs/config/settings.py:370 cogs/config/settings.py:394
 msgid "Server prefix"
 msgstr "サーバープレフィックス"
 
-#: cogs/config/settings.py:371
+#: cogs/config/settings.py:372
 msgid "Prefix has been set to:"
 msgstr "プレフィックスを次に設定しました:"
 
-#: cogs/config/settings.py:395
+#: cogs/config/settings.py:396
 msgid "Current server prefix"
 msgstr "現在のサーバープレフィックス"
 
-#: cogs/config/settings.py:432
+#: cogs/config/settings.py:433
 msgid "Auto-role role"
 msgstr "オートロールのロール"
 
-#: cogs/config/settings.py:435
+#: cogs/config/settings.py:436
 msgid "Auto-role has been set to:"
 msgstr "オートロールを次に設定しました:"
 
-#: cogs/config/settings.py:458
+#: cogs/config/settings.py:459
 msgid "Auto-role has been remove from the guild"
 msgstr "オートロールをサーバーから削除しました"
 
-#: cogs/config/settings.py:485 cogs/config/settings.py:492
+#: cogs/config/settings.py:486 cogs/config/settings.py:493
 msgid "Current auto-role"
 msgstr "現在のオートロール"
 
@@ -6832,10 +7012,6 @@ msgstr "フォロー中のYouTubeチャンネル"
 #: cogs/config/youtube.py:439
 msgid "I will not ping everyone."
 msgstr "全員にはメンションしません。"
-
-#: cogs/config/youtube.py:450
-msgid "YouTube alerts"
-msgstr "YouTube通知"
 
 #: cogs/config/youtube.py:452
 msgid "Ping role"
@@ -11060,8 +11236,8 @@ msgid "Getting started"
 msgstr "はじめに"
 
 #: cogs/system/onboarding.py:184
-msgid "Use `/config` to set up prefixes, autorole, leveling, starboard, automod, mod-log, and welcome messages in one place."
-msgstr "`/config` を使うと、プレフィックス、オートロール、レベル、starboard、自動モデレーション、mod-log、ウェルカムメッセージを一か所で設定できます。"
+msgid "Use `/config panel` to set up prefixes, autorole, leveling, starboard, automod, mod-log, and welcome messages in one place."
+msgstr "`/config panel`を使うと、接頭辞、自動ロール、レベル、スターボード、automod、モデレーションログ、ようこそメッセージをまとめて設定できます。"
 
 #: cogs/system/onboarding.py:187
 msgid "Use `/help` to browse every command."
@@ -11249,8 +11425,8 @@ msgstr "キューが空のときも、Yasuhoがボイスチャンネルに残り
 msgid "**Extended server playlists**"
 msgstr "**拡張されたサーバープレイリスト**"
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:169
-#: tests/cogs/test_premium_panel.py:173
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:171
+#: tests/cogs/test_premium_panel.py:175
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr "最大{count}件のプレイリスト(各{tracks}曲)。"

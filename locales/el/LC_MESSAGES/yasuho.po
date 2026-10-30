@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-30 13:40+0000\n"
+"POT-Creation-Date: 2026-10-30 14:32+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -1240,8 +1240,8 @@ msgstr "Διαγραφή"
 #: cogs/anilist/feed_views.py:1065 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
 #: cogs/community/usersettings.py:246 cogs/community/usersettings.py:361
-#: cogs/config/tickets/lifecycle.py:280 cogs/music/playlists_shared.py:399
-#: cogs/system/arg_completion.py:286
+#: cogs/config/config_transfer.py:886 cogs/config/tickets/lifecycle.py:280
+#: cogs/music/playlists_shared.py:399 cogs/system/arg_completion.py:286
 msgid "Cancel"
 msgstr "Ακύρωση"
 
@@ -1299,7 +1299,7 @@ msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή A
 
 #: cogs/anilist/feed_views.py:1391 cogs/community/birthdays/panel.py:170
 #: cogs/community/suggestions/panel.py:195 cogs/config/event_reminders.py:260
-#: cogs/config/milestones.py:247 cogs/config/settings.py:53
+#: cogs/config/milestones.py:247 cogs/config/settings.py:54
 #: cogs/config/tickets/panel.py:98 cogs/config/tickets/panel.py:495
 #: cogs/config/twitch.py:424 cogs/config/verification.py:111
 #: cogs/config/welcome.py:557 cogs/config/welcome.py:680
@@ -1309,7 +1309,7 @@ msgstr "Ενεργοποιημένο"
 
 #: cogs/anilist/feed_views.py:1391 cogs/community/birthdays/panel.py:170
 #: cogs/community/suggestions/panel.py:195 cogs/config/event_reminders.py:260
-#: cogs/config/milestones.py:247 cogs/config/settings.py:53
+#: cogs/config/milestones.py:247 cogs/config/settings.py:54
 #: cogs/config/tickets/panel.py:100 cogs/config/tickets/panel.py:497
 #: cogs/config/twitch.py:426 cogs/config/verification.py:113
 #: cogs/config/welcome.py:559 cogs/config/welcome.py:682
@@ -1435,9 +1435,9 @@ msgstr "Κάτι πήγε στραβά κατά τη σύνδεση του λο�
 msgid "Could not open the code form."
 msgstr "Δεν ήταν δυνατό το άνοιγμα της φόρμας κωδικού."
 
-#: cogs/anilist/lookup.py:39 cogs/config/settings.py:52
-#: cogs/config/settings.py:173 cogs/config/settings.py:182
-#: cogs/config/settings.py:196 cogs/config/settings.py:204
+#: cogs/anilist/lookup.py:39 cogs/config/settings.py:53
+#: cogs/config/settings.py:174 cogs/config/settings.py:183
+#: cogs/config/settings.py:197 cogs/config/settings.py:205
 #: cogs/system/help.py:518 cogs/utility/info.py:36 cogs/utility/info.py:148
 msgid "Unknown"
 msgstr "Άγνωστο"
@@ -2465,7 +2465,7 @@ msgstr "Προσαρμογή"
 msgid "You need the Manage Server permission for this."
 msgstr "Χρειάζεσαι την άδεια Διαχείριση διακομιστή για αυτό."
 
-#: cogs/community/birthdays/panel.py:164
+#: cogs/community/birthdays/panel.py:164 cogs/config/config_transfer.py:363
 msgid "Birthdays"
 msgstr "Γενέθλια"
 
@@ -2857,7 +2857,7 @@ msgstr "Στιλ κάρτας μελών"
 #: cogs/community/leveling/seasons_views.py:185
 #: cogs/community/leveling/seasons_views.py:431
 #: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:769
-#: cogs/config/settings.py:265 cogs/config/tickets/panel.py:609
+#: cogs/config/settings.py:266 cogs/config/tickets/panel.py:609
 #: cogs/moderation/automod_panel.py:401 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου"
@@ -2866,7 +2866,7 @@ msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυ�
 #: cogs/community/leveling/seasons_views.py:187
 #: cogs/community/leveling/seasons_views.py:433
 #: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:771
-#: cogs/config/settings.py:267 cogs/config/tickets/panel.py:611
+#: cogs/config/settings.py:268 cogs/config/tickets/panel.py:611
 #: cogs/moderation/automod_panel.py:403 cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
 msgstr "λήγει μετά από 3 λεπτά"
@@ -3028,8 +3028,8 @@ msgstr ""
 msgid "The leveling system isn't loaded right now."
 msgstr "Το σύστημα επιπέδων δεν είναι φορτωμένο αυτή τη στιγμή."
 
-#: cogs/community/leveling/level_config_ui.py:1275 cogs/config/settings.py:89
-#: cogs/config/settings.py:215
+#: cogs/community/leveling/level_config_ui.py:1275 cogs/config/settings.py:90
+#: cogs/config/settings.py:216
 msgid "Leveling"
 msgstr "Επίπεδα"
 
@@ -4988,6 +4988,199 @@ msgstr "Το πάνελ ρόλων-κουμπιών διαγράφηκε"
 msgid "Removed `{count}` role button(s) for message `{mid}`."
 msgstr "Αφαιρέθηκαν `{count}` κουμπιά ρόλου για το μήνυμα `{mid}`."
 
+#: cogs/config/config_transfer.py:312
+msgid "Language"
+msgstr "Γλώσσα"
+
+#: cogs/config/config_transfer.py:315 cogs/config/settings.py:126
+#: cogs/config/settings.py:231
+msgid "Welcome"
+msgstr "Καλωσόρισμα"
+
+#: cogs/config/config_transfer.py:331
+msgid "Tickets"
+msgstr "Εισιτήρια"
+
+#: cogs/config/config_transfer.py:342
+msgid "Music"
+msgstr "Μουσική"
+
+#: cogs/config/config_transfer.py:354 cogs/config/milestones.py:239
+msgid "Member milestones"
+msgstr "Ορόσημα μελών"
+
+#: cogs/config/config_transfer.py:375
+msgid "Suggestions"
+msgstr "Προτάσεις"
+
+#: cogs/config/config_transfer.py:384 cogs/config/event_reminders.py:252
+msgid "Event reminders"
+msgstr "Υπενθυμίσεις εκδηλώσεων"
+
+#: cogs/config/config_transfer.py:395 cogs/config/youtube.py:450
+msgid "YouTube alerts"
+msgstr "Ειδοποιήσεις YouTube"
+
+#: cogs/config/config_transfer.py:403
+msgid "Server statistics"
+msgstr "Στατιστικά διακομιστή"
+
+#: cogs/config/config_transfer.py:720
+#, python-brace-format
+msgid "{field}: {name} -> {target} (matched by name)"
+msgstr "{field}: {name} -> {target} (αντιστοίχιση με βάση το όνομα)"
+
+#: cogs/config/config_transfer.py:724
+#, python-brace-format
+msgid "{field}: {target} dropped, it has powerful permissions"
+msgstr "{field}: {target} απορρίφθηκε, έχει ισχυρά δικαιώματα"
+
+#: cogs/config/config_transfer.py:728
+#, python-brace-format
+msgid "{field}: {target} dropped, it can't be used for this"
+msgstr "{field}: {target} απορρίφθηκε, δεν μπορεί να χρησιμοποιηθεί για αυτό"
+
+#: cogs/config/config_transfer.py:732
+#, python-brace-format
+msgid "{field}: {name} dropped, it is not the right kind here"
+msgstr "{field}: {name} απορρίφθηκε, δεν είναι το σωστό είδος εδώ"
+
+#: cogs/config/config_transfer.py:735
+#, python-brace-format
+msgid "{field}: {name} dropped, nothing with that name here"
+msgstr "{field}: {name} απορρίφθηκε, δεν υπάρχει τίποτα με αυτό το όνομα εδώ"
+
+#: cogs/config/config_transfer.py:748
+#, python-brace-format
+msgid "**{section}**: no change"
+msgstr "**{section}**: καμία αλλαγή"
+
+#: cogs/config/config_transfer.py:752
+#, python-brace-format
+msgid "**{section}**: skipped, I need {permissions} in {channel}"
+msgstr "**{section}**: παραλείφθηκε, χρειάζομαι {permissions} στο {channel}"
+
+#: cogs/config/config_transfer.py:757
+#, python-brace-format
+msgid "**{section}**: skipped, you need {permissions} in {channel}"
+msgstr "**{section}**: παραλείφθηκε, χρειάζεστε {permissions} στο {channel}"
+
+#: cogs/config/config_transfer.py:762
+#, python-brace-format
+msgid "**{section}**: will be updated ({keys})"
+msgstr "**{section}**: θα ενημερωθεί ({keys})"
+
+#: cogs/config/config_transfer.py:830
+#, python-brace-format
+msgid "**{section}**: applied"
+msgstr "**{section}**: εφαρμόστηκε"
+
+#: cogs/config/config_transfer.py:832
+#, python-brace-format
+msgid "**{section}**: failed, try again later"
+msgstr "**{section}**: απέτυχε, δοκιμάστε ξανά αργότερα"
+
+#: cogs/config/config_transfer.py:841
+#, python-brace-format
+msgid "That file is too large (the limit is {kb} KB)."
+msgstr "Αυτό το αρχείο είναι πολύ μεγάλο (το όριο είναι {kb} KB)."
+
+#: cogs/config/config_transfer.py:843
+msgid "That export comes from a version of Yasuho this one can't read."
+msgstr "Αυτή η εξαγωγή προέρχεται από έκδοση του Yasuho που δεν μπορώ να διαβάσω."
+
+#: cogs/config/config_transfer.py:844
+msgid "That file is not a Yasuho configuration export."
+msgstr "Αυτό το αρχείο δεν είναι εξαγωγή ρυθμίσεων του Yasuho."
+
+#: cogs/config/config_transfer.py:866 cogs/config/config_transfer.py:933
+msgid "Configuration import and templates are a Yasuho+ feature."
+msgstr "Η εισαγωγή ρυθμίσεων και τα πρότυπα είναι λειτουργία του Yasuho+."
+
+#: cogs/config/config_transfer.py:885
+msgid "Apply"
+msgstr "Εφαρμογή"
+
+#: cogs/config/config_transfer.py:902
+msgid "You need the Manage Server permission to do that."
+msgstr "Χρειάζεστε την άδεια Διαχείριση διακομιστή για να το κάνετε αυτό."
+
+#: cogs/config/config_transfer.py:911
+msgid "Import finished"
+msgstr "Η εισαγωγή ολοκληρώθηκε"
+
+#: cogs/config/config_transfer.py:920
+msgid "Import cancelled. Nothing was changed."
+msgstr "Η εισαγωγή ακυρώθηκε. Δεν άλλαξα τίποτα."
+
+#: cogs/config/config_transfer.py:950
+msgid "This configuration matches the current one: there is nothing to import."
+msgstr "Αυτή η ρύθμιση ταυτίζεται με την τρέχουσα: δεν υπάρχει τίποτα να εισαχθεί."
+
+#: cogs/config/config_transfer.py:954
+msgid "Import preview"
+msgstr "Προεπισκόπηση εισαγωγής"
+
+#: cogs/config/config_transfer.py:957
+msgid "Nothing is saved until you press Apply."
+msgstr "Τίποτα δεν αποθηκεύεται μέχρι να πατήσετε Εφαρμογή."
+
+#: cogs/config/config_transfer.py:969
+msgid "Please use the slash command for this, so the answer stays private."
+msgstr "Χρησιμοποιήστε την εντολή slash για αυτό, ώστε η απάντηση να παραμείνει ιδιωτική."
+
+#: cogs/config/config_transfer.py:979
+msgid "Here is this server's configuration. Load it with `/config import`."
+msgstr "Αυτές είναι οι ρυθμίσεις αυτού του διακομιστή. Φορτώστε τις με `/config import`."
+
+#: cogs/config/config_transfer.py:992 cogs/config/config_transfer.py:1097
+msgid "Please wait a moment before importing a configuration again."
+msgstr "Περιμένετε λίγο πριν εισαγάγετε ξανά μια ρύθμιση."
+
+#: cogs/config/config_transfer.py:1066
+#, python-brace-format
+msgid "A template name is 1 to {n} characters."
+msgstr "Το όνομα ενός προτύπου έχει από 1 έως {n} χαρακτήρες."
+
+#: cogs/config/config_transfer.py:1076
+#, python-brace-format
+msgid "This server already has {n} template. Delete one first."
+msgid_plural "This server already has {n} templates. Delete one first."
+msgstr[0] "Αυτός ο διακομιστής έχει ήδη {n} πρότυπο. Διαγράψτε πρώτα ένα."
+msgstr[1] "Αυτός ο διακομιστής έχει ήδη {n} πρότυπα. Διαγράψτε πρώτα ένα."
+
+#: cogs/config/config_transfer.py:1083
+#, python-brace-format
+msgid "Replaced the template **{name}**."
+msgstr "Αντικατέστησα το πρότυπο **{name}**."
+
+#: cogs/config/config_transfer.py:1085
+#, python-brace-format
+msgid "Saved the template **{name}**."
+msgstr "Αποθήκευσα το πρότυπο **{name}**."
+
+#: cogs/config/config_transfer.py:1104 cogs/config/config_transfer.py:1142
+#, python-brace-format
+msgid "No template is called **{name}**."
+msgstr "Δεν υπάρχει πρότυπο με το όνομα **{name}**."
+
+#: cogs/config/config_transfer.py:1114
+msgid "That template can no longer be read. Delete it and save it again."
+msgstr "Αυτό το πρότυπο δεν μπορεί πλέον να διαβαστεί. Διαγράψτε το και αποθηκεύστε το ξανά."
+
+#: cogs/config/config_transfer.py:1125
+msgid "This server has no configuration templates yet. Save one with `/config template save`."
+msgstr "Αυτός ο διακομιστής δεν έχει ακόμη πρότυπα ρυθμίσεων. Αποθηκεύστε ένα με `/config template save`."
+
+#: cogs/config/config_transfer.py:1132
+msgid "Configuration templates"
+msgstr "Πρότυπα ρυθμίσεων"
+
+#: cogs/config/config_transfer.py:1141
+#, python-brace-format
+msgid "Deleted the template **{name}**."
+msgstr "Διέγραψα το πρότυπο **{name}**."
+
 #: cogs/config/customcommands.py:35
 msgid "10s"
 msgstr "10s"
@@ -5302,10 +5495,6 @@ msgstr "Πότε να γίνει υπενθύμιση..."
 msgid "Role to ping (optional)..."
 msgstr "Ρόλος για αναφορά (προαιρετικό)..."
 
-#: cogs/config/event_reminders.py:252
-msgid "Event reminders"
-msgstr "Υπενθυμίσεις εκδηλώσεων"
-
 #: cogs/config/event_reminders.py:254
 msgid "Yasuho reminds your members before a scheduled event starts."
 msgstr "Η Yasuho υπενθυμίζει στα μέλη σου πριν ξεκινήσει μια προγραμματισμένη εκδήλωση."
@@ -5363,10 +5552,6 @@ msgstr "Δώσε έως {count} ακέραιους αριθμούς από 1 έ�
 #: cogs/config/milestones.py:179
 msgid "Celebration channel..."
 msgstr "Κανάλι εορτασμού..."
-
-#: cogs/config/milestones.py:239
-msgid "Member milestones"
-msgstr "Ορόσημα μελών"
 
 #: cogs/config/milestones.py:241
 msgid "Yasuho celebrates when your server reaches a member milestone."
@@ -6102,160 +6287,156 @@ msgstr "Η ιδιοκτησία του δωματίου μεταβιβάστηκ
 msgid "Could not complete that action."
 msgstr "Δεν ήταν δυνατή η ολοκλήρωση αυτής της ενέργειας."
 
-#: cogs/config/settings.py:23
+#: cogs/config/settings.py:24
 msgid "Use `/prefix set <prefix>` to change the command prefix for this server."
 msgstr "Χρησιμοποίησε `/prefix set <prefix>` για να αλλάξεις το πρόθεμα εντολών αυτού του διακομιστή."
 
-#: cogs/config/settings.py:27
+#: cogs/config/settings.py:28
 msgid "Use `/autorole set <role>` to choose the role new members receive on join."
 msgstr "Χρησιμοποίησε `/autorole set <role>` για να επιλέξεις τον ρόλο που λαμβάνουν τα νέα μέλη κατά την είσοδο."
 
-#: cogs/config/settings.py:31
+#: cogs/config/settings.py:32
 msgid "Use `/automod` to open the interactive AutoMod control panel (custom + native filters)."
 msgstr "Χρησιμοποίησε `/automod` για να ανοίξεις το διαδραστικό πάνελ ελέγχου AutoMod (προσαρμοσμένα + εγγενή φίλτρα)."
 
-#: cogs/config/settings.py:35
+#: cogs/config/settings.py:36
 msgid "Use `/modlog` to open the interactive mod-log control panel (channel + event toggles)."
 msgstr "Χρησιμοποίησε `/modlog` για να ανοίξεις το διαδραστικό πάνελ ελέγχου mod-log (κανάλι + εναλλαγές συμβάντων)."
 
-#: cogs/config/settings.py:39
+#: cogs/config/settings.py:40
 msgid "Use `/starboard set <channel> [threshold]` to set up the starboard."
 msgstr "Χρησιμοποίησε `/starboard set <channel> [threshold]` για να ρυθμίσεις το starboard."
 
-#: cogs/config/settings.py:42
+#: cogs/config/settings.py:43
 #, python-brace-format
 msgid "Use `/welcome set <channel> <message>` to configure welcome messages. Placeholders: {user}, {server}, {count}."
 msgstr "Χρησιμοποίησε `/welcome set <channel> <message>` για να ρυθμίσεις τα μηνύματα καλωσορίσματος. Placeholders: {user}, {server}, {count}."
 
-#: cogs/config/settings.py:81
+#: cogs/config/settings.py:82
 msgid "Current state unknown"
 msgstr "Άγνωστη τρέχουσα κατάσταση"
 
-#: cogs/config/settings.py:83
+#: cogs/config/settings.py:84
 msgid "Currently enabled - select to disable"
 msgstr "Αυτή τη στιγμή ενεργοποιημένο - επίλεξε για απενεργοποίηση"
 
-#: cogs/config/settings.py:85
+#: cogs/config/settings.py:86
 msgid "Currently disabled - select to enable"
 msgstr "Αυτή τη στιγμή απενεργοποιημένο - επίλεξε για ενεργοποίηση"
 
-#: cogs/config/settings.py:95 cogs/config/settings.py:212
+#: cogs/config/settings.py:96 cogs/config/settings.py:213
 msgid "Prefix"
 msgstr "Πρόθεμα"
 
-#: cogs/config/settings.py:98
+#: cogs/config/settings.py:99
 msgid "Change the command prefix"
 msgstr "Άλλαξε το πρόθεμα εντολών"
 
-#: cogs/config/settings.py:101 cogs/config/settings.py:218
-#: cogs/config/settings.py:455 cogs/config/settings.py:483
-#: cogs/config/settings.py:490
+#: cogs/config/settings.py:102 cogs/config/settings.py:219
+#: cogs/config/settings.py:456 cogs/config/settings.py:484
+#: cogs/config/settings.py:491
 msgid "Auto-role"
 msgstr "Αυτόματος ρόλος"
 
-#: cogs/config/settings.py:104
+#: cogs/config/settings.py:105
 msgid "Role granted to new members"
 msgstr "Ρόλος που δίνεται στα νέα μέλη"
 
-#: cogs/config/settings.py:107 cogs/config/settings.py:224
+#: cogs/config/settings.py:108 cogs/config/settings.py:225
 #: cogs/moderation/automod.py:272
 msgid "AutoMod"
 msgstr "AutoMod"
 
-#: cogs/config/settings.py:110
+#: cogs/config/settings.py:111
 msgid "Open the AutoMod control panel"
 msgstr "Άνοιξε το πάνελ ελέγχου AutoMod"
 
-#: cogs/config/settings.py:113 cogs/config/settings.py:227
+#: cogs/config/settings.py:114 cogs/config/settings.py:228
 msgid "Mod-log"
 msgstr "Mod-log"
 
-#: cogs/config/settings.py:116
+#: cogs/config/settings.py:117
 msgid "Open the mod-log control panel"
 msgstr "Άνοιξε το πάνελ ελέγχου mod-log"
 
-#: cogs/config/settings.py:119 cogs/config/settings.py:221
+#: cogs/config/settings.py:120 cogs/config/settings.py:222
 #: cogs/config/starboard.py:356 cogs/config/starboard.py:393
 #: cogs/config/starboard.py:430 cogs/config/starboard.py:455
 msgid "Starboard"
 msgstr "Starboard"
 
-#: cogs/config/settings.py:122 cogs/config/starboard.py:175
+#: cogs/config/settings.py:123 cogs/config/starboard.py:175
 #: cogs/config/starboard.py:257
 msgid "Configure the starboard"
 msgstr "Ρύθμισε το starboard"
 
-#: cogs/config/settings.py:125 cogs/config/settings.py:230
-msgid "Welcome"
-msgstr "Καλωσόρισμα"
-
-#: cogs/config/settings.py:128
+#: cogs/config/settings.py:129
 msgid "Configure welcome messages"
 msgstr "Ρύθμισε τα μηνύματα καλωσορίσματος"
 
-#: cogs/config/settings.py:132
+#: cogs/config/settings.py:133
 msgid "Configure a feature..."
 msgstr "Ρύθμισε μια λειτουργία..."
 
-#: cogs/config/settings.py:168 cogs/config/settings.py:175
-#: cogs/config/settings.py:184 cogs/config/settings.py:200
-#: cogs/config/settings.py:208
+#: cogs/config/settings.py:169 cogs/config/settings.py:176
+#: cogs/config/settings.py:185 cogs/config/settings.py:201
+#: cogs/config/settings.py:209
 msgid "Not set up"
 msgstr "Δεν έχει ρυθμιστεί"
 
-#: cogs/config/settings.py:188
+#: cogs/config/settings.py:189
 msgid "Anti-link"
 msgstr "Anti-link"
 
-#: cogs/config/settings.py:190
+#: cogs/config/settings.py:191
 msgid "Anti-spam"
 msgstr "Anti-spam"
 
-#: cogs/config/settings.py:236
+#: cogs/config/settings.py:237
 msgid "Configuration"
 msgstr "Διαμόρφωση"
 
-#: cogs/config/settings.py:240
+#: cogs/config/settings.py:241
 msgid "An overview of every feature for this server. Use the menu below to toggle **Leveling** or jump to a feature's setup command."
 msgstr "Μια επισκόπηση κάθε λειτουργίας αυτού του διακομιστή. Χρησιμοποίησε το μενού παρακάτω για να εναλλάξεις τα **Επίπεδα** ή να μεταβείς στην εντολή ρύθμισης μιας λειτουργίας."
 
-#: cogs/config/settings.py:245
+#: cogs/config/settings.py:246
 msgid "Full leveling setup lives in `/levelconfig`."
 msgstr "Η πλήρης ρύθμιση του συστήματος επιπέδων βρίσκεται στο `/levelconfig`."
 
-#: cogs/config/settings.py:352
+#: cogs/config/settings.py:353
 msgid "The prefix can't be blank."
 msgstr "Το πρόθεμα δεν μπορεί να είναι κενό."
 
-#: cogs/config/settings.py:355
+#: cogs/config/settings.py:356
 msgid "The prefix can't be longer than 10 characters."
 msgstr "Το πρόθεμα δεν μπορεί να είναι μεγαλύτερο από 10 χαρακτήρες."
 
-#: cogs/config/settings.py:369 cogs/config/settings.py:393
+#: cogs/config/settings.py:370 cogs/config/settings.py:394
 msgid "Server prefix"
 msgstr "Πρόθεμα διακομιστή"
 
-#: cogs/config/settings.py:371
+#: cogs/config/settings.py:372
 msgid "Prefix has been set to:"
 msgstr "Το πρόθεμα ορίστηκε σε:"
 
-#: cogs/config/settings.py:395
+#: cogs/config/settings.py:396
 msgid "Current server prefix"
 msgstr "Τρέχον πρόθεμα διακομιστή"
 
-#: cogs/config/settings.py:432
+#: cogs/config/settings.py:433
 msgid "Auto-role role"
 msgstr "Ρόλος αυτόματου ρόλου"
 
-#: cogs/config/settings.py:435
+#: cogs/config/settings.py:436
 msgid "Auto-role has been set to:"
 msgstr "Ο αυτόματος ρόλος ορίστηκε σε:"
 
-#: cogs/config/settings.py:458
+#: cogs/config/settings.py:459
 msgid "Auto-role has been remove from the guild"
 msgstr "Ο αυτόματος ρόλος αφαιρέθηκε από τον διακομιστή"
 
-#: cogs/config/settings.py:485 cogs/config/settings.py:492
+#: cogs/config/settings.py:486 cogs/config/settings.py:493
 msgid "Current auto-role"
 msgstr "Τρέχων αυτόματος ρόλος"
 
@@ -6863,10 +7044,6 @@ msgstr "Κανάλια YouTube που ακολουθούνται"
 #: cogs/config/youtube.py:439
 msgid "I will not ping everyone."
 msgstr "Δεν θα αναφέρω όλους."
-
-#: cogs/config/youtube.py:450
-msgid "YouTube alerts"
-msgstr "Ειδοποιήσεις YouTube"
 
 #: cogs/config/youtube.py:452
 msgid "Ping role"
@@ -11118,8 +11295,8 @@ msgid "Getting started"
 msgstr "Ξεκινώντας"
 
 #: cogs/system/onboarding.py:184
-msgid "Use `/config` to set up prefixes, autorole, leveling, starboard, automod, mod-log, and welcome messages in one place."
-msgstr "Χρησιμοποίησε `/config` για να ρυθμίσεις prefixes, autorole, επίπεδα, starboard, automod, mod-log και μηνύματα καλωσορίσματος σε ένα μέρος."
+msgid "Use `/config panel` to set up prefixes, autorole, leveling, starboard, automod, mod-log, and welcome messages in one place."
+msgstr "Χρησιμοποιήστε την `/config panel` για να ορίσετε σε ένα μέρος τα προθέματα, τον αυτόματο ρόλο, τα επίπεδα, το starboard, το automod, το αρχείο καταγραφής και τα μηνύματα καλωσορίσματος."
 
 #: cogs/system/onboarding.py:187
 msgid "Use `/help` to browse every command."
@@ -11307,8 +11484,8 @@ msgstr "Το Yasuho μένει στο φωνητικό σου κανάλι, ακ
 msgid "**Extended server playlists**"
 msgstr "**Εκτεταμένες λίστες διακομιστή**"
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:169
-#: tests/cogs/test_premium_panel.py:173
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:171
+#: tests/cogs/test_premium_panel.py:175
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr "Έως {count} λίστες των {tracks} κομματιών."
