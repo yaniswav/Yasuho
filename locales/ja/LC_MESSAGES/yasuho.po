@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-28 11:53+0000\n"
+"POT-Creation-Date: 2026-10-30 08:08+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -552,7 +552,7 @@ msgstr "現在のステータスを維持"
 #: cogs/community/suggestions/panel.py:195
 #: cogs/community/suggestions/render.py:55 cogs/config/event_reminders.py:259
 #: cogs/config/milestones.py:246 cogs/config/twitch.py:439
-#: cogs/config/welcome.py:436 cogs/config/welcome.py:558
+#: cogs/config/welcome.py:569 cogs/config/welcome.py:693
 msgid "Status"
 msgstr "ステータス"
 
@@ -595,9 +595,9 @@ msgstr "そのタイプに一致するタイトルがありません。"
 #: cogs/community/leveling/seasons_views.py:214
 #: cogs/community/leveling/seasons_views.py:236
 #: cogs/community/serverstats/views.py:678 cogs/config/announcements.py:345
-#: cogs/config/rolemenus.py:732 cogs/config/welcome.py:109
-#: cogs/config/welcome.py:264 cogs/config/welcome.py:518
-#: cogs/system/botstats.py:1358
+#: cogs/config/rolemenus.py:732 cogs/config/welcome.py:144
+#: cogs/config/welcome.py:202 cogs/config/welcome.py:397
+#: cogs/config/welcome.py:653 cogs/system/botstats.py:1358
 msgid "Something went wrong."
 msgstr "問題が発生しました。"
 
@@ -1053,18 +1053,18 @@ msgstr "少なくとも1つのアクティビティタイプを有効にして�
 msgid "Members can join: {state}"
 msgstr "メンバーの参加: {state}"
 
-#: cogs/anilist/feed_views.py:284 cogs/config/welcome.py:152
-#: cogs/config/welcome.py:450 cogs/config/welcome.py:452
-#: cogs/config/welcome.py:454 cogs/config/welcome.py:566
-#: cogs/config/welcome.py:568 cogs/config/welcome.py:570
+#: cogs/anilist/feed_views.py:284 cogs/config/welcome.py:245
+#: cogs/config/welcome.py:583 cogs/config/welcome.py:585
+#: cogs/config/welcome.py:587 cogs/config/welcome.py:701
+#: cogs/config/welcome.py:703 cogs/config/welcome.py:705
 msgid "On"
 msgstr "オン"
 
 #: cogs/anilist/feed_views.py:284 cogs/community/suggestions/panel.py:214
-#: cogs/config/welcome.py:152 cogs/config/welcome.py:450
-#: cogs/config/welcome.py:452 cogs/config/welcome.py:454
-#: cogs/config/welcome.py:566 cogs/config/welcome.py:568
-#: cogs/config/welcome.py:570 cogs/music/views.py:514
+#: cogs/config/welcome.py:245 cogs/config/welcome.py:583
+#: cogs/config/welcome.py:585 cogs/config/welcome.py:587
+#: cogs/config/welcome.py:701 cogs/config/welcome.py:703
+#: cogs/config/welcome.py:705 cogs/music/views.py:514
 msgid "Off"
 msgstr "オフ"
 
@@ -1205,14 +1205,14 @@ msgstr "ここでミュート中 ({count})"
 #: cogs/anilist/feed_views.py:1033 cogs/community/birthdays/panel.py:126
 #: cogs/community/suggestions/panel.py:138 cogs/config/event_reminders.py:204
 #: cogs/config/milestones.py:201 cogs/config/twitch.py:321
-#: cogs/config/welcome.py:207
+#: cogs/config/welcome.py:340
 msgid "Disable"
 msgstr "無効化"
 
 #: cogs/anilist/feed_views.py:1033 cogs/community/birthdays/panel.py:126
 #: cogs/community/suggestions/panel.py:138 cogs/config/event_reminders.py:204
 #: cogs/config/milestones.py:201 cogs/config/twitch.py:321
-#: cogs/config/welcome.py:207
+#: cogs/config/welcome.py:340
 msgid "Enable"
 msgstr "有効化"
 
@@ -1284,7 +1284,7 @@ msgstr "このサーバーにはまだAniListフィードがありません。�
 #: cogs/config/milestones.py:247 cogs/config/settings.py:53
 #: cogs/config/tickets/panel.py:92 cogs/config/tickets/panel.py:489
 #: cogs/config/twitch.py:424 cogs/config/verification.py:111
-#: cogs/config/welcome.py:424 cogs/config/welcome.py:545
+#: cogs/config/welcome.py:557 cogs/config/welcome.py:680
 #: cogs/moderation/modlog.py:276
 msgid "Enabled"
 msgstr "有効"
@@ -1294,8 +1294,8 @@ msgstr "有効"
 #: cogs/config/milestones.py:247 cogs/config/settings.py:53
 #: cogs/config/tickets/panel.py:94 cogs/config/tickets/panel.py:491
 #: cogs/config/twitch.py:426 cogs/config/verification.py:113
-#: cogs/config/welcome.py:426 cogs/config/welcome.py:547
-#: cogs/config/welcome.py:803 cogs/moderation/modlog.py:278
+#: cogs/config/welcome.py:559 cogs/config/welcome.py:682
+#: cogs/config/welcome.py:971 cogs/moderation/modlog.py:278
 msgid "Disabled"
 msgstr "無効"
 
@@ -1312,8 +1312,8 @@ msgstr "このサーバーへのAniListアクティビティの反映方法を�
 #: cogs/community/suggestions/panel.py:197 cogs/config/announcements.py:315
 #: cogs/config/event_reminders.py:264 cogs/config/milestones.py:251
 #: cogs/config/rolemenus.py:686 cogs/config/starboard.py:284
-#: cogs/config/twitch.py:441 cogs/config/welcome.py:438
-#: cogs/config/welcome.py:560 cogs/config/welcome.py:782
+#: cogs/config/twitch.py:441 cogs/config/welcome.py:571
+#: cogs/config/welcome.py:695 cogs/config/welcome.py:950
 #: cogs/moderation/modlog.py:601 cogs/moderation/modlog.py:718
 msgid "Channel"
 msgstr "チャンネル"
@@ -1879,7 +1879,7 @@ msgstr "例: 10m、明日18時、または <t:...> タグ"
 #: cogs/community/birthdays/panel.py:183 cogs/community/reminders.py:367
 #: cogs/config/milestones.py:262 cogs/config/reactionroles.py:226
 #: cogs/config/reactionroles.py:342 cogs/config/twitch.py:36
-#: cogs/config/twitch.py:458 cogs/config/welcome.py:784
+#: cogs/config/twitch.py:458 cogs/config/welcome.py:952
 msgid "Message"
 msgstr "メッセージ"
 
@@ -2428,8 +2428,8 @@ msgstr "メンバーは /birthday set で誕生日を共有すると、ここで
 #: cogs/config/buttonroles.py:550 cogs/config/event_reminders.py:265
 #: cogs/config/milestones.py:252 cogs/config/rolemenus.py:679
 #: cogs/config/tickets/panel.py:157 cogs/config/twitch.py:420
-#: cogs/config/verification.py:118 cogs/config/welcome.py:422
-#: cogs/config/welcome.py:543 cogs/moderation/modlog.py:274
+#: cogs/config/verification.py:118 cogs/config/welcome.py:555
+#: cogs/config/welcome.py:678 cogs/moderation/modlog.py:274
 msgid "*Not set.*"
 msgstr "*未設定。*"
 
@@ -4445,7 +4445,7 @@ msgstr "ロールにメンション (任意)..."
 
 #: cogs/config/announcements.py:128 cogs/config/event_reminders.py:212
 #: cogs/config/milestones.py:209 cogs/config/twitch.py:303
-#: cogs/config/welcome.py:189
+#: cogs/config/welcome.py:282
 msgid "Preview"
 msgstr "プレビュー"
 
@@ -4455,7 +4455,7 @@ msgid "Add some content to the embed first."
 msgstr "まず埋め込みにコンテンツを追加してください。"
 
 #: cogs/config/announcements.py:141 cogs/config/twitch.py:312
-#: cogs/config/welcome.py:198
+#: cogs/config/welcome.py:291
 msgid "Could not render the preview."
 msgstr "プレビューを表示できませんでした。"
 
@@ -4533,8 +4533,8 @@ msgstr "アナウンスビルダー"
 msgid "Compose the embed with the menu, pick a channel (and optionally a role to ping), then **Send**. Preview shows it only to you."
 msgstr "メニューで埋め込みを作成し、チャンネル (と、任意でメンションするロール) を選んでから、**Send** を押してください。プレビューはあなたにのみ表示されます。"
 
-#: cogs/config/announcements.py:320 cogs/config/welcome.py:453
-#: cogs/config/welcome.py:479 cogs/config/welcome.py:569
+#: cogs/config/announcements.py:320 cogs/config/welcome.py:586
+#: cogs/config/welcome.py:612 cogs/config/welcome.py:704
 msgid "Ping"
 msgstr "メンション"
 
@@ -4545,7 +4545,7 @@ msgstr "なし"
 
 #: cogs/config/announcements.py:325 cogs/config/buttonroles.py:543
 #: cogs/config/twitch.py:428 cogs/config/twitch.py:471
-#: cogs/config/welcome.py:462 cogs/config/welcome.py:583
+#: cogs/config/welcome.py:595 cogs/config/welcome.py:718
 msgid "Embed"
 msgstr "埋め込み"
 
@@ -6223,7 +6223,7 @@ msgstr "**コンテンツ行:** {preview}"
 msgid "Edit the alert embed..."
 msgstr "アラートの埋め込みを編集..."
 
-#: cogs/config/twitch.py:498 cogs/config/welcome.py:490
+#: cogs/config/twitch.py:498 cogs/config/welcome.py:625
 #, python-brace-format
 msgid "Only you can use these controls. Placeholders: {placeholders}"
 msgstr "これらの操作はあなただけが使用できます。プレースホルダー: {placeholders}"
@@ -6372,126 +6372,150 @@ msgstr "認証が設定されています - クリックすると {channel} で 
 msgid "Verification disabled."
 msgstr "認証を無効にしました。"
 
-#: cogs/config/welcome.py:84
+#: cogs/config/welcome.py:119
 msgid "Add a GIF"
 msgstr "GIFを追加"
 
-#: cogs/config/welcome.py:87
+#: cogs/config/welcome.py:122
 msgid "GIF or image URL"
 msgstr "GIFまたは画像のURL"
 
-#: cogs/config/welcome.py:99
+#: cogs/config/welcome.py:134
 msgid "That doesn't look like a valid URL."
 msgstr "それは有効なURLには見えません。"
 
-#: cogs/config/welcome.py:128
+#: cogs/config/welcome.py:151 cogs/config/welcome.py:301
+msgid "Customize card"
+msgstr "カードをカスタマイズ"
+
+#: cogs/config/welcome.py:156
+msgid "Greeting (empty = default)"
+msgstr "挨拶 (空欄で既定値)"
+
+#: cogs/config/welcome.py:163
+msgid "Subtitle (empty = default)"
+msgstr "サブタイトル (空欄で既定値)"
+
+#: cogs/config/welcome.py:170
+msgid "Text colour (empty = default)"
+msgstr "文字色 (空欄で既定値)"
+
+#: cogs/config/welcome.py:194
+msgid "Your lines were saved, but that is not a valid hex colour (like #5865F2), so the colour was kept."
+msgstr "テキストは保存されましたが、#5865F2 のような有効な16進数カラーではないため、色は変更されませんでした。"
+
+#: cogs/config/welcome.py:221
 msgid "Select the welcome channel..."
 msgstr "ウェルカムチャンネルを選択..."
 
-#: cogs/config/welcome.py:175
+#: cogs/config/welcome.py:268
 msgid "Manage GIFs"
 msgstr "GIFを管理"
 
-#: cogs/config/welcome.py:239
+#: cogs/config/welcome.py:322
+msgid "Card customisation is a Yasuho+ feature."
+msgstr "カードのカスタマイズは Yasuho+ の機能です。"
+
+#: cogs/config/welcome.py:372
 msgid "GIF"
 msgstr "GIF"
 
-#: cogs/config/welcome.py:245
+#: cogs/config/welcome.py:378
 msgid "Remove a GIF..."
 msgstr "GIFを削除..."
 
-#: cogs/config/welcome.py:270
+#: cogs/config/welcome.py:403
 msgid "Add GIF"
 msgstr "GIFを追加"
 
-#: cogs/config/welcome.py:278
+#: cogs/config/welcome.py:411
 msgid "Could not open the form."
 msgstr "フォームを開けませんでした。"
 
-#: cogs/config/welcome.py:299
+#: cogs/config/welcome.py:432
 msgid "Manage welcome GIFs"
 msgstr "ウェルカムGIFを管理"
 
-#: cogs/config/welcome.py:302
+#: cogs/config/welcome.py:435
 msgid "Add image/GIF URLs to the random pool, or remove one below. Turn on **Random GIF** on the main panel to use the pool."
 msgstr "ランダムプールに画像/GIFのURLを追加するか、下で削除してください。プールを使用するには、メインパネルで **Random GIF** をオンにしてください。"
 
-#: cogs/config/welcome.py:311
+#: cogs/config/welcome.py:444
 #, python-brace-format
 msgid "...and {count} more"
 msgstr "...他 {count} 件"
 
-#: cogs/config/welcome.py:316
+#: cogs/config/welcome.py:449
 #, python-brace-format
 msgid "Pool ({count})"
 msgstr "プール ({count})"
 
-#: cogs/config/welcome.py:325
+#: cogs/config/welcome.py:458
 msgid "Pool (0)"
 msgstr "プール (0)"
 
-#: cogs/config/welcome.py:327
+#: cogs/config/welcome.py:460
 msgid "No GIFs yet. Add one to build the random pool."
 msgstr "まだGIFがありません。追加してランダムプールを作りましょう。"
 
-#: cogs/config/welcome.py:430
+#: cogs/config/welcome.py:563
 msgid "Welcome system"
 msgstr "ウェルカムシステム"
 
-#: cogs/config/welcome.py:432
+#: cogs/config/welcome.py:565
 msgid "Design the greeting new members receive. Use the menus below; every change saves instantly. Hit **Preview** to see it live."
 msgstr "新しいメンバーが受け取る挨拶をデザインしてください。下のメニューを使ってください。すべての変更は即座に保存されます。**Preview** を押してライブで確認してください。"
 
-#: cogs/config/welcome.py:442 cogs/config/welcome.py:573
+#: cogs/config/welcome.py:575 cogs/config/welcome.py:708
 msgid "GIF pool"
 msgstr "GIFプール"
 
-#: cogs/config/welcome.py:443 cogs/config/welcome.py:574
+#: cogs/config/welcome.py:576 cogs/config/welcome.py:709
 #, python-brace-format
 msgid "{count} saved"
 msgstr "{count} 件保存済み"
 
-#: cogs/config/welcome.py:449 cogs/config/welcome.py:477
-#: cogs/config/welcome.py:565
+#: cogs/config/welcome.py:582 cogs/config/welcome.py:610
+#: cogs/config/welcome.py:700
 msgid "Card"
 msgstr "カード"
 
-#: cogs/config/welcome.py:451 cogs/config/welcome.py:478
-#: cogs/config/welcome.py:567
+#: cogs/config/welcome.py:584 cogs/config/welcome.py:611
+#: cogs/config/welcome.py:702
 msgid "Random GIF"
 msgstr "ランダムGIF"
 
-#: cogs/config/welcome.py:471
+#: cogs/config/welcome.py:604
 msgid "Edit the welcome embed..."
 msgstr "ウェルカムの埋め込みを編集..."
 
-#: cogs/config/welcome.py:552
+#: cogs/config/welcome.py:687
 #, python-brace-format
 msgid "Welcome | {guild}"
 msgstr "ウェルカム | {guild}"
 
-#: cogs/config/welcome.py:590
+#: cogs/config/welcome.py:725
 msgid "Use `/welcome` to open the full builder."
 msgstr "`/welcome` でフルビルダーを開けます。"
 
-#: cogs/config/welcome.py:694
+#: cogs/config/welcome.py:829
 #, python-brace-format
 msgid "Welcome {mention}!"
 msgstr "ようこそ {mention}!"
 
-#: cogs/config/welcome.py:781 cogs/config/welcome.py:801
+#: cogs/config/welcome.py:949 cogs/config/welcome.py:969
 msgid "Welcome message"
 msgstr "ウェルカムメッセージ"
 
-#: cogs/config/welcome.py:788
+#: cogs/config/welcome.py:956
 msgid "Use /welcome to open the full builder."
 msgstr "/welcome を使って完全なビルダーを開いてください。"
 
-#: cogs/config/welcome.py:804
+#: cogs/config/welcome.py:972
 msgid "Welcome messages have been turned off."
 msgstr "ウェルカムメッセージをオフにしました。"
 
-#: cogs/config/welcome.py:894
+#: cogs/config/welcome.py:1062
 #, python-brace-format
 msgid "Welcome {member}!"
 msgstr "ようこそ {member}!"
@@ -10405,8 +10429,8 @@ msgstr "キューが空のときも、Yasuhoがボイスチャンネルに残り
 msgid "**Extended server playlists**"
 msgstr "**拡張されたサーバープレイリスト**"
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:156
-#: tests/cogs/test_premium_panel.py:160
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:157
+#: tests/cogs/test_premium_panel.py:161
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr "最大{count}件のプレイリスト(各{tracks}曲)。"

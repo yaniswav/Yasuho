@@ -360,7 +360,7 @@ async def test_welcome_test_defers_before_rendering_the_card(log):
     async def _get_config(guild_id):
         return {"card": True}
 
-    async def _render(member):
+    async def _render(member, config=None):
         log.add("render")
         return None
 

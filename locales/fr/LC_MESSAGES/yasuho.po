@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-28 11:53+0000\n"
+"POT-Creation-Date: 2026-10-30 08:08+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -554,7 +554,7 @@ msgstr "Conserver le statut actuel"
 #: cogs/community/suggestions/panel.py:195
 #: cogs/community/suggestions/render.py:55 cogs/config/event_reminders.py:259
 #: cogs/config/milestones.py:246 cogs/config/twitch.py:439
-#: cogs/config/welcome.py:436 cogs/config/welcome.py:558
+#: cogs/config/welcome.py:569 cogs/config/welcome.py:693
 msgid "Status"
 msgstr "Statut"
 
@@ -597,9 +597,9 @@ msgstr "Aucun titre correspondant de ce type."
 #: cogs/community/leveling/seasons_views.py:214
 #: cogs/community/leveling/seasons_views.py:236
 #: cogs/community/serverstats/views.py:678 cogs/config/announcements.py:345
-#: cogs/config/rolemenus.py:732 cogs/config/welcome.py:109
-#: cogs/config/welcome.py:264 cogs/config/welcome.py:518
-#: cogs/system/botstats.py:1358
+#: cogs/config/rolemenus.py:732 cogs/config/welcome.py:144
+#: cogs/config/welcome.py:202 cogs/config/welcome.py:397
+#: cogs/config/welcome.py:653 cogs/system/botstats.py:1358
 msgid "Something went wrong."
 msgstr "Une erreur est survenue."
 
@@ -1066,18 +1066,18 @@ msgstr "Au moins un type d'activité doit rester activé."
 msgid "Members can join: {state}"
 msgstr "Les membres peuvent rejoindre : {state}"
 
-#: cogs/anilist/feed_views.py:284 cogs/config/welcome.py:152
-#: cogs/config/welcome.py:450 cogs/config/welcome.py:452
-#: cogs/config/welcome.py:454 cogs/config/welcome.py:566
-#: cogs/config/welcome.py:568 cogs/config/welcome.py:570
+#: cogs/anilist/feed_views.py:284 cogs/config/welcome.py:245
+#: cogs/config/welcome.py:583 cogs/config/welcome.py:585
+#: cogs/config/welcome.py:587 cogs/config/welcome.py:701
+#: cogs/config/welcome.py:703 cogs/config/welcome.py:705
 msgid "On"
 msgstr "Activé"
 
 #: cogs/anilist/feed_views.py:284 cogs/community/suggestions/panel.py:214
-#: cogs/config/welcome.py:152 cogs/config/welcome.py:450
-#: cogs/config/welcome.py:452 cogs/config/welcome.py:454
-#: cogs/config/welcome.py:566 cogs/config/welcome.py:568
-#: cogs/config/welcome.py:570 cogs/music/views.py:514
+#: cogs/config/welcome.py:245 cogs/config/welcome.py:583
+#: cogs/config/welcome.py:585 cogs/config/welcome.py:587
+#: cogs/config/welcome.py:701 cogs/config/welcome.py:703
+#: cogs/config/welcome.py:705 cogs/music/views.py:514
 msgid "Off"
 msgstr "Désactivé"
 
@@ -1219,14 +1219,14 @@ msgstr "Masqués ici ({count})"
 #: cogs/anilist/feed_views.py:1033 cogs/community/birthdays/panel.py:126
 #: cogs/community/suggestions/panel.py:138 cogs/config/event_reminders.py:204
 #: cogs/config/milestones.py:201 cogs/config/twitch.py:321
-#: cogs/config/welcome.py:207
+#: cogs/config/welcome.py:340
 msgid "Disable"
 msgstr "Désactiver"
 
 #: cogs/anilist/feed_views.py:1033 cogs/community/birthdays/panel.py:126
 #: cogs/community/suggestions/panel.py:138 cogs/config/event_reminders.py:204
 #: cogs/config/milestones.py:201 cogs/config/twitch.py:321
-#: cogs/config/welcome.py:207
+#: cogs/config/welcome.py:340
 msgid "Enable"
 msgstr "Activer"
 
@@ -1298,7 +1298,7 @@ msgstr "Ce serveur n'a pas encore de flux AniList. Choisis un salon ci-dessous p
 #: cogs/config/milestones.py:247 cogs/config/settings.py:53
 #: cogs/config/tickets/panel.py:92 cogs/config/tickets/panel.py:489
 #: cogs/config/twitch.py:424 cogs/config/verification.py:111
-#: cogs/config/welcome.py:424 cogs/config/welcome.py:545
+#: cogs/config/welcome.py:557 cogs/config/welcome.py:680
 #: cogs/moderation/modlog.py:276
 msgid "Enabled"
 msgstr "Activé"
@@ -1308,8 +1308,8 @@ msgstr "Activé"
 #: cogs/config/milestones.py:247 cogs/config/settings.py:53
 #: cogs/config/tickets/panel.py:94 cogs/config/tickets/panel.py:491
 #: cogs/config/twitch.py:426 cogs/config/verification.py:113
-#: cogs/config/welcome.py:426 cogs/config/welcome.py:547
-#: cogs/config/welcome.py:803 cogs/moderation/modlog.py:278
+#: cogs/config/welcome.py:559 cogs/config/welcome.py:682
+#: cogs/config/welcome.py:971 cogs/moderation/modlog.py:278
 msgid "Disabled"
 msgstr "Désactivé"
 
@@ -1326,8 +1326,8 @@ msgstr "Configure la façon dont l'activité AniList est relayée dans ce serveu
 #: cogs/community/suggestions/panel.py:197 cogs/config/announcements.py:315
 #: cogs/config/event_reminders.py:264 cogs/config/milestones.py:251
 #: cogs/config/rolemenus.py:686 cogs/config/starboard.py:284
-#: cogs/config/twitch.py:441 cogs/config/welcome.py:438
-#: cogs/config/welcome.py:560 cogs/config/welcome.py:782
+#: cogs/config/twitch.py:441 cogs/config/welcome.py:571
+#: cogs/config/welcome.py:695 cogs/config/welcome.py:950
 #: cogs/moderation/modlog.py:601 cogs/moderation/modlog.py:718
 msgid "Channel"
 msgstr "Salon"
@@ -1899,7 +1899,7 @@ msgstr "ex. 10m, demain à 18h, ou une balise <t:...>"
 #: cogs/community/birthdays/panel.py:183 cogs/community/reminders.py:367
 #: cogs/config/milestones.py:262 cogs/config/reactionroles.py:226
 #: cogs/config/reactionroles.py:342 cogs/config/twitch.py:36
-#: cogs/config/twitch.py:458 cogs/config/welcome.py:784
+#: cogs/config/twitch.py:458 cogs/config/welcome.py:952
 msgid "Message"
 msgstr "Message"
 
@@ -2449,8 +2449,8 @@ msgstr "Les membres partagent leur anniversaire avec /birthday set et je le cél
 #: cogs/config/buttonroles.py:550 cogs/config/event_reminders.py:265
 #: cogs/config/milestones.py:252 cogs/config/rolemenus.py:679
 #: cogs/config/tickets/panel.py:157 cogs/config/twitch.py:420
-#: cogs/config/verification.py:118 cogs/config/welcome.py:422
-#: cogs/config/welcome.py:543 cogs/moderation/modlog.py:274
+#: cogs/config/verification.py:118 cogs/config/welcome.py:555
+#: cogs/config/welcome.py:678 cogs/moderation/modlog.py:274
 msgid "*Not set.*"
 msgstr "*Non défini.*"
 
@@ -4469,7 +4469,7 @@ msgstr "Mentionner un role (optionnel)..."
 
 #: cogs/config/announcements.py:128 cogs/config/event_reminders.py:212
 #: cogs/config/milestones.py:209 cogs/config/twitch.py:303
-#: cogs/config/welcome.py:189
+#: cogs/config/welcome.py:282
 msgid "Preview"
 msgstr "Aperçu"
 
@@ -4479,7 +4479,7 @@ msgid "Add some content to the embed first."
 msgstr "Ajoute d'abord du contenu a l'embed."
 
 #: cogs/config/announcements.py:141 cogs/config/twitch.py:312
-#: cogs/config/welcome.py:198
+#: cogs/config/welcome.py:291
 msgid "Could not render the preview."
 msgstr "Impossible d'afficher l'aperçu."
 
@@ -4557,8 +4557,8 @@ msgstr "Createur d'annonce"
 msgid "Compose the embed with the menu, pick a channel (and optionally a role to ping), then **Send**. Preview shows it only to you."
 msgstr "Compose l'embed avec le menu, choisis un salon (et eventuellement un role a mentionner), puis **Envoyer**. L'apercu n'est visible que par toi."
 
-#: cogs/config/announcements.py:320 cogs/config/welcome.py:453
-#: cogs/config/welcome.py:479 cogs/config/welcome.py:569
+#: cogs/config/announcements.py:320 cogs/config/welcome.py:586
+#: cogs/config/welcome.py:612 cogs/config/welcome.py:704
 msgid "Ping"
 msgstr "Mention"
 
@@ -4569,7 +4569,7 @@ msgstr "Aucun"
 
 #: cogs/config/announcements.py:325 cogs/config/buttonroles.py:543
 #: cogs/config/twitch.py:428 cogs/config/twitch.py:471
-#: cogs/config/welcome.py:462 cogs/config/welcome.py:583
+#: cogs/config/welcome.py:595 cogs/config/welcome.py:718
 msgid "Embed"
 msgstr "Embed"
 
@@ -6248,7 +6248,7 @@ msgstr "**Ligne de contenu :** {preview}"
 msgid "Edit the alert embed..."
 msgstr "Modifier l'embed d'alerte..."
 
-#: cogs/config/twitch.py:498 cogs/config/welcome.py:490
+#: cogs/config/twitch.py:498 cogs/config/welcome.py:625
 #, python-brace-format
 msgid "Only you can use these controls. Placeholders: {placeholders}"
 msgstr "Vous seul pouvez utiliser ces commandes. Variables : {placeholders}"
@@ -6397,126 +6397,150 @@ msgstr "La vérification est configurée - cliquer attribue {role} dans {channel
 msgid "Verification disabled."
 msgstr "Vérification désactivée."
 
-#: cogs/config/welcome.py:84
+#: cogs/config/welcome.py:119
 msgid "Add a GIF"
 msgstr "Ajouter un GIF"
 
-#: cogs/config/welcome.py:87
+#: cogs/config/welcome.py:122
 msgid "GIF or image URL"
 msgstr "URL du GIF ou de l'image"
 
-#: cogs/config/welcome.py:99
+#: cogs/config/welcome.py:134
 msgid "That doesn't look like a valid URL."
 msgstr "Cela ne ressemble pas à une URL valide."
 
-#: cogs/config/welcome.py:128
+#: cogs/config/welcome.py:151 cogs/config/welcome.py:301
+msgid "Customize card"
+msgstr "Personnaliser la carte"
+
+#: cogs/config/welcome.py:156
+msgid "Greeting (empty = default)"
+msgstr "Message d'accueil (vide = par défaut)"
+
+#: cogs/config/welcome.py:163
+msgid "Subtitle (empty = default)"
+msgstr "Sous-titre (vide = par défaut)"
+
+#: cogs/config/welcome.py:170
+msgid "Text colour (empty = default)"
+msgstr "Couleur du texte (vide = par défaut)"
+
+#: cogs/config/welcome.py:194
+msgid "Your lines were saved, but that is not a valid hex colour (like #5865F2), so the colour was kept."
+msgstr "Vos textes ont été enregistrés, mais cette valeur n'est pas une couleur hexadécimale valide (comme #5865F2), la couleur précédente a donc été conservée."
+
+#: cogs/config/welcome.py:221
 msgid "Select the welcome channel..."
 msgstr "Sélectionnez le salon de bienvenue..."
 
-#: cogs/config/welcome.py:175
+#: cogs/config/welcome.py:268
 msgid "Manage GIFs"
 msgstr "Gérer les GIF"
 
-#: cogs/config/welcome.py:239
+#: cogs/config/welcome.py:322
+msgid "Card customisation is a Yasuho+ feature."
+msgstr "La personnalisation de la carte est une fonctionnalité de Yasuho+."
+
+#: cogs/config/welcome.py:372
 msgid "GIF"
 msgstr "GIF"
 
-#: cogs/config/welcome.py:245
+#: cogs/config/welcome.py:378
 msgid "Remove a GIF..."
 msgstr "Retirer un GIF..."
 
-#: cogs/config/welcome.py:270
+#: cogs/config/welcome.py:403
 msgid "Add GIF"
 msgstr "Ajouter un GIF"
 
-#: cogs/config/welcome.py:278
+#: cogs/config/welcome.py:411
 msgid "Could not open the form."
 msgstr "Impossible d'ouvrir le formulaire."
 
-#: cogs/config/welcome.py:299
+#: cogs/config/welcome.py:432
 msgid "Manage welcome GIFs"
 msgstr "Gérer les GIF de bienvenue"
 
-#: cogs/config/welcome.py:302
+#: cogs/config/welcome.py:435
 msgid "Add image/GIF URLs to the random pool, or remove one below. Turn on **Random GIF** on the main panel to use the pool."
 msgstr "Ajoutez des URL d'image/GIF au pool aléatoire, ou retirez-en une ci-dessous. Activez **GIF aléatoire** sur le panneau principal pour utiliser le pool."
 
-#: cogs/config/welcome.py:311
+#: cogs/config/welcome.py:444
 #, python-brace-format
 msgid "...and {count} more"
 msgstr "...et {count} de plus"
 
-#: cogs/config/welcome.py:316
+#: cogs/config/welcome.py:449
 #, python-brace-format
 msgid "Pool ({count})"
 msgstr "Pool ({count})"
 
-#: cogs/config/welcome.py:325
+#: cogs/config/welcome.py:458
 msgid "Pool (0)"
 msgstr "Pool (0)"
 
-#: cogs/config/welcome.py:327
+#: cogs/config/welcome.py:460
 msgid "No GIFs yet. Add one to build the random pool."
 msgstr "Aucun GIF pour l'instant. Ajoutez-en un pour constituer le pool aléatoire."
 
-#: cogs/config/welcome.py:430
+#: cogs/config/welcome.py:563
 msgid "Welcome system"
 msgstr "Système de bienvenue"
 
-#: cogs/config/welcome.py:432
+#: cogs/config/welcome.py:565
 msgid "Design the greeting new members receive. Use the menus below; every change saves instantly. Hit **Preview** to see it live."
 msgstr "Concevez le message d'accueil que reçoivent les nouveaux membres. Utilisez les menus ci-dessous ; chaque modification est enregistrée instantanément. Appuyez sur **Aperçu** pour le voir en direct."
 
-#: cogs/config/welcome.py:442 cogs/config/welcome.py:573
+#: cogs/config/welcome.py:575 cogs/config/welcome.py:708
 msgid "GIF pool"
 msgstr "Pool de GIF"
 
-#: cogs/config/welcome.py:443 cogs/config/welcome.py:574
+#: cogs/config/welcome.py:576 cogs/config/welcome.py:709
 #, python-brace-format
 msgid "{count} saved"
 msgstr "{count} enregistré(s)"
 
-#: cogs/config/welcome.py:449 cogs/config/welcome.py:477
-#: cogs/config/welcome.py:565
+#: cogs/config/welcome.py:582 cogs/config/welcome.py:610
+#: cogs/config/welcome.py:700
 msgid "Card"
 msgstr "Carte"
 
-#: cogs/config/welcome.py:451 cogs/config/welcome.py:478
-#: cogs/config/welcome.py:567
+#: cogs/config/welcome.py:584 cogs/config/welcome.py:611
+#: cogs/config/welcome.py:702
 msgid "Random GIF"
 msgstr "GIF aléatoire"
 
-#: cogs/config/welcome.py:471
+#: cogs/config/welcome.py:604
 msgid "Edit the welcome embed..."
 msgstr "Modifier l'embed de bienvenue..."
 
-#: cogs/config/welcome.py:552
+#: cogs/config/welcome.py:687
 #, python-brace-format
 msgid "Welcome | {guild}"
 msgstr "Bienvenue | {guild}"
 
-#: cogs/config/welcome.py:590
+#: cogs/config/welcome.py:725
 msgid "Use `/welcome` to open the full builder."
 msgstr "Utilise `/welcome` pour ouvrir le constructeur complet."
 
-#: cogs/config/welcome.py:694
+#: cogs/config/welcome.py:829
 #, python-brace-format
 msgid "Welcome {mention}!"
 msgstr "Bienvenue {mention} !"
 
-#: cogs/config/welcome.py:781 cogs/config/welcome.py:801
+#: cogs/config/welcome.py:949 cogs/config/welcome.py:969
 msgid "Welcome message"
 msgstr "Message de bienvenue"
 
-#: cogs/config/welcome.py:788
+#: cogs/config/welcome.py:956
 msgid "Use /welcome to open the full builder."
 msgstr "Utilisez /welcome pour ouvrir le créateur complet."
 
-#: cogs/config/welcome.py:804
+#: cogs/config/welcome.py:972
 msgid "Welcome messages have been turned off."
 msgstr "Les messages de bienvenue ont été désactivés."
 
-#: cogs/config/welcome.py:894
+#: cogs/config/welcome.py:1062
 #, python-brace-format
 msgid "Welcome {member}!"
 msgstr "Bienvenue {member} !"
@@ -10448,8 +10472,8 @@ msgstr "Yasuho reste dans ton salon vocal, même quand la file est vide."
 msgid "**Extended server playlists**"
 msgstr "**Playlists serveur étendues**"
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:156
-#: tests/cogs/test_premium_panel.py:160
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:157
+#: tests/cogs/test_premium_panel.py:161
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr "Jusqu'à {count} playlists de {tracks} morceaux."

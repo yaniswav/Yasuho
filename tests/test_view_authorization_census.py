@@ -1011,6 +1011,11 @@ CLASSIFIED: dict[str, tuple[str, str]] = {
         "Opened only from ManageGifsView (welcome.py:274,282), an "
         "AuthorLayoutView; accepted revocation-only residual.",
     ),
+    "cogs.config.welcome.CardModal": (
+        "GATED_FLOW_MODAL",
+        "Opened only from _CardButton on WelcomePanel, an AuthorLayoutView, "
+        "and only with Yasuho+ active; accepted revocation-only residual.",
+    ),
     "cogs.config.welcome.WelcomeStatusView": (
         "DISPLAY_ONLY",
         "Docstring: 'read-only, no controls'; _build adds only TextDisplay.",

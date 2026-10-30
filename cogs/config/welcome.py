@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 import random
 
@@ -5,7 +6,16 @@ import discord
 from discord.ext import commands
 
 from . import welcome_card
-from tools import card_themes, embed_creator, interactions, rendering, settings
+from cogs.community.leveling import rank_card
+from tools import (
+    card_themes,
+    embed_creator,
+    interactions,
+    premium,
+    premium_upsell,
+    rendering,
+    settings,
+)
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.snowflake import coerce_id
@@ -35,6 +45,10 @@ def _default_config():
         "card": True,
         "gifs": [],
         "random_gif": False,
+        # Yasuho+ card extras (None = the stock card). Kept when premium lapses.
+        "card_greeting": None,
+        "card_subtitle": None,
+        "card_color": None,
         "embed": {
             "title": "Welcome {user}!",
             "description": "Welcome to {server}, {mention}! You are member #{count}.",
@@ -46,6 +60,24 @@ def _default_config():
             "fields": [],
         },
     }
+
+
+def _clean_line(value):
+    """A stored custom card line, clamped, or None (dashboard input is untrusted)."""
+
+    if not isinstance(value, str):
+        return None
+    return " ".join(value.split())[: welcome_card.MAX_LINE_LENGTH] or None
+
+
+def _clean_colour(value):
+    """A stored text colour normalised to "#RRGGBB", or None."""
+
+    try:
+        accent = rank_card.validate_accent(value)
+    except rank_card.InvalidAccent:
+        return None
+    return None if accent is None else "#{:06X}".format(accent)
 
 
 def _merge_defaults(blob):
@@ -70,6 +102,9 @@ def _merge_defaults(blob):
     # through get_config -> _merge_defaults).
     config["channel_id"] = coerce_id(config.get("channel_id"))
     config["gifs"] = list(blob.get("gifs") or [])
+    config["card_greeting"] = _clean_line(blob.get("card_greeting"))
+    config["card_subtitle"] = _clean_line(blob.get("card_subtitle"))
+    config["card_color"] = _clean_colour(blob.get("card_color"))
     config["embed"] = embed_creator.merge_embed(blob.get("embed"))
     return config
 
@@ -106,6 +141,64 @@ class AddGifModal(LocaleModal):
             await self.manage_view.refresh(interaction)
         except Exception:
             log.exception("Welcome add-GIF modal failed")
+            await embed_creator.notify_failure(interaction, _("Something went wrong."))
+
+
+class CardModal(LocaleModal):
+    """Yasuho+: the custom greeting, subtitle and text colour of the card."""
+
+    def __init__(self, panel):
+        super().__init__(title=_("Customize card"))
+        self.panel = panel
+        config = panel.config
+        hint = "{user} {server} {count}"
+        self.greeting_field = discord.ui.TextInput(
+            label=_("Greeting (empty = default)"),
+            placeholder=hint,
+            default=config.get("card_greeting"),
+            required=False,
+            max_length=welcome_card.MAX_LINE_LENGTH,
+        )
+        self.subtitle_field = discord.ui.TextInput(
+            label=_("Subtitle (empty = default)"),
+            placeholder=hint,
+            default=config.get("card_subtitle"),
+            required=False,
+            max_length=welcome_card.MAX_LINE_LENGTH,
+        )
+        self.colour_field = discord.ui.TextInput(
+            label=_("Text colour (empty = default)"),
+            placeholder="#FFFFFF",
+            default=config.get("card_color"),
+            required=False,
+            max_length=10,
+        )
+        self.add_item(self.greeting_field)
+        self.add_item(self.subtitle_field)
+        self.add_item(self.colour_field)
+
+    async def on_submit(self, interaction):
+        try:
+            raw = (self.colour_field.value or "").strip()
+            colour = _clean_colour(raw) if raw else None
+            config = self.panel.config
+            # The lines are saved even when the colour is refused.
+            config["card_greeting"] = _clean_line(self.greeting_field.value)
+            config["card_subtitle"] = _clean_line(self.subtitle_field.value)
+            if not raw or colour is not None:
+                config["card_color"] = colour
+            await self.panel.cog.save(self.panel.guild.id, config)
+            if raw and colour is None:
+                return await interaction.response.send_message(
+                    _(
+                        "Your lines were saved, but that is not a valid hex "
+                        "colour (like #5865F2), so the colour was kept."
+                    ),
+                    ephemeral=True,
+                )
+            await self.panel._rerender(interaction)
+        except Exception:
+            log.exception("Welcome card modal failed")
             await embed_creator.notify_failure(interaction, _("Something went wrong."))
 
 
@@ -197,6 +290,46 @@ class _PreviewButton(discord.ui.Button):
             await embed_creator.notify_failure(
                 interaction, _("Could not render the preview.")
             )
+
+
+class _CardButton(discord.ui.Button):
+    """Yasuho+: opens the card customisation modal (an upsell otherwise)."""
+
+    def __init__(self, panel):
+        self.panel = panel
+        super().__init__(
+            label=_("Customize card"), style=discord.ButtonStyle.secondary
+        )
+
+    async def callback(self, interaction):
+        try:
+            panel = self.panel
+            bot = panel.cog.bot
+            if premium.resolve_guild_limits(bot, panel.guild.id).premium_welcome_card:
+                return await interaction.response.send_modal(CardModal(panel))
+            await interaction.response.defer(ephemeral=True)
+            upsell = await premium_upsell.for_guild_refusal(
+                bot,
+                limit_key="premium_welcome_card",
+                guild_id=panel.guild.id,
+                person_id=interaction.user.id,
+                is_admin=premium_upsell.invoker_is_admin(interaction.user),
+                already_top_tier=premium_upsell.is_guild_already_top_tier(
+                    bot, panel.guild.id
+                ),
+                kind="unlock",
+            )
+            text = _("Card customisation is a Yasuho+ feature.")
+            kwargs = {"ephemeral": True}
+            if upsell is not None:
+                text += "\n" + upsell.line
+                view = upsell.view()
+                if view is not None:
+                    kwargs["view"] = view
+            await interaction.followup.send(text, **kwargs)
+        except Exception:
+            log.exception("Welcome card button failed")
+            await self.panel._error(interaction)
 
 
 class _EnableButton(discord.ui.Button):
@@ -481,7 +614,9 @@ class WelcomePanel(AuthorLayoutView):
                 _PreviewButton(self),
             )
         )
-        container.add_item(discord.ui.ActionRow(_EnableButton(self)))
+        container.add_item(
+            discord.ui.ActionRow(_EnableButton(self), _CardButton(self))
+        )
 
         container.add_item(
             discord.ui.TextDisplay(
@@ -697,7 +832,7 @@ class Welcome(commands.Cog):
         return content, embed
 
     # -- welcome card ---------------------------------------------------
-    async def render_welcome_card(self, member):
+    async def render_welcome_card(self, member, config=None):
         """Render a welcome card for a joining member.
 
         Returns a BytesIO PNG. All Pillow work runs in an executor so the join
@@ -713,6 +848,32 @@ class Welcome(commands.Cog):
         colour = random_colour()
         bg_rgb = ((colour >> 16) & 0xFF, (colour >> 8) & 0xFF, colour & 0xFF)
         theme = await card_themes.for_guild(self.bot, member.guild.id)
+        style = theme.welcome
+        background = greeting = subtitle = None
+
+        # Yasuho+ extras. A lapsed guild just draws the free card; its stored
+        # values are never touched and apply again when premium returns.
+        guild = member.guild
+        if premium.resolve_guild_limits(self.bot, guild.id).premium_welcome_card:
+            if config is None:
+                config = await self.get_config(guild.id)
+            if config.get("card_color"):
+                rgb = rank_card.accent_to_rgb(int(config["card_color"][1:], 16))
+                style = dataclasses.replace(style, text=rgb, ring=rgb)
+            args = (display_name, guild.name, member_count)
+            greeting = welcome_card.fill_template(
+                config.get("card_greeting"), *args
+            )
+            subtitle = welcome_card.fill_template(
+                config.get("card_subtitle"), *args
+            )
+            # One PK lookup per premium render (per join, low rate), never cached.
+            try:
+                background = await rank_card.fetch_background(
+                    self.bot.db_pool, guild.id
+                )
+            except Exception:
+                log.warning("Welcome card background read failed", exc_info=True)
 
         return await rendering.run_image_job(
             self.bot,
@@ -721,12 +882,15 @@ class Welcome(commands.Cog):
             display_name,
             member_count,
             bg_rgb,
-            theme.welcome,
+            style,
+            background,
+            greeting,
+            subtitle,
         )
 
-    async def _render_card_file(self, member):
+    async def _render_card_file(self, member, config=None):
         try:
-            buf = await self.render_welcome_card(member)
+            buf = await self.render_welcome_card(member, config)
             return discord.File(buf, filename="welcome.png")
         except Exception:
             log.exception("Failed to render welcome card")
@@ -737,7 +901,11 @@ class Welcome(commands.Cog):
 
         member = interaction.user
         content, embed = self._compose(config, member)
-        file = await self._render_card_file(member) if config.get("card") else None
+        file = (
+            await self._render_card_file(member, config)
+            if config.get("card")
+            else None
+        )
         kwargs = {"embed": embed, "ephemeral": True}
         if content:
             kwargs["content"] = content
@@ -841,7 +1009,7 @@ class Welcome(commands.Cog):
         async with ctx.typing():
             content, embed = self._compose(config, ctx.author)
             file = (
-                await self._render_card_file(ctx.author)
+                await self._render_card_file(ctx.author, config)
                 if config.get("card")
                 else None
             )
@@ -873,7 +1041,7 @@ class Welcome(commands.Cog):
 
             content, embed = self._compose(config, member)
             file = (
-                await self._render_card_file(member)
+                await self._render_card_file(member, config)
                 if config.get("card")
                 else None
             )
