@@ -315,10 +315,14 @@ class _FakeRoomsCog:
     def __init__(self, owner_id):
         self.owner_id = owner_id
         self.transfers = []
+        self.remembered = []
         self.bot = types.SimpleNamespace(get_channel=lambda cid: None)
 
     def _owner_of(self, channel_id):
         return self.owner_id
+
+    async def remember_room(self, guild_id, user_id, channel_id, **fields):
+        self.remembered.append((guild_id, user_id, fields))
 
     async def _transfer_room(self, channel, member):
         self.transfers.append((channel, member.id))
@@ -359,6 +363,7 @@ class _FakeFollowup:
 class _FakeInteraction:
     def __init__(self, user_id):
         self.user = types.SimpleNamespace(id=user_id)
+        self.guild_id = 1
         self.response = _FakeResponse()
         self.followup = _FakeFollowup()
 
@@ -510,3 +515,32 @@ async def test_rename_modal_still_works_for_the_still_current_owner():
     assert channel.edited == [{"name": "new-name"}]
 
 
+
+
+async def test_the_panel_actions_remember_the_owner_choices():
+    channel = _FakeChannel(name="old-name")
+    cog = _FakeRoomsCog(owner_id=OWNER_A)
+    view = _control_view(cog, channel)
+
+    select = rooms._SlotSelect(view)
+    select._values = ["5"]
+    await select.callback(_FakeInteraction(OWNER_A))
+
+    modal = rooms._RoomRenameModal(view, channel.name)
+    modal.name_input._value = "new-name"
+    await modal.on_submit(_FakeInteraction(OWNER_A))
+
+    assert cog.remembered == [
+        (1, OWNER_A, {"user_limit": 5}),
+        (1, OWNER_A, {"name": "new-name"}),
+    ]
+
+
+async def test_a_refused_owner_saves_nothing():
+    channel = _FakeChannel(name="old-name")
+    cog = _FakeRoomsCog(owner_id=NEW_OWNER_B)
+    view = _control_view(cog, channel)
+    select = rooms._SlotSelect(view)
+    select._values = ["5"]
+    await select.callback(_FakeInteraction(OWNER_A))
+    assert cog.remembered == []

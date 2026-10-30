@@ -256,6 +256,8 @@ FREE_MAX_COMMAND_BUTTONS = 0
 FREE_MAX_STARBOARDS = 1
 # Temporary roles (cogs/moderation/temprole): active grants per server.
 FREE_MAX_TEMP_ROLES = 5
+# YouTube upload alerts (cogs/config/youtube): followed channels per server.
+FREE_MAX_YOUTUBE_FOLLOWS = 3
 
 FREE_MAX_FAVOURITES = 100  # cogs/music/music.MAX_FAVOURITES
 FREE_MAX_PENDING_REMINDERS = 25  # cogs/community/reminders.MAX_PENDING_REMINDERS
@@ -302,6 +304,7 @@ GUILD_CEILINGS = {
     "max_command_buttons": 5,
     "max_starboards": 10,
     "max_temp_roles": 500,
+    "max_youtube_follows": 50,
 }
 
 USER_CEILINGS = {
@@ -344,6 +347,7 @@ class GuildLimits:
     max_command_buttons: int
     max_starboards: int
     max_temp_roles: int
+    max_youtube_follows: int
 
     def __post_init__(self):
         for name, ceiling in GUILD_CEILINGS.items():
@@ -399,6 +403,7 @@ GUILD_FREE = GuildLimits(
     max_command_buttons=FREE_MAX_COMMAND_BUTTONS,
     max_starboards=FREE_MAX_STARBOARDS,
     max_temp_roles=FREE_MAX_TEMP_ROLES,
+    max_youtube_follows=FREE_MAX_YOUTUBE_FOLLOWS,
 )
 
 # Yasuho+ (guild subscription). Values from the retained plan's table
@@ -433,6 +438,7 @@ GUILD_PREMIUM = GuildLimits(
     max_command_buttons=3,
     max_starboards=5,
     max_temp_roles=100,
+    max_youtube_follows=25,
 )
 
 USER_FREE = UserLimits(

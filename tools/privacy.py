@@ -119,7 +119,10 @@ EXPORT_COOLDOWN_SECONDS = 3600
 # (`birthdays_shared`, no year is ever stored), erased on request.
 # v18 adds the temporary roles a moderator gave this user (`temp_roles_held`: server,
 # role, expiry), erased on request; the scheduled removal (a timers row) is kept.
-EXPORT_VERSION = 18
+# v19 adds the temporary-room settings remembered for this user (`room_prefs_saved`:
+# server, hub, name, user limit, locked, hidden, updated_at; `room_prefs_opted_out` lists the servers
+# where saving is turned off), erased on request.
+EXPORT_VERSION = 19
 
 # THE list of tables a profile lives in, deleted together. This mirrors
 # retention.GUILD_DELETE_QUERIES for the USER side: profile data is keyed by
@@ -217,6 +220,10 @@ USER_DELETE_QUERIES = PROFILE_DELETE_QUERIES + (
     # role still comes off on time - forgetting the record must never turn a
     # temporary role into a permanent one.
     ("temp_roles", "DELETE FROM temp_roles WHERE user_id = $1"),
+    # Remembered temporary-room settings (tools/roomprefs): one row per server.
+    # room_prefs_off (the opt-out: only an on/off choice, no settings) is NOT in
+    # this list on purpose, so erasing the profile never turns saving back on.
+    ("room_prefs", "DELETE FROM room_prefs WHERE user_id = $1"),
     # This user's OWN Pack Confort rows (tools/premium.py) - WHERE user_id
     # only, same carve-out the export query above uses, so a Yasuho+ row
     # (guild-scoped, user_id NULL) is never reachable from here. Safe to erase
@@ -609,6 +616,15 @@ async def collect_user_export(pool, user_id):
         "WHERE user_id = $1 ORDER BY expires_at",
         user_id,
     )
+    room_prefs = await pool.fetch(
+        "SELECT guild_id, hub_channel_id, name, user_limit, locked, hidden, updated_at "
+        "FROM room_prefs WHERE user_id = $1 ORDER BY guild_id, hub_channel_id",
+        user_id,
+    )
+    room_prefs_off = await pool.fetch(
+        "SELECT guild_id FROM room_prefs_off WHERE user_id = $1 ORDER BY guild_id",
+        user_id,
+    )
     reminders = await pool.fetch(
         "SELECT id, expires, created, extra FROM timers "
         "WHERE event = 'reminder' "
@@ -747,6 +763,8 @@ async def collect_user_export(pool, user_id):
         "suggestion_votes_cast": _records(suggestion_votes),
         "birthdays_shared": _records(birthdays),
         "temp_roles_held": _records(temp_roles),
+        "room_prefs_saved": _records(room_prefs),
+        "room_prefs_opted_out": _records(room_prefs_off),
         "pending_reminders": _records(reminders),
         "guild_playlists_created": _records(playlists),
         "custom_commands_created": _records(custom_commands),

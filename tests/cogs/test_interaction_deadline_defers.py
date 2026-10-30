@@ -658,6 +658,10 @@ async def test_the_role_menu_guard_answers_without_deferring(log):
     assert log.kwargs_of("response.send_message")["ephemeral"] is True
 
 
+async def _remember_nothing(*args, **fields):
+    return None
+
+
 def _rename_modal(log, channel, *, still_owner=True):
     """``_RoomRenameModal`` without discord.py's Modal machinery behind it."""
 
@@ -665,6 +669,8 @@ def _rename_modal(log, channel, *, still_owner=True):
         _owner=types.SimpleNamespace(
             _channel=lambda: channel,
             _still_owner=lambda user_id: still_owner,
+            cog=types.SimpleNamespace(remember_room=_remember_nothing),
+            channel_id=1,
         ),
         name_input=types.SimpleNamespace(value="  quiet corner  "),
     )

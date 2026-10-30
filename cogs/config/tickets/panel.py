@@ -58,7 +58,7 @@ from discord.ext import commands
 
 from . import guild_config, preflight
 from .open import TicketPanelView
-from tools import i18n, interactions, premium
+from tools import forumsolved, i18n, interactions, premium
 from tools.formats import random_colour
 from tools.i18n import _
 from tools.modchecks import everyone_can_read
@@ -780,9 +780,11 @@ class Tickets(commands.Cog):
             await guild_config.read_raw(self.bot.db_pool, guild_id), ceiling=ceiling
         )
 
+    # No group-level permission check on purpose: for a PREFIX command the group's
+    # checks also run for its subcommands, which would refuse `solved` to the post
+    # author. Every configuring subcommand carries its own manage_guild check.
     @commands.hybrid_group(name="ticket")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
     async def ticket(self, ctx):
         """Manage support tickets: set up the panel, configure it or turn it off."""
         if ctx.invoked_subcommand is None:
@@ -982,6 +984,34 @@ class Tickets(commands.Cog):
         view.message = await ctx.send(
             view=view, allowed_mentions=discord.AllowedMentions.none()
         )
+
+    @ticket.command(name="solved")
+    @commands.guild_only()
+    async def ticket_solved(self, ctx):
+        """Mark this forum post as solved: tag it, then close it."""
+        # Open to the post's author and to Manage Threads holders; checked in the
+        # body, where the thread's own permissions are known.
+        await forumsolved.close_post(self.bot, ctx)
+
+    @ticket.command(name="forum")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        forum="The forum to configure.",
+        tag="The tag to apply (its name); empty uses a tag named Solved or Resolved.",
+        prefix="Put [Solved] in front of the post title.",
+        lock="Lock the post when it is closed.",
+    )
+    async def ticket_forum(
+        self,
+        ctx,
+        forum: typing.Optional[discord.ForumChannel] = None,
+        tag: typing.Optional[str] = None,
+        prefix: typing.Optional[bool] = None,
+        lock: typing.Optional[bool] = None,
+    ):
+        """Set the Solved tag, the title prefix and the lock used by /ticket solved."""
+        await forumsolved.configure(self.bot, ctx, forum, tag, prefix, lock)
 
     @ticket.command(name="disable")
     @commands.guild_only()

@@ -505,7 +505,7 @@ class _ProfileExportPool(_ExportPool):
 async def test_export_carries_the_profile_its_visibilities_and_the_legacy_row():
     data, _avatars = await privacy.collect_user_export(_ProfileExportPool(), 42)
 
-    assert data["export_version"] == privacy.EXPORT_VERSION == 18
+    assert data["export_version"] == privacy.EXPORT_VERSION == 19
     assert data["profile"]["bio"] == "hello"
     assert data["profile"]["accent"] == 0x5865F2
     # Decoded, not a JSON string.
@@ -590,6 +590,7 @@ async def test_the_wide_erasure_adds_the_vote_ledger_to_the_same_transaction():
         "suggestions",
         "birthdays",
         "temp_roles",
+        "room_prefs",
         "premium_entitlements",
         "premium_upsells",
         "topgg_votes",
@@ -598,7 +599,7 @@ async def test_the_wide_erasure_adds_the_vote_ledger_to_the_same_transaction():
         "anilist_airing_optins",
         "anilist_chapter_optins",
     ]
-    assert len(executed) == 16
+    assert len(executed) == 17
     assert counts["premium_entitlements"] == 1
     assert counts["premium_upsells"] == 1
     assert counts["topgg_votes"] == 1
@@ -1215,7 +1216,7 @@ async def test_the_export_carries_the_actors_own_journal_entries_only():
     pool = _AuditPool()
     data, _avatars = await privacy.collect_user_export(pool, 42)
 
-    assert data["export_version"] == privacy.EXPORT_VERSION == 18
+    assert data["export_version"] == privacy.EXPORT_VERSION == 19
     assert data["dashboard_audit"] == [
         {
             "guild_id": 7,
@@ -1511,6 +1512,7 @@ _WIDE_ONLY_PROMPT_PHRASES = {
     "suggestions": "suggestions and your votes",
     "birthdays": "shared birthdays",
     "temp_roles": "forgets your temporary roles",
+    "room_prefs": "remembered voice room settings",
     "topgg_votes": "top.gg vote record",
     "user_rank_cards": "background image you",
     "anilist_tokens": "AniList link",
@@ -1525,6 +1527,7 @@ _WIDE_ONLY_RESULT_PHRASES = {
     "suggestions": "suggestions and votes are gone",
     "birthdays": "shared birthdays are gone",
     "temp_roles": "temporary-role records are gone",
+    "room_prefs": "remembered voice room settings are gone",
     "topgg_votes": "top.gg vote record is gone",
     "user_rank_cards": "personal rank card",
     "anilist_tokens": "AniList link is gone",

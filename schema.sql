@@ -950,6 +950,47 @@ CREATE TABLE IF NOT EXISTS temp_roles (
 );
 CREATE INDEX IF NOT EXISTS temp_roles_user_idx ON temp_roles (user_id);
 
+-- YouTube upload alerts: one row per (server, followed channel). `seen` is the
+-- dedup cursor (the newest video ids already handled, so a restart never
+-- re-posts); `baselined` is false until the first successful read of the feed
+-- recorded the videos that already existed (a new follow posts nothing).
+-- Public data only (a channel id and its title); no member is stored.
+-- cogs/config/youtube.py
+CREATE TABLE IF NOT EXISTS youtube_follows (
+    guild_id       BIGINT      NOT NULL,
+    yt_channel_id  TEXT        NOT NULL,
+    post_channel   BIGINT      NOT NULL,
+    title          TEXT        NOT NULL DEFAULT '',
+    added_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    baselined      BOOLEAN     NOT NULL DEFAULT FALSE,
+    seen           TEXT[]      NOT NULL DEFAULT '{}',
+    PRIMARY KEY (guild_id, yt_channel_id)
+);
+CREATE INDEX IF NOT EXISTS youtube_follows_channel_idx ON youtube_follows (yt_channel_id);
+
+-- Remembered temporary-room settings, one row per (server, member, hub): re-applied
+-- when the member creates a room from that hub. Only the fields they changed are
+-- set. Per-user data: exported, erased with the profile, purged with the server.
+-- room_prefs_off is the opt-out (no settings, only the on/off choice); it survives
+-- forget and profile erasure so those never turn saving back on. tools/roomprefs.py
+CREATE TABLE IF NOT EXISTS room_prefs (
+    guild_id       BIGINT      NOT NULL,
+    user_id        BIGINT      NOT NULL,
+    hub_channel_id BIGINT      NOT NULL,
+    name           TEXT,
+    user_limit     SMALLINT    CHECK (user_limit BETWEEN 0 AND 99),
+    locked         BOOLEAN,
+    hidden         BOOLEAN,
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (guild_id, user_id, hub_channel_id)
+);
+CREATE INDEX IF NOT EXISTS room_prefs_user_idx ON room_prefs (user_id);
+CREATE TABLE IF NOT EXISTS room_prefs_off (
+    guild_id BIGINT NOT NULL,
+    user_id  BIGINT NOT NULL,
+    PRIMARY KEY (guild_id, user_id)
+);
+
 -- Self-assignable role menus (Components V2). One row per posted menu message;
 -- config is a JSONB blob holding the menu kind (buttons/select), its options
 -- (role_id/label/emoji/description) and its rules (min/max, exclusive).

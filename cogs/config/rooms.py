@@ -89,7 +89,7 @@ from .rooms_panels import (
     _RoomSubView,  # noqa: F401
     _SlotSelect,  # noqa: F401
 )
-from tools import premium, settings
+from tools import premium, roomprefs, settings
 from tools.autoroom import (
     CREATE_COOLDOWN_SECONDS,
     DEFAULT_LABEL,
@@ -124,6 +124,49 @@ def _hub_mapping(hubs):
     ``hub_channel_id`` is unusable by the voice listener and is dropped.
     """
     return {hub["hub_channel_id"]: hub for hub in hubs if hub.get("hub_channel_id")}
+
+
+def _copy_overwrite(overwrite):
+    return discord.PermissionOverwrite.from_pair(*overwrite.pair())
+
+
+def room_overwrites(guild, category, member, locked, hidden):
+    """The explicit overwrites for a locked and/or hidden new room, or None.
+
+    Passing ``overwrites`` to create_voice_channel REPLACES what the channel would
+    inherit from its category, so this starts from a copy of the category's own
+    overwrites (a staff-only category stays staff-only), then merges in the
+    @everyone denies and the owner's grants, and ALWAYS grants the bot itself
+    view / connect / manage / move: without that a hidden room is invisible to
+    Yasuho (no cleanup, no room cap) and a locked room cannot receive its owner.
+    """
+    if not (locked or hidden):
+        return None
+    overwrites = {
+        target: _copy_overwrite(ow)
+        for target, ow in (category.overwrites.items() if category is not None else ())
+    }
+
+    def edit(target):
+        return overwrites.setdefault(target, discord.PermissionOverwrite())
+
+    everyone = edit(guild.default_role)
+    if locked:
+        everyone.connect = False
+    if hidden:
+        everyone.view_channel = False
+    owner = edit(member)
+    owner.connect = True
+    owner.manage_channels = True
+    owner.move_members = True
+    if hidden:
+        owner.view_channel = True
+    me = edit(guild.me)
+    me.view_channel = True
+    me.connect = True
+    me.manage_channels = True
+    me.move_members = True
+    return overwrites
 
 
 def _rebuild_lock(cog):
@@ -884,23 +927,28 @@ class TemporaryRooms(commands.Cog):
             if len(active) >= hub["max_rooms"]:
                 return  # at capacity: refuse quietly
 
-            name = render_room_name(
-                hub["template"], member.display_name, len(active) + 1
+            # The member's remembered settings: ONE primary-key read, only when a
+            # room is actually being created (a step that already costs several
+            # REST calls); a failure just means the hub defaults.
+            try:
+                prefs = await roomprefs.load(
+                    self.bot.db_pool, guild.id, member.id, hub_channel.id
+                )
+            except Exception:
+                log.exception("Could not load remembered room settings")
+                prefs = None
+            name, user_limit, locked, hidden = roomprefs.plan_room(
+                prefs,
+                render_room_name(hub["template"], member.display_name, len(active) + 1),
+                hub["user_limit"],
+                hub["private"],
             )
             kwargs = {"category": category}
-            if hub["user_limit"] > 0:
-                kwargs["user_limit"] = hub["user_limit"]
-            if hub["private"]:
-                # Actually lock the room: deny @everyone connect (the old code
-                # only granted the creator manage perms, which _grant_room_owner
-                # does anyway, so "private" rooms were joinable by all). The owner
-                # keeps connect + control and can admit people via the panel.
-                kwargs["overwrites"] = {
-                    guild.default_role: discord.PermissionOverwrite(connect=False),
-                    member: discord.PermissionOverwrite(
-                        connect=True, manage_channels=True, move_members=True
-                    ),
-                }
+            if user_limit > 0:
+                kwargs["user_limit"] = user_limit
+            overwrites = room_overwrites(guild, category, member, locked, hidden)
+            if overwrites is not None:
+                kwargs["overwrites"] = overwrites
 
             new_channel = await guild.create_voice_channel(name, **kwargs)
             active.add(new_channel.id)
@@ -923,6 +971,25 @@ class TemporaryRooms(commands.Cog):
             task.add_done_callback(self._cleanup_tasks.discard)
         except Exception:
             log.exception("Failed to create an autoroom temp room")
+
+    def _hub_channel_of_room(self, guild_id, channel_id):
+        """The trigger channel id of the hub a live room came from, or None."""
+        for hub_channel_id, hub in (self._hub_index.get(guild_id) or {}).items():
+            if channel_id in self._active.get((guild_id, hub["id"]), ()):
+                return hub_channel_id
+        return None
+
+    async def remember_room(self, guild_id, user_id, channel_id, **fields):
+        """Save one changed room setting for its owner (best-effort, never raises)."""
+        hub_channel_id = self._hub_channel_of_room(guild_id, channel_id)
+        if hub_channel_id is None:
+            return
+        try:
+            await roomprefs.save(
+                self.bot.db_pool, guild_id, user_id, hub_channel_id, **fields
+            )
+        except Exception:
+            log.exception("Could not save remembered room settings")
 
     async def _cleanup_room(self, channel_id, guild_id, hub_id):
         """Delete the temp room once it empties, then forget it."""
@@ -1122,6 +1189,58 @@ class TemporaryRooms(commands.Cog):
                 inline=False,
             )
         await ctx.send(embed=embed)
+
+    # -- remembered room settings (per member, see tools/roomprefs.py) -------
+
+    @autoroom.command(name="mine", aliases=["show"])
+    @commands.guild_only()
+    async def autoroom_mine(self, ctx):
+        """Show the room settings remembered for you in this server."""
+        await ctx.defer(ephemeral=True)
+        rows = await roomprefs.load_all(self.bot.db_pool, ctx.guild.id, ctx.author.id)
+        lines = []
+        if await roomprefs.is_opted_out(self.bot.db_pool, ctx.guild.id, ctx.author.id):
+            lines.append(_("Saving is turned off for your rooms in this server."))
+        for row in rows:
+            parts = []
+            if row["name"] is not None:
+                parts.append(_("Name: {name}").format(name=discord.utils.escape_markdown(row["name"])))
+            if row["user_limit"] is not None:
+                parts.append(_("User limit: {n}").format(n=row["user_limit"]))
+            if row["locked"] is not None:
+                parts.append(_("Locked: {state}").format(state=_("yes") if row["locked"] else _("no")))
+            if row["hidden"] is not None:
+                parts.append(_("Hidden: {state}").format(state=_("yes") if row["hidden"] else _("no")))
+            lines.append("<#%d>: %s" % (row["hub_channel_id"], ", ".join(parts)))
+        if not lines:
+            return await ctx.send(
+                _("Nothing is remembered for your rooms in this server."), ephemeral=True
+            )
+        await ctx.send(
+            "\n".join(lines), ephemeral=True, allowed_mentions=discord.AllowedMentions.none()
+        )
+
+    @autoroom.command(name="forget")
+    @commands.guild_only()
+    async def autoroom_forget(self, ctx):
+        """Forget the room settings remembered for you in this server."""
+        await ctx.defer(ephemeral=True)
+        await roomprefs.forget(self.bot.db_pool, ctx.guild.id, ctx.author.id)
+        await ctx.send(_("Forgotten. Your next room starts from the defaults."), ephemeral=True)
+
+    @autoroom.command(name="remember")
+    @commands.guild_only()
+    @discord.app_commands.describe(enabled="Save the changes you make to your rooms.")
+    async def autoroom_remember(self, ctx, enabled: bool):
+        """Turn the saving of your room settings on or off (off also forgets them)."""
+        await ctx.defer(ephemeral=True)
+        await roomprefs.set_remember(self.bot.db_pool, ctx.guild.id, ctx.author.id, enabled)
+        await ctx.send(
+            _("Your room settings will be remembered.")
+            if enabled
+            else _("Your room settings are forgotten and will not be saved."),
+            ephemeral=True,
+        )
 
 
 async def setup(bot: commands.Bot):

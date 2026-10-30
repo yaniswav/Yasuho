@@ -132,6 +132,7 @@ CATEGORIES = [
             "TemporaryRooms",
             "Tickets",
             "Twitch",
+            "YouTubeAlerts",
         ],
     ),
     (

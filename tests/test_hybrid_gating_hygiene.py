@@ -85,6 +85,12 @@ EXEMPT = {
     "mydata deleteprofile": "self-scoped: erases the caller's own profile",
     "mydata deleteavatars": "self-scoped: erases the caller's own avatars",
     # -- self-scoped: the caller's own AniList account link ------------------
+    # -- self-scoped: the caller's own remembered voice room settings --------
+    "autoroom mine": "self-scoped: shows the caller's own remembered room settings",
+    "autoroom forget": "self-scoped: erases the caller's own remembered room settings",
+    "autoroom remember": "self-scoped: toggles saving of the caller's own room settings",
+    # -- body check: the post's author or a Manage Threads holder ------------
+    "ticket solved": "closes a forum post; the body requires the post's author or Manage Threads",
     "anilist login": "self-scoped: links the caller's own AniList account",
     "anilist code": "self-scoped: completes the caller's own login",
     "anilist logout": "self-scoped: unlinks the caller's own account",

@@ -242,6 +242,7 @@ def test_scheduled_announcement_limits_are_three_free_and_25_premium():
     assert (premium.GUILD_FREE.max_command_buttons, premium.GUILD_PREMIUM.max_command_buttons) == (0, 3)
     assert (premium.GUILD_FREE.max_starboards, premium.GUILD_PREMIUM.max_starboards) == (1, 5)
     assert (premium.GUILD_FREE.max_temp_roles, premium.GUILD_PREMIUM.max_temp_roles) == (5, 100)
+    assert (premium.GUILD_FREE.max_youtube_follows, premium.GUILD_PREMIUM.max_youtube_follows) == (3, 25)
 
 
 def test_guild_free_dataclass_is_built_from_the_checked_constants():
@@ -275,6 +276,7 @@ def test_guild_free_dataclass_is_built_from_the_checked_constants():
         max_command_buttons=premium.FREE_MAX_COMMAND_BUTTONS,
         max_starboards=premium.FREE_MAX_STARBOARDS,
         max_temp_roles=premium.FREE_MAX_TEMP_ROLES,
+        max_youtube_follows=premium.FREE_MAX_YOUTUBE_FOLLOWS,
     )
 
 
@@ -345,6 +347,7 @@ def test_guild_limits_clamps_a_value_over_its_ceiling():
         max_command_buttons=0,
         max_starboards=1,
         max_temp_roles=5,
+        max_youtube_follows=3,
     )
     assert limits.max_guild_playlists == premium.GUILD_CEILINGS["max_guild_playlists"]
 

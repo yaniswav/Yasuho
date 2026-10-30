@@ -142,6 +142,16 @@ ends (at most 90 days), when the server's data is purged, or with
 90 days, so the role still comes off when it expires. The bot does not keep who
 gave it or why.
 
+**Voice room settings** (per server): when you change your temporary voice room
+(its name, user limit, locked or hidden state) with the room controls, we remember
+that choice so your next room from the same voice hub in the same server starts the
+same way. We store the server, the hub, those settings and when they last changed,
+and a marker if you turned this off. You can see them with `/autoroom mine`, clear
+them with `/autoroom forget`, or stop them being saved with `/autoroom remember`.
+They are deleted when the server's data is purged or with `/mydata deleteprofile`;
+if you had turned saving off, that on/off marker (it holds no settings) is kept so
+the erasure does not turn saving back on.
+
 **Command usage**: anonymous aggregate counters (command name x day). No user
 ID, no server ID.
 
@@ -178,6 +188,11 @@ ID, no server ID.
     hold no account of yours there), but the search itself does leave the bot.
     Lyrics, when you ask for them, are fetched the same way. If you would
     rather a query never leave, do not run the command.
+  - **YouTube upload alerts.** When a moderator follows a YouTube channel with
+    `/youtube add`, the bot asks YouTube for that public channel's list of
+    videos (the channel link, handle or id is the only thing sent). The server
+    stores the channel id, its title and the ids of the latest videos already
+    handled; no member is involved or stored.
 
 ## Where data lives
 
@@ -278,7 +293,7 @@ complaint with the French data protection authority, the CNIL
   your AniList / MangaDex alert opt-ins, your limit notes, your suggestions and
   votes (with the votes cast on your suggestions), your shared birthdays in
   every server, your temporary-role records (the scheduled removal itself is
-  kept until it runs, at most 90 days) and our copy of your own premium
+  kept until it runs, at most 90 days), your remembered voice room settings and our copy of your own premium
   purchases. The posted suggestion messages are removed where the bot can; their discussion threads
   hold other members' replies, so they stay, renamed to the suggestion number
   and locked. A purchase that is still active on Discord is copied again at the

@@ -106,6 +106,7 @@ def _synthetic_guild_plus():
         max_command_buttons=3,
         max_starboards=5,
         max_temp_roles=100,
+        max_youtube_follows=25,
     )
 
 

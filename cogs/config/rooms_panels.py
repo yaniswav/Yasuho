@@ -113,8 +113,15 @@ class _SlotSelect(discord.ui.Select):
                 content=_("Could not change the user limit."), view=None
             )
             return
+        # Answer first (the 3 s window), then the DB write.
         await interaction.response.edit_message(
             content=_("Updated the user limit."), view=None
+        )
+        await self._owner.cog.remember_room(
+            interaction.guild_id,
+            interaction.user.id,
+            self._owner.channel_id,
+            user_limit=int(self.values[0]),
         )
 
 
@@ -210,6 +217,9 @@ class _RoomRenameModal(LocaleModal):
             return
         await interactions.reply(
             interaction, _("Renamed the room to **{name}**.").format(name=name[:100])
+        )
+        await self._owner.cog.remember_room(
+            interaction.guild_id, interaction.user.id, self._owner.channel_id, name=name[:100]
         )
 
 
@@ -466,6 +476,9 @@ class RoomControlView(LocaleLayoutView):
             if locked
             else _("Locked the room - no one new can join."),
         )
+        await self.cog.remember_room(
+            interaction.guild_id, interaction.user.id, self.channel_id, locked=not locked
+        )
         await self._rerender()
 
     async def _do_hide(self, interaction):
@@ -489,6 +502,9 @@ class RoomControlView(LocaleLayoutView):
             _("The room is visible again.")
             if hidden
             else _("Hid the room from everyone else."),
+        )
+        await self.cog.remember_room(
+            interaction.guild_id, interaction.user.id, self.channel_id, hidden=not hidden
         )
         await self._rerender()
 

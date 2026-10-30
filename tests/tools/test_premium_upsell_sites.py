@@ -73,6 +73,8 @@ _ALLOWED_IMPORTERS = {
     "cogs/config/customcommands.py",
     "cogs/config/starboard.py",
     "cogs/moderation/temprole.py",
+    # V5e: the YouTube follow cap is Yasuho+.
+    "cogs/config/youtube.py",
 }
 
 

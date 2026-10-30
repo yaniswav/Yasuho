@@ -346,7 +346,7 @@ def test_privacy_and_retention_wiring():
     assert ("birthdays", "DELETE FROM birthdays WHERE user_id = $1") in privacy.USER_DELETE_QUERIES
     assert dict(retention.GUILD_DELETE_QUERIES)["birthdays"] == "DELETE FROM birthdays WHERE guild_id = $1"
     assert "FROM birthdays" in retention.STORED_GUILD_IDS_QUERY
-    assert privacy.EXPORT_VERSION == 18 and '"birthdays_shared"' in inspect.getsource(privacy)
+    assert privacy.EXPORT_VERSION == 19 and '"birthdays_shared"' in inspect.getsource(privacy)
 
 
 async def test_panel_role_pick_refuses_unmanageable_roles():
