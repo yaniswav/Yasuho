@@ -1293,6 +1293,37 @@ class EffectsView(LocaleView):
     def __init__(self, cog: "Music", player: Player, *, timeout: float = 120) -> None:
         super().__init__(timeout=timeout)
         self.add_item(_EffectsSelect(cog, player))
+        self.add_item(_SaveDefaultEffectButton(cog, player))
+
+
+class _SaveDefaultEffectButton(discord.ui.Button):
+    """Save the effect currently on the player as the server default (Yasuho+)."""
+
+    def __init__(self, cog: "Music", player: Player) -> None:
+        self._cog = cog
+        self._player = player
+        super().__init__(
+            label=_("Save as server default"),
+            style=discord.ButtonStyle.secondary,
+            row=1,
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        try:
+            guild = interaction.guild
+            if guild is None:
+                return
+            # Answer the 3 s clock before the settings write.
+            await interaction.response.defer(ephemeral=True)
+            key = getattr(self._player, "effect_preset", None) or effects.OFF_KEY
+            text, view = await self._cog._request_default_effect(
+                self._player, guild, interaction.user, key
+            )
+            kwargs = {"view": view} if view is not None else {}
+            await interaction.followup.send(text, ephemeral=True, **kwargs)
+        except Exception:
+            log.exception("Save default effect failed")
+            await interactions.notify_failure(interaction)
 
 
 class _ModalPlayContext:

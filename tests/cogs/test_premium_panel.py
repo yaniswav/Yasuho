@@ -97,6 +97,7 @@ def _synthetic_guild_plus():
         birthdays_custom=True,
         premium_card_themes=True,
         premium_welcome_card=True,
+        music_saved_effects=True,
     )
 
 

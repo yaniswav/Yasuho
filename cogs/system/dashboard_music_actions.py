@@ -447,6 +447,29 @@ async def _exec_music_stop(bot, guild_id, payload):
     return {"ok": True}
 
 
+async def _exec_music_default_effect_set(bot, guild_id, payload):
+    """Save or clear the server default effect. Payload: ``{"preset": key|null}``.
+
+    Needs no live session: it writes the guild setting through the SAME seam as
+    the slash option and the panel button (``Music._save_default_effect``), which
+    owns the Yasuho+ gate and the preset validation. Manage Server is the
+    dashboard's own gate (``requireManageGuild``). ``null`` (or the Off key)
+    clears the saved effect.
+    """
+    cog = bot.get_cog("Music")
+    if cog is None:
+        return {"ok": False, "reason": "no_session"}
+    preset = payload.get("preset")
+    if preset is None:
+        preset = "off"
+    if not isinstance(preset, str):
+        return {"ok": False, "reason": "unknown_preset"}
+    code = await cog._save_default_effect(guild_id, preset)
+    if code in ("saved", "cleared"):
+        return {"ok": True}
+    return {"ok": False, "reason": code}
+
+
 # Merged into ``dashboard_actions._EXECUTORS`` at import time, so the queue keeps
 # ONE kind table and this module stays the single owner of the music kinds.
 EXECUTORS = {
@@ -455,4 +478,5 @@ EXECUTORS = {
     "music_skip": _exec_music_skip,
     "music_volume": _exec_music_volume,
     "music_stop": _exec_music_stop,
+    "music_default_effect_set": _exec_music_default_effect_set,
 }

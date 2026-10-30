@@ -159,6 +159,9 @@ class Player(sonolink.Player):
         # Active audio-effect preset key (None = no effect). Set by the effects
         # seam, read by the controller and the snapshot; restored on cold restart.
         self.effect_preset: typing.Optional[str] = None
+        # The server's saved default effect is applied ONCE per player (first
+        # track start); a cold restore sets this so the row's own effect wins.
+        self.default_effect_done = False
         # Repair autoplay for non-YouTube seeds: swap sonolink's stock autoplay
         # handler for our subclass, reusing the SAME settings object so the
         # player.autoplay getter/setter (and _set_autoplay) keep operating on it.

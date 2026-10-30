@@ -234,6 +234,8 @@ FREE_PREMIUM_CARD_THEMES = False
 # Welcome card customisation (cogs/config/welcome_card): the server's rank card
 # background, custom greeting/subtitle and text colour are Yasuho+.
 FREE_PREMIUM_WELCOME_CARD = False
+# Saved audio effect (cogs/music): a server default effect applied once per player.
+FREE_MUSIC_SAVED_EFFECTS = False
 
 FREE_MAX_FAVOURITES = 100  # cogs/music/music.MAX_FAVOURITES
 FREE_MAX_PENDING_REMINDERS = 25  # cogs/community/reminders.MAX_PENDING_REMINDERS
@@ -308,6 +310,7 @@ class GuildLimits:
     birthdays_custom: bool
     premium_card_themes: bool
     premium_welcome_card: bool
+    music_saved_effects: bool
 
     def __post_init__(self):
         for name, ceiling in GUILD_CEILINGS.items():
@@ -354,6 +357,7 @@ GUILD_FREE = GuildLimits(
     birthdays_custom=FREE_BIRTHDAYS_CUSTOM,
     premium_card_themes=FREE_PREMIUM_CARD_THEMES,
     premium_welcome_card=FREE_PREMIUM_WELCOME_CARD,
+    music_saved_effects=FREE_MUSIC_SAVED_EFFECTS,
 )
 
 # Yasuho+ (guild subscription). Values from the retained plan's table
@@ -379,6 +383,7 @@ GUILD_PREMIUM = GuildLimits(
     birthdays_custom=True,
     premium_card_themes=True,
     premium_welcome_card=True,
+    music_saved_effects=True,
 )
 
 USER_FREE = UserLimits(

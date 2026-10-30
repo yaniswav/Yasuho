@@ -1962,6 +1962,17 @@ class Music(ServerPlaylistMixin, commands.Cog):
         # Remember what actually played so a radio refill never re-seeds it.
         player.played_ids.add(getattr(track, "identifier", None))
 
+        # Saved server effect: once per player, before the controller renders so
+        # the panel already shows it. The flag is set synchronously so two
+        # overlapping track starts cannot both apply.
+        if not player.default_effect_done:
+            player.default_effect_done = True
+            try:
+                await self._apply_default_effect(player, guild_id)
+            except Exception:
+                # Best-effort perk: never let it cost the controller.
+                log.exception("Saved effect apply failed for guild %s", guild_id)
+
         if getattr(player, "home", None) is not None:
             # Pass the event's track so the controller renders even while
             # play()'s REST update is still in flight and player.current is not
@@ -2704,6 +2715,8 @@ class Music(ServerPlaylistMixin, commands.Cog):
             # not come back at full blast after a restart.
             volume=100 if row["volume"] is None else int(row["volume"]),
         )
+        # The row's own effect (including none) wins over the server default.
+        player.default_effect_done = True
         # Re-apply the persisted audio effect, re-acquiring a filtered-players
         # ceiling slot. A stale/unknown key is dropped (resolve_preset -> None);
         # a FULL ceiling skips the effect and keeps playing, holding no slot -
@@ -4497,19 +4510,119 @@ class Music(ServerPlaylistMixin, commands.Cog):
             emoji=preset.emoji, label=preset.label
         )
 
+    async def _apply_default_effect(self, player: Player, guild_id: typing.Any) -> None:
+        """Apply the server's saved effect to a fresh player (Yasuho+), best-effort.
+
+        Free guilds stop at the in-memory limits lookup (zero queries). The
+        settings read rides the guild blob LRU. A full filtered-players ceiling
+        is logged and the player simply plays unfiltered.
+        """
+        if guild_id is None or player.effect_preset is not None:
+            return
+        if not resolve_guild_limits(self.bot, guild_id).music_saved_effects:
+            return
+        key = await guild_config.default_effect(self._settings_pool(), guild_id)
+        # Someone may have picked an effect while the read was in flight.
+        if key is None or player.effect_preset is not None:
+            return
+        result = await effects.apply_preset(player, key, quotas=self.quotas)
+        if result == effects.RESULT_CEILING_FULL:
+            log.info(
+                "Saved effect '%s' skipped for guild %s: filtered-player ceiling full",
+                key,
+                guild_id,
+            )
+
+    async def _save_default_effect(self, guild_id: int, key: str) -> str:
+        """Save (or, for Off, clear) the server default effect; return a code.
+
+        Codes: ``saved`` / ``cleared`` / ``unknown_preset`` / ``not_premium``.
+        THE one seam behind the slash option, the panel button and the dashboard
+        action; callers own the who-may-do-it gate.
+        """
+        if effects.resolve_preset(key) is None:
+            return "unknown_preset"
+        if not resolve_guild_limits(self.bot, guild_id).music_saved_effects:
+            return "not_premium"
+        is_off = key == effects.OFF_KEY
+        await settings.set_guild(
+            self.bot.db_pool,
+            guild_id,
+            guild_config.KEY_DEFAULT_EFFECT,
+            None if is_off else key,
+        )
+        return "cleared" if is_off else "saved"
+
+    async def _request_default_effect(
+        self, player: Player, guild: discord.Guild, actor: typing.Any, key: str
+    ) -> typing.Tuple[str, typing.Any]:
+        """The member-facing save: manager gate, premium upsell, a line to show.
+
+        Returns ``(text, view_or_None)``; the view carries the upsell button.
+        """
+        if not await self._is_music_manager(player, actor):
+            return (
+                _(
+                    "Only members with Manage Server or the DJ role can save "
+                    "the server's default effect."
+                ),
+                None,
+            )
+        code = await self._save_default_effect(guild.id, key)
+        if code == "not_premium":
+            text = _("Saving a default effect is a Yasuho+ perk.")
+            upsell = await premium_upsell.for_guild_refusal(
+                self.bot,
+                limit_key="music_saved_effects",
+                guild_id=guild.id,
+                person_id=actor.id,
+                is_admin=premium_upsell.invoker_is_admin(actor),
+                already_top_tier=premium_upsell.is_guild_already_top_tier(
+                    self.bot, guild.id
+                ),
+                kind="unlock",
+            )
+            if upsell is None:
+                return text, None
+            return text + "\n" + upsell.line, upsell.view()
+        if code == "saved":
+            return _("Saved as this server's default effect."), None
+        if code == "cleared":
+            return _("The server's default effect was cleared."), None
+        return _("That effect isn't available."), None
+
     @music.command(name="filter")
     @commands.guild_only()
-    @app_commands.describe(preset="The audio effect to apply, or Off to clear.")
+    @app_commands.describe(
+        preset="The audio effect to apply, or Off to clear.",
+        save_as_default="Also save it as the server's default effect (Yasuho+).",
+    )
     @app_commands.choices(preset=EFFECT_CHOICES)
-    async def filter_command(self, ctx: commands.Context, *, preset: str) -> None:
+    async def filter_command(
+        self, ctx: commands.Context, *, preset: str, save_as_default: bool = False
+    ) -> None:
         """Apply an audio effect preset to the current playback (Off to clear)."""
+        if (
+            save_as_default
+            and ctx.interaction is not None
+            and not ctx.interaction.response.is_done()
+        ):
+            # The save adds a DB write: answer the 3 s clock first.
+            await ctx.defer(ephemeral=True)
         player = await self._require_player(ctx, control=True)
         if player is None:
             return
         message = await self._run_effect_change(
             player, ctx.guild.id, ctx.author, preset
         )
-        await ctx.send(message, ephemeral=True)
+        if not save_as_default:
+            await ctx.send(message, ephemeral=True)
+            return
+        saved, view = await self._request_default_effect(
+            player, ctx.guild, ctx.author, preset
+        )
+        kwargs = {"view": view} if view is not None else {}
+        await ctx.send(message + "\n" + saved, ephemeral=True, **kwargs)
 
     # ------------------------------------------------------------------
     # Lyrics

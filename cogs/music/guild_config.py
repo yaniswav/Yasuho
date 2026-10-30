@@ -73,6 +73,12 @@ KEY_DJ_ROLE = "music_dj_role"
 # Whether SponsorBlock segment skipping is armed on new players (bool, True).
 KEY_SPONSORBLOCK = "music_sponsorblock"
 
+# The server's saved default audio effect (preset key, Yasuho+). Deliberately NOT
+# in KEYS: the dashboard never writes it directly, only the bot does (slash,
+# panel button, or the music_default_effect_set action) because saving is gated
+# on Yasuho+ and on a known preset key.
+KEY_DEFAULT_EFFECT = "music_default_effect"
+
 # Every key this module owns; the dashboard writes these and nothing else under
 # the ``music_config`` kind.
 KEYS = frozenset(
@@ -286,3 +292,15 @@ async def sponsorblock_enabled(pool: typing.Any, guild_id: typing.Any) -> bool:
 async def dj_role_id(pool: typing.Any, guild_id: typing.Any):
     """The configured DJ role id, or ``None`` when the guild has none."""
     return coerce_role_id(await _read(pool, guild_id, KEY_DJ_ROLE))
+
+
+async def default_effect(pool: typing.Any, guild_id: typing.Any):
+    """The saved default effect preset key, or ``None`` when there is none.
+
+    Only the SHAPE is checked here (a non-empty string); whether the key still
+    names a catalog preset is decided by the effects seam when it is applied.
+    """
+    raw = await _read(pool, guild_id, KEY_DEFAULT_EFFECT)
+    if isinstance(raw, str) and raw.strip():
+        return raw.strip()
+    return None
