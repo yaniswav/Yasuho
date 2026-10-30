@@ -262,6 +262,11 @@ FREE_MAX_YOUTUBE_FOLLOWS = 3
 # and the CSV export of the per-ticket rows. Ratings themselves stay free.
 FREE_TICKET_STATS_DAYS = 30
 FREE_TICKET_STATS_EXPORT = False
+# Configuration transfer (cogs/config/config_transfer): exporting is free (it is the
+# server's own data), importing a file or applying a saved template is Yasuho+, and
+# so is saving templates (FREE 0). A lapse keeps every stored template.
+FREE_CONFIG_IMPORT = False
+FREE_MAX_CONFIG_TEMPLATES = 0
 
 FREE_MAX_FAVOURITES = 100  # cogs/music/music.MAX_FAVOURITES
 FREE_MAX_PENDING_REMINDERS = 25  # cogs/community/reminders.MAX_PENDING_REMINDERS
@@ -310,6 +315,7 @@ GUILD_CEILINGS = {
     "max_temp_roles": 500,
     "max_youtube_follows": 50,
     "ticket_stats_days": 365,
+    "max_config_templates": 25,
 }
 
 USER_CEILINGS = {
@@ -355,6 +361,8 @@ class GuildLimits:
     max_youtube_follows: int
     ticket_stats_days: int
     ticket_stats_export: bool
+    config_import: bool
+    max_config_templates: int
 
     def __post_init__(self):
         for name, ceiling in GUILD_CEILINGS.items():
@@ -413,6 +421,8 @@ GUILD_FREE = GuildLimits(
     max_youtube_follows=FREE_MAX_YOUTUBE_FOLLOWS,
     ticket_stats_days=FREE_TICKET_STATS_DAYS,
     ticket_stats_export=FREE_TICKET_STATS_EXPORT,
+    config_import=FREE_CONFIG_IMPORT,
+    max_config_templates=FREE_MAX_CONFIG_TEMPLATES,
 )
 
 # Yasuho+ (guild subscription). Values from the retained plan's table
@@ -450,6 +460,8 @@ GUILD_PREMIUM = GuildLimits(
     max_youtube_follows=25,
     ticket_stats_days=365,
     ticket_stats_export=True,
+    config_import=True,
+    max_config_templates=10,
 )
 
 USER_FREE = UserLimits(

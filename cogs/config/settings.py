@@ -3,6 +3,7 @@ import logging
 import discord
 from discord.ext import commands
 
+from cogs.config import config_transfer
 from tools import db, modchecks, settings
 from tools.formats import random_colour
 from tools.i18n import N_, _
@@ -566,10 +567,12 @@ class Settings(commands.Cog):
 
         return state
 
-    # A plain command, not a group: it has no subcommands, and a hybrid group
-    # without any is registered on Discord as a plain command, so every slash
-    # /config failed locally with CommandSignatureMismatch.
-    @commands.hybrid_command(name="config", aliases=["setup"])
+    # A group since lot V5d (export / import / templates). The panel is the
+    # FALLBACK: `?config` / `?setup` still open it, and on the slash surface it is
+    # `/config panel` (a hybrid group cannot also be invoked bare as a slash
+    # command). The group's checks do NOT run for its subcommands (see
+    # tests/test_hybrid_gating_hygiene.py), so every subcommand carries its own.
+    @commands.hybrid_group(name="config", aliases=["setup"], fallback="panel")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def config(self, ctx):
@@ -578,6 +581,61 @@ class Settings(commands.Cog):
         state = await self._config_state(ctx.guild)
         view = ConfigPanel(self, ctx.author.id, ctx.guild, state)
         view.message = await ctx.send(view=view)
+
+    @config.command(name="export")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @commands.cooldown(1, 30.0, commands.BucketType.guild)
+    async def config_export(self, ctx):
+        """Download this server's bot configuration as a file."""
+        await config_transfer.export_command(self.bot, ctx)
+
+    @config.command(name="import")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(file="A configuration file made by /config export.")
+    async def config_import(self, ctx, file: discord.Attachment):
+        """Load a configuration file into this server, with a preview (Yasuho+)."""
+        await config_transfer.import_command(self.bot, ctx, file)
+
+    @config.group(name="template")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def config_template(self, ctx):
+        """Save and apply configuration templates (Yasuho+)."""
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
+
+    @config_template.command(name="save")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(name="The template name (replaces a template of the same name).")
+    async def config_template_save(self, ctx, *, name: str):
+        """Save this server's configuration as a template (Yasuho+)."""
+        await config_transfer.template_save_command(self.bot, ctx, name)
+
+    @config_template.command(name="apply")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(name="The template to apply.")
+    async def config_template_apply(self, ctx, *, name: str):
+        """Apply a saved template, with a preview (Yasuho+)."""
+        await config_transfer.template_apply_command(self.bot, ctx, name)
+
+    @config_template.command(name="list")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def config_template_list(self, ctx):
+        """List this server's saved configuration templates."""
+        await config_transfer.template_list_command(self.bot, ctx)
+
+    @config_template.command(name="delete")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(name="The template to delete.")
+    async def config_template_delete(self, ctx, *, name: str):
+        """Delete a saved configuration template."""
+        await config_transfer.template_delete_command(self.bot, ctx, name)
 
 
 async def setup(bot: commands.Bot):

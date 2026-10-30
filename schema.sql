@@ -2428,3 +2428,17 @@ CREATE TABLE IF NOT EXISTS birthday_state (
 -- Per-guild timer lookups (event reminders, suggestion digest, birthdays) filter on
 -- extra->>'guild_id'; without this every write scans all rows of that event.
 CREATE INDEX IF NOT EXISTS timers_event_guild_idx ON timers (event, (extra->>'guild_id'));
+
+-- Saved configuration templates (lot V5d, /config template): a stored export of the
+-- server's own bot configuration (see cogs/config/config_transfer.py), applied back
+-- through the same preview/confirm import flow. Server configuration only (channel
+-- and role ids with their names), never per-user data or secrets. Count capped per
+-- guild by GuildLimits.max_config_templates under an advisory lock; purged with the
+-- guild by tools/retention.py; a lapsed Yasuho+ keeps them (apply is refused).
+CREATE TABLE IF NOT EXISTS config_templates (
+    guild_id   BIGINT      NOT NULL,
+    name       TEXT        NOT NULL CHECK (char_length(name) BETWEEN 1 AND 32),
+    payload    JSONB       NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (guild_id, name)
+);

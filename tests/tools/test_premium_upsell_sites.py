@@ -76,6 +76,9 @@ _ALLOWED_IMPORTERS = {
     "cogs/moderation/temprole.py",
     # V5e: the YouTube follow cap is Yasuho+.
     "cogs/config/youtube.py",
+    # V5d: configuration import / template apply and template save are Yasuho+,
+    # refused at the command and again at the confirm click.
+    "cogs/config/config_transfer.py",
 }
 
 

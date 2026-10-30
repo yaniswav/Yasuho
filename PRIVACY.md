@@ -17,7 +17,9 @@ question or request: **azellaxmc@gmail.com**.
 
 **Server configuration** (per server, controlled by server managers): prefixes,
 welcome/autorole/automod/starboard/leveling/music settings, custom commands and
-their responses, role menus. This data belongs to the server, not to a user.
+their responses, role menus, and the configuration templates a server saves
+(copies of these settings, including the channel and role IDs and names they
+point to). This data belongs to the server, not to a user.
 
 **Moderation records** (per server): warnings and moderation cases created by
 that server's moderators (user ID, moderator ID, reason, timestamp). These exist

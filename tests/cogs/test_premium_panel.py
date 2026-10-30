@@ -109,6 +109,8 @@ def _synthetic_guild_plus():
         max_youtube_follows=25,
         ticket_stats_days=365,
         ticket_stats_export=True,
+        config_import=True,
+        max_config_templates=10,
     )
 
 

@@ -294,6 +294,8 @@ EXCLUDED_GUILD_FIELDS = {
     "max_starboards": "boards live in a small per-guild table; LIMIT-REACHED is its measure",
     "ticket_stats_days": "a read window, not a count that can be refused; LIMIT-REACHED is its measure",
     "ticket_stats_export": "binary capability refused at the command; LIMIT-REACHED is its measure",
+    "config_import": "binary capability refused at the command and at the confirm click; LIMIT-REACHED is its measure",
+    "max_config_templates": "templates live in a small per-guild table and FREE is 0 (a capability gate); LIMIT-REACHED is its measure",
     "max_youtube_follows": "followed channels live in a small per-guild table; LIMIT-REACHED is its measure",
     "max_temp_roles": "short-lived rows swept at expiry, a point-in-time count says little; LIMIT-REACHED is its measure",
 }

@@ -246,6 +246,8 @@ def test_scheduled_announcement_limits_are_three_free_and_25_premium():
     assert (premium.GUILD_FREE.ticket_stats_days, premium.GUILD_PREMIUM.ticket_stats_days) == (30, 365)
     assert not premium.GUILD_FREE.ticket_stats_export
     assert premium.GUILD_PREMIUM.ticket_stats_export
+    assert (premium.GUILD_FREE.config_import, premium.GUILD_PREMIUM.config_import) == (False, True)
+    assert (premium.GUILD_FREE.max_config_templates, premium.GUILD_PREMIUM.max_config_templates) == (0, 10)
 
 
 def test_guild_free_dataclass_is_built_from_the_checked_constants():
@@ -282,6 +284,8 @@ def test_guild_free_dataclass_is_built_from_the_checked_constants():
         max_youtube_follows=premium.FREE_MAX_YOUTUBE_FOLLOWS,
         ticket_stats_days=premium.FREE_TICKET_STATS_DAYS,
         ticket_stats_export=premium.FREE_TICKET_STATS_EXPORT,
+        config_import=premium.FREE_CONFIG_IMPORT,
+        max_config_templates=premium.FREE_MAX_CONFIG_TEMPLATES,
     )
 
 
@@ -355,6 +359,8 @@ def test_guild_limits_clamps_a_value_over_its_ceiling():
         max_youtube_follows=3,
         ticket_stats_days=30,
         ticket_stats_export=False,
+        config_import=False,
+        max_config_templates=0,
     )
     assert limits.max_guild_playlists == premium.GUILD_CEILINGS["max_guild_playlists"]
 
