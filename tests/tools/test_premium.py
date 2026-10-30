@@ -248,6 +248,10 @@ def test_scheduled_announcement_limits_are_three_free_and_25_premium():
     assert premium.GUILD_PREMIUM.ticket_stats_export
     assert (premium.GUILD_FREE.config_import, premium.GUILD_PREMIUM.config_import) == (False, True)
     assert (premium.GUILD_FREE.max_config_templates, premium.GUILD_PREMIUM.max_config_templates) == (0, 10)
+    assert (premium.GUILD_FREE.max_airing_roles, premium.GUILD_PREMIUM.max_airing_roles) == (1, 100)
+    assert (premium.GUILD_FREE.max_watchalongs, premium.GUILD_PREMIUM.max_watchalongs) == (0, 5)
+    assert not premium.GUILD_FREE.anilist_feed_filters
+    assert premium.GUILD_PREMIUM.anilist_feed_filters
 
 
 def test_guild_free_dataclass_is_built_from_the_checked_constants():
@@ -286,6 +290,9 @@ def test_guild_free_dataclass_is_built_from_the_checked_constants():
         ticket_stats_export=premium.FREE_TICKET_STATS_EXPORT,
         config_import=premium.FREE_CONFIG_IMPORT,
         max_config_templates=premium.FREE_MAX_CONFIG_TEMPLATES,
+        max_airing_roles=premium.FREE_MAX_AIRING_ROLES,
+        anilist_feed_filters=premium.FREE_ANILIST_FEED_FILTERS,
+        max_watchalongs=premium.FREE_MAX_WATCHALONGS,
     )
 
 
@@ -361,6 +368,9 @@ def test_guild_limits_clamps_a_value_over_its_ceiling():
         ticket_stats_export=False,
         config_import=False,
         max_config_templates=0,
+        max_airing_roles=1,
+        anilist_feed_filters=False,
+        max_watchalongs=0,
     )
     assert limits.max_guild_playlists == premium.GUILD_CEILINGS["max_guild_playlists"]
 

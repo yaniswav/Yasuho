@@ -267,6 +267,12 @@ FREE_TICKET_STATS_EXPORT = False
 # so is saving templates (FREE 0). A lapse keeps every stored template.
 FREE_CONFIG_IMPORT = False
 FREE_MAX_CONFIG_TEMPLATES = 0
+# AniList anime extras (cogs/anilist): the role pinged on a followed title's
+# airing post (one mapping per server is free), per-feed activity filters and
+# watch-along threads (both Yasuho+ only). A lapse keeps every stored row.
+FREE_MAX_AIRING_ROLES = 1
+FREE_ANILIST_FEED_FILTERS = False
+FREE_MAX_WATCHALONGS = 0
 
 FREE_MAX_FAVOURITES = 100  # cogs/music/music.MAX_FAVOURITES
 FREE_MAX_PENDING_REMINDERS = 25  # cogs/community/reminders.MAX_PENDING_REMINDERS
@@ -316,6 +322,8 @@ GUILD_CEILINGS = {
     "max_youtube_follows": 50,
     "ticket_stats_days": 365,
     "max_config_templates": 25,
+    "max_airing_roles": 100,
+    "max_watchalongs": 25,
 }
 
 USER_CEILINGS = {
@@ -363,6 +371,9 @@ class GuildLimits:
     ticket_stats_export: bool
     config_import: bool
     max_config_templates: int
+    max_airing_roles: int
+    anilist_feed_filters: bool
+    max_watchalongs: int
 
     def __post_init__(self):
         for name, ceiling in GUILD_CEILINGS.items():
@@ -423,6 +434,9 @@ GUILD_FREE = GuildLimits(
     ticket_stats_export=FREE_TICKET_STATS_EXPORT,
     config_import=FREE_CONFIG_IMPORT,
     max_config_templates=FREE_MAX_CONFIG_TEMPLATES,
+    max_airing_roles=FREE_MAX_AIRING_ROLES,
+    anilist_feed_filters=FREE_ANILIST_FEED_FILTERS,
+    max_watchalongs=FREE_MAX_WATCHALONGS,
 )
 
 # Yasuho+ (guild subscription). Values from the retained plan's table
@@ -462,6 +476,9 @@ GUILD_PREMIUM = GuildLimits(
     ticket_stats_export=True,
     config_import=True,
     max_config_templates=10,
+    max_airing_roles=100,
+    anilist_feed_filters=True,
+    max_watchalongs=5,
 )
 
 USER_FREE = UserLimits(

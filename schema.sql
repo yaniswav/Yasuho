@@ -1105,6 +1105,38 @@ CREATE TABLE IF NOT EXISTS anilist_airing_state (
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- V4a anime extras (cogs/anilist/airing_roles.py, watchalong.py, feed_filters.py).
+-- Per-feed activity filters (Yasuho+): names from feed_policy.FEED_FILTERS, applied
+-- at delivery only (never a fetch or cursor filter). A lapsed server's stored
+-- filters are ignored, not deleted.
+ALTER TABLE anilist_feeds ADD COLUMN IF NOT EXISTS filters TEXT[] NOT NULL DEFAULT '{}';
+
+-- Role pinged on a title's airing post in this guild's feed channels. One row per
+-- (guild, title). Rows over the guild's current max_airing_roles are ARCHIVED
+-- lazily (oldest created_at kept, ties by media_id): stored, never pinged.
+CREATE TABLE IF NOT EXISTS anilist_airing_roles (
+    guild_id   BIGINT      NOT NULL,
+    media_id   INTEGER     NOT NULL,                       -- AniList media id
+    role_id    BIGINT      NOT NULL,
+    title      TEXT        NOT NULL,                       -- cached display title
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (guild_id, media_id)
+);
+
+-- Watch-along: a thread that gets "Episode N is out" on each airing of one title.
+-- One row per (guild, title). Rows over max_watchalongs are ARCHIVED lazily
+-- (oldest created_at kept, ties by media_id): stored, never posted to.
+CREATE TABLE IF NOT EXISTS anilist_watchalongs (
+    guild_id   BIGINT      NOT NULL,
+    media_id   INTEGER     NOT NULL,                       -- AniList media id
+    channel_id BIGINT      NOT NULL,                       -- parent text channel
+    thread_id  BIGINT      NOT NULL,
+    role_id    BIGINT,                                     -- optional ping role
+    title      TEXT        NOT NULL,                       -- cached display title
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (guild_id, media_id)
+);
+
 -- ============================================================
 -- MangaDex chapter alerts (tools/mangadex.py + cogs/anilist/chapters.py)
 -- ============================================================

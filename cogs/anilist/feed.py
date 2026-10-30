@@ -90,6 +90,7 @@ from discord.ext import commands, tasks
 # same object (``feed.Name is feed_x.Name``). Names the cog itself uses at
 # runtime carry no marker; the rest are pure re-exports flagged for the linter.
 from . import feed_coalesce as afc
+from . import feed_filters
 from . import feed_policy as af
 from .breaker import (
     CircuitOpen,
@@ -734,8 +735,8 @@ class AniListFeed(NoPingReplies, commands.Cog):
         """
 
         rows = await self.bot.db_pool.fetch(
-            "SELECT guild_id, channel_id, types, fail_count, enabled, created_at "
-            "FROM anilist_feeds;"
+            "SELECT guild_id, channel_id, types, filters, fail_count, enabled, "
+            "created_at FROM anilist_feeds;"
         )
         if not rows:
             return []
@@ -1089,6 +1090,12 @@ class AniListFeed(NoPingReplies, commands.Cog):
                 {
                     "channel_id": feed["channel_id"],
                     "types": set(feed["types"] or ()),
+                    # Yasuho+ only; a lapsed guild's stored filters are ignored.
+                    "filters": (
+                        set(feed.get("filters") or ())
+                        if self._guild_limits(feed["guild_id"]).anilist_feed_filters
+                        else ()
+                    ),
                     "followed_ids": ids,
                     "muted_ids": mutes_by_channel.get(key) or (),
                     "allow_adult": self._allow_adult(feed["channel_id"]),
@@ -2853,6 +2860,36 @@ class AniListFeed(NoPingReplies, commands.Cog):
                 "nothing of yours is posted there until they unhide it."
             )
         await ctx.send(message)
+
+    @anilistfeed.command(name="filter")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @discord.app_commands.describe(
+        completed_only="Only post completed titles.",
+        hide_planning="Skip plans to watch or read.",
+        hide_progress="Skip episode and chapter progress updates.",
+        hide_dropped="Skip dropped and paused titles.",
+    )
+    async def anilistfeed_filter(
+        self,
+        ctx: commands.Context,
+        completed_only: typing.Optional[bool] = None,
+        hide_planning: typing.Optional[bool] = None,
+        hide_progress: typing.Optional[bool] = None,
+        hide_dropped: typing.Optional[bool] = None,
+    ):
+        """Show or change which list activities this feed posts (Yasuho+)."""
+
+        await feed_filters.run_filter_command(
+            self,
+            ctx,
+            {
+                "completed_only": completed_only,
+                "hide_planning": hide_planning,
+                "hide_progress": hide_progress,
+                "hide_dropped": hide_dropped,
+            },
+        )
 
     @anilistfeed.command(name="list")
     @commands.guild_only()

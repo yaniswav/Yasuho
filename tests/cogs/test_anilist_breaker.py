@@ -610,6 +610,10 @@ def _airing_tick_cog(session, clock):
         db.append("channel_subs")
         return []
 
+    async def _load_watchalongs():
+        db.append("watchalongs")
+        return []
+
     async def _load_cursor():
         db.append("cursor")
         return 1_700_000_000
@@ -622,6 +626,7 @@ def _airing_tick_cog(session, clock):
 
     cog._load_optins = _load_optins
     cog._load_channel_subs = _load_channel_subs
+    cog._load_watchalongs = _load_watchalongs
     cog._load_cursor = _load_cursor
     cog._save_cursor = _save_cursor
     cog._space = _no_space

@@ -97,6 +97,39 @@ def sub_cap_exceeded(current_count, already_subscribed, limit=MAX_SUBS_PER_FEED)
 ALLOWED_TYPES = ("ANIME_LIST", "MANGA_LIST", "TEXT")
 DEFAULT_TYPES = ALLOWED_TYPES  # a fresh feed follows every allowed type
 
+# Per-feed delivery filters (Yasuho+). They look only at the ListActivity ``status``
+# the poller already fetched, so they cost no request; text activities are governed
+# by ``types`` alone. Order here is the stored and displayed order.
+FEED_FILTERS = ("completed_only", "hide_planning", "hide_progress", "hide_dropped")
+_PLANNING_STATUSES = frozenset({"plans to watch", "plans to read"})
+_PROGRESS_STATUSES = frozenset(
+    {"watched episode", "rewatched episode", "read chapter", "reread chapter"}
+)
+_DROPPED_STATUSES = frozenset({"dropped", "paused watching", "paused reading"})
+
+
+def passes_filters(activity, filters):
+    """Whether a feed with ``filters`` should post ``activity``.
+
+    Only list activities are filtered (``ANIME_LIST`` / ``MANGA_LIST``); an
+    unknown filter name is ignored and an unknown status passes every filter but
+    ``completed_only``. Pure and total.
+    """
+
+    if not filters or activity.get("type") not in ("ANIME_LIST", "MANGA_LIST"):
+        return True
+    status = str(activity.get("status") or "").strip().lower()
+    if "completed_only" in filters and status != "completed":
+        return False
+    if "hide_planning" in filters and status in _PLANNING_STATUSES:
+        return False
+    if "hide_progress" in filters and status in _PROGRESS_STATUSES:
+        return False
+    if "hide_dropped" in filters and status in _DROPPED_STATUSES:
+        return False
+    return True
+
+
 # Embed body cap for a text activity. Well under Discord's 4096 description
 # limit, leaving room for the spoiler-safe truncation suffix.
 TEXT_LIMIT = 2048
@@ -267,7 +300,8 @@ def route_activities(activities, feeds):
     the cog passes ``channel.is_nsfw()``). An activity reaches a feed when the
     feed follows its user, that user is not muted FOR THIS FEED, and the
     activity's type is in the feed's types; adult activities are dropped unless
-    the feed allows them.
+    the feed allows them; and the feed's optional ``filters`` (see
+    :func:`passes_filters`; the cog passes them only for a Yasuho+ guild) accept it.
 
     Muting is a DELIVERY-ONLY filter and it lives here, at the very end of the
     pipeline, on purpose. The poller fetches a muted user exactly as before (the
@@ -288,6 +322,7 @@ def route_activities(activities, feeds):
         muted = set(feed.get("muted_ids") or ())
         types = set(feed.get("types") or ())
         allow_adult = bool(feed.get("allow_adult"))
+        filters = set(feed.get("filters") or ())
         bucket = routed.setdefault(channel_id, [])
         for activity in activities:
             if activity.get("user_id") not in followed:
@@ -297,6 +332,8 @@ def route_activities(activities, feeds):
             if activity.get("type") not in types:
                 continue
             if blocks_adult(activity.get("is_adult"), allow_adult):
+                continue
+            if not passes_filters(activity, filters):
                 continue
             bucket.append(activity)
     return {

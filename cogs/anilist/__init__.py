@@ -4,6 +4,7 @@ from discord.ext import commands
 
 from .account import AccountMixin
 from .airing import AiringMixin, AniListAiring
+from .airing_roles import AiringRolesMixin
 from .base import AniListBase
 from .chapters import AniListChapters, ChaptersMixin
 from .collection import CollectionMixin
@@ -12,6 +13,7 @@ from .hub import HubMixin
 from .lookup import LookupMixin
 from .replies import NoPingReplies
 from .schedule import ScheduleMixin
+from .watchalong import WatchalongMixin
 
 log = logging.getLogger(__name__)
 
@@ -20,6 +22,8 @@ class AniList(
     LookupMixin,
     AccountMixin,
     AiringMixin,
+    AiringRolesMixin,
+    WatchalongMixin,
     ScheduleMixin,
     ChaptersMixin,
     HubMixin,

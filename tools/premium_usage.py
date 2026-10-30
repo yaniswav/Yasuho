@@ -296,6 +296,9 @@ EXCLUDED_GUILD_FIELDS = {
     "ticket_stats_export": "binary capability refused at the command; LIMIT-REACHED is its measure",
     "config_import": "binary capability refused at the command and at the confirm click; LIMIT-REACHED is its measure",
     "max_config_templates": "templates live in a small per-guild table and FREE is 0 (a capability gate); LIMIT-REACHED is its measure",
+    "max_airing_roles": "role mappings live in a small per-guild table; LIMIT-REACHED is its measure",
+    "anilist_feed_filters": "binary capability refused at the command; a lapsed server's filters are ignored at delivery; LIMIT-REACHED is its measure",
+    "max_watchalongs": "FREE is 0 (a capability gate, no 80%-of-free reading); LIMIT-REACHED is its measure",
     "max_youtube_follows": "followed channels live in a small per-guild table; LIMIT-REACHED is its measure",
     "max_temp_roles": "short-lived rows swept at expiry, a point-in-time count says little; LIMIT-REACHED is its measure",
 }

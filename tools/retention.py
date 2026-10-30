@@ -94,6 +94,8 @@ GUILD_DELETE_QUERIES = (
     ("temp_roles", "DELETE FROM temp_roles WHERE guild_id = $1"),
     ("youtube_follows", "DELETE FROM youtube_follows WHERE guild_id = $1"),
     ("config_templates", "DELETE FROM config_templates WHERE guild_id = $1"),
+    ("anilist_airing_roles", "DELETE FROM anilist_airing_roles WHERE guild_id = $1"),
+    ("anilist_watchalongs", "DELETE FROM anilist_watchalongs WHERE guild_id = $1"),
     ("room_prefs", "DELETE FROM room_prefs WHERE guild_id = $1"),
     ("room_prefs_off", "DELETE FROM room_prefs_off WHERE guild_id = $1"),
     ("starboard", "DELETE FROM starboard WHERE guild_id = $1"),
@@ -270,6 +272,8 @@ UNION SELECT guild_id FROM starboard_entries
 UNION SELECT guild_id FROM temp_roles
 UNION SELECT guild_id FROM youtube_follows
 UNION SELECT guild_id FROM config_templates
+UNION SELECT guild_id FROM anilist_airing_roles
+UNION SELECT guild_id FROM anilist_watchalongs
 UNION SELECT guild_id FROM room_prefs
 UNION SELECT guild_id FROM room_prefs_off
 UNION SELECT guild_id FROM welcome

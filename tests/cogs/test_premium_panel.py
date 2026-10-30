@@ -111,6 +111,9 @@ def _synthetic_guild_plus():
         ticket_stats_export=True,
         config_import=True,
         max_config_templates=10,
+        max_airing_roles=100,
+        anilist_feed_filters=True,
+        max_watchalongs=5,
     )
 
 

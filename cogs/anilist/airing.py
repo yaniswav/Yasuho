@@ -39,7 +39,14 @@ import discord
 from discord.ext import commands, tasks
 
 from . import feed_policy as af
+from . import watchalong
 from .account import AccountMixin
+from .airing_roles import (
+    load_roles_for_guilds,
+    ping_mentions,
+    role_pingable_by_bot,
+    usable_roles,
+)
 from .breaker import (
     CircuitOpen,
     breaker_for,
@@ -432,16 +439,25 @@ class AiringCard(LocaleLayoutView):
     partial row dict never breaks delivery of the batch.
     """
 
-    def __init__(self, row, *, timeout=None):
+    def __init__(self, row, *, timeout=None, ping_role_id=None):
         super().__init__(timeout=timeout)
+        # A V2 message cannot carry ``content``, so the role mention is a leading
+        # TextDisplay; the sender's allowed_mentions decides whether it pings.
+        self._ping = "<@&{}>".format(int(ping_role_id)) if ping_role_id else None
+        self._add_ping()
         try:
             self._build(row)
         except Exception:  # a card must never break the DM fan-out
             log.exception("AniList airing: failed to build a card")
             self._fallback()
 
+    def _add_ping(self):
+        if self._ping:
+            self.add_item(discord.ui.TextDisplay(self._ping))
+
     def _fallback(self):
         self.clear_items()
+        self._add_ping()
         container = discord.ui.Container(accent_colour=CARD_ACCENT)
         container.add_item(discord.ui.TextDisplay(_("A new episode just aired.")))
         self.add_item(container)
@@ -979,6 +995,13 @@ class AniListAiring(NoPingReplies, commands.Cog):
         )
         return filter_active_channel_subs(self.bot, rows)
 
+    async def _load_watchalongs(self):
+        """Watch-alongs under each guild's current limit (the rest are archived)."""
+
+        return watchalong.active_watchalongs(
+            self.bot, await watchalong.load_watchalongs(self.bot.db_pool)
+        )
+
     async def _load_cursor(self):
         row = await self.bot.db_pool.fetchrow(
             "SELECT last_airing_at FROM anilist_airing_state WHERE id = 1;"
@@ -1039,7 +1062,9 @@ class AniListAiring(NoPingReplies, commands.Cog):
 
         optins = await self._load_optins()
         channel_subs = await self._load_channel_subs()
-        if not optins and not channel_subs:
+        # V4a: watch-along titles ride this same poll (no poller of their own).
+        watchalongs = await self._load_watchalongs()
+        if not optins and not channel_subs and not watchalongs:
             return  # nobody tracked -> no API call
 
         cursor = await self._load_cursor()
@@ -1120,6 +1145,8 @@ class AniListAiring(NoPingReplies, commands.Cog):
             key = (row["guild_id"], row["channel_id"])
             channel_media.setdefault(key, set()).add(row["media_id"])
             union.add(row["media_id"])
+        # A watch-along title joins the union BEFORE the fetch, like a sub (C4).
+        union.update(wa["media_id"] for wa in watchalongs)
 
         if not union:
             return  # nothing tracked yet -> no schedules call
@@ -1155,8 +1182,14 @@ class AniListAiring(NoPingReplies, commands.Cog):
         if plan:
             await self._deliver(plan, rows_by_key)
         channel_posts = plan_airing_channel_posts(aired, channel_media)
+        # A role is pinged at most once per tick per (guild, title, role), across the
+        # guild's channel posts and its watch-along: the first post pings.
+        pinged = set()
         if channel_posts:
-            await self._deliver_channel_posts(channel_posts, rows_by_key)
+            await self._deliver_channel_posts(channel_posts, rows_by_key, pinged)
+        wa_posts = watchalong.plan_watchalong_posts(aired, watchalongs)
+        for wa, wa_row in wa_posts:
+            await watchalong.deliver_watchalong(self.bot, wa, wa_row, pinged)
 
         # The cursor advances regardless of delivery outcome (a closed DM disables
         # the user, it does not re-queue the episode), so a stuck DM can never
@@ -1177,6 +1210,7 @@ class AniListAiring(NoPingReplies, commands.Cog):
                     "aired_rows": len(aired),
                     "dm_notifications": len(plan),
                     "channel_posts": len(channel_posts),
+                    "watchalong_posts": len(wa_posts),
                     "cursor_advanced": new_cursor != cursor,
                 },
             )
@@ -1190,14 +1224,32 @@ class AniListAiring(NoPingReplies, commands.Cog):
                 continue
             await self._deliver_one(user_id, row)
 
-    async def _deliver_channel_posts(self, channel_posts, rows_by_key):
-        """Post each planned channel card. Never raises (each post is guarded)."""
+    async def _deliver_channel_posts(self, channel_posts, rows_by_key, pinged=None):
+        """Post each planned channel card. Never raises (each post is guarded).
 
-        for _guild_id, channel_id, media_id, episode in channel_posts:
+        One query (per tick that has posts) reads the ping-role mappings of the
+        guilds being posted in; a failure of it only means no pings this tick.
+        """
+
+        try:
+            role_rows = await load_roles_for_guilds(
+                self.bot.db_pool, {p[0] for p in channel_posts}
+            )
+            roles = usable_roles(self.bot, role_rows)
+        except Exception:
+            log.exception("AniList airing: could not read the ping roles")
+            roles = {}
+        for guild_id, channel_id, media_id, episode in channel_posts:
             row = rows_by_key.get((media_id, episode))
             if row is None:
                 continue
-            await self._deliver_channel(channel_id, row)
+            role_id = roles.get((guild_id, media_id))
+            if pinged is not None and (guild_id, media_id, role_id) in pinged:
+                role_id = None
+            if await self._deliver_channel(channel_id, row, role_id=role_id) and (
+                pinged is not None
+            ):
+                pinged.add((guild_id, media_id, role_id))
 
     async def _deliver_one(self, user_id, row):
         """DM one user one airing card, disabling them on a closed-DM Forbidden."""
@@ -1228,12 +1280,31 @@ class AniListAiring(NoPingReplies, commands.Cog):
         except Exception:
             log.exception("AniList airing: unexpected error DMing user %s", user_id)
 
-    async def _deliver_channel(self, channel_id, row):
+    @staticmethod
+    def _ping_role(channel, role_id):
+        """The role to mention, or None. Never raises: a missing member or guild
+        costs the ping, never the post (and so never the cursor save)."""
+
+        try:
+            guild = getattr(channel, "guild", None)
+            role = guild.get_role(role_id) if guild is not None and role_id else None
+            if role is not None and role_pingable_by_bot(
+                role, channel.permissions_for(guild.me).mention_everyone
+            ):
+                return role
+        except Exception:
+            log.exception("AniList airing: could not resolve the ping role")
+        return None
+
+    async def _deliver_channel(self, channel_id, row, role_id=None):
         """Post one airing card once in a feed channel (guarded; never raises).
 
         The card is the same :class:`AiringCard` the DM path sends; its Seen button
         is per-clicker (it writes the CLICKER's own progress at click time), so it is
-        safe to post publicly. Rendered in the guild's locale.
+        safe to post publicly. Rendered in the guild's locale. ``role_id`` is the
+        server's ping role for this title (V4a): mentioned, and ONLY it allowed to
+        ping, when the role still exists and the bot can make it ping. Returns True
+        when the post went out pinging that role, else False/None.
         """
 
         channel = self.bot.get_channel(channel_id)
@@ -1246,12 +1317,18 @@ class AniListAiring(NoPingReplies, commands.Cog):
         loc = await i18n.resolve_guild_locale(
             self.bot, getattr(channel, "guild", None)
         )
+        role = self._ping_role(channel, role_id)
         try:
             with i18n.locale(loc):
                 await channel.send(
-                    view=AiringCard(row),
-                    allowed_mentions=discord.AllowedMentions.none(),
+                    view=AiringCard(row, ping_role_id=role.id if role else None),
+                    allowed_mentions=(
+                        ping_mentions(role)
+                        if role is not None
+                        else discord.AllowedMentions.none()
+                    ),
                 )
+            return role is not None  # True = this post pinged its role
         except (discord.Forbidden, discord.NotFound):
             log.warning(
                 "AniList airing: delivery to channel %s failed (forbidden/gone)",
