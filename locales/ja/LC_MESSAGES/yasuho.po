@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-30 14:32+0000\n"
+"POT-Creation-Date: 2026-10-30 14:45+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -1226,7 +1226,7 @@ msgstr "削除"
 #: cogs/anilist/feed_views.py:1065 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
 #: cogs/community/usersettings.py:246 cogs/community/usersettings.py:361
-#: cogs/config/config_transfer.py:886 cogs/config/tickets/lifecycle.py:280
+#: cogs/config/config_transfer.py:888 cogs/config/tickets/lifecycle.py:280
 #: cogs/music/playlists_shared.py:399 cogs/system/arg_completion.py:286
 msgid "Cancel"
 msgstr "キャンセル"
@@ -1884,7 +1884,7 @@ msgstr "例: 10m、明日18時、または <t:...> タグ"
 #: cogs/config/milestones.py:262 cogs/config/reactionroles.py:226
 #: cogs/config/reactionroles.py:342 cogs/config/twitch.py:36
 #: cogs/config/twitch.py:458 cogs/config/welcome.py:952
-#: cogs/config/youtube.py:460
+#: cogs/config/youtube.py:466
 msgid "Message"
 msgstr "メッセージ"
 
@@ -2444,7 +2444,7 @@ msgstr "カスタマイズ"
 msgid "You need the Manage Server permission for this."
 msgstr "これにはサーバー管理権限が必要です。"
 
-#: cogs/community/birthdays/panel.py:164 cogs/config/config_transfer.py:363
+#: cogs/community/birthdays/panel.py:164 cogs/config/config_transfer.py:365
 msgid "Birthdays"
 msgstr "誕生日"
 
@@ -2496,11 +2496,15 @@ msgstr "そのチャンネルにはメッセージを送信できません。先
 msgid "I can't give that role. It must be below my highest role, not managed by an integration, without powerful permissions, and I need Manage Roles."
 msgstr "そのロールは付与できません。私の最上位ロールより下にあり、連携機能で管理されておらず、強力な権限を持っていない必要があります。また、ロールの管理権限も必要です。"
 
-#: cogs/community/birthdays/panel.py:238
+#: cogs/community/birthdays/panel.py:235
+msgid "You need Manage Roles, and that role must be below your highest role, to make it the birthday role."
+msgstr "誕生日ロールに設定するには、「ロールの管理」の権限が必要です。また、そのロールはあなたの最も高いロールより下に配置されている必要があります。"
+
+#: cogs/community/birthdays/panel.py:246
 msgid "Pick a birthday channel first."
 msgstr "先に誕生日チャンネルを選んでください。"
 
-#: cogs/community/birthdays/panel.py:263
+#: cogs/community/birthdays/panel.py:271
 msgid "A custom birthday message is a Yasuho+ feature."
 msgstr "カスタムの誕生日メッセージは Yasuho+ の機能です。"
 
@@ -4629,7 +4633,7 @@ msgid "Ping"
 msgstr "メンション"
 
 #: cogs/config/announcements.py:321 cogs/config/customcommands.py:34
-#: cogs/config/youtube.py:453 cogs/moderation/automod_panel.py:322
+#: cogs/config/youtube.py:459 cogs/moderation/automod_panel.py:322
 #: cogs/moderation/automod_panel.py:324 tools/forumsolved.py:188
 msgid "None"
 msgstr "なし"
@@ -4876,7 +4880,7 @@ msgstr "パネルの投稿中に問題が発生しました。"
 msgid "Your button-role panel is live in {channel}."
 msgstr "あなたのボタンロールパネルが {channel} で公開されました。"
 
-#: cogs/config/buttonroles.py:697 cogs/config/youtube.py:457
+#: cogs/config/buttonroles.py:697 cogs/config/youtube.py:463
 #: cogs/moderation/moderation.py:772
 msgid "Skipped"
 msgstr "スキップしました"
@@ -4962,194 +4966,194 @@ msgstr "ボタンロールパネルを削除しました"
 msgid "Removed `{count}` role button(s) for message `{mid}`."
 msgstr "メッセージ `{mid}` の `{count}` 個のロールボタンを削除しました。"
 
-#: cogs/config/config_transfer.py:312
+#: cogs/config/config_transfer.py:314
 msgid "Language"
 msgstr "言語"
 
-#: cogs/config/config_transfer.py:315 cogs/config/settings.py:126
+#: cogs/config/config_transfer.py:317 cogs/config/settings.py:126
 #: cogs/config/settings.py:231
 msgid "Welcome"
 msgstr "ウェルカム"
 
-#: cogs/config/config_transfer.py:331
+#: cogs/config/config_transfer.py:333
 msgid "Tickets"
 msgstr "チケット"
 
-#: cogs/config/config_transfer.py:342
+#: cogs/config/config_transfer.py:344
 msgid "Music"
 msgstr "音楽"
 
-#: cogs/config/config_transfer.py:354 cogs/config/milestones.py:239
+#: cogs/config/config_transfer.py:356 cogs/config/milestones.py:239
 msgid "Member milestones"
 msgstr "メンバー数マイルストーン"
 
-#: cogs/config/config_transfer.py:375
+#: cogs/config/config_transfer.py:377
 msgid "Suggestions"
 msgstr "提案"
 
-#: cogs/config/config_transfer.py:384 cogs/config/event_reminders.py:252
+#: cogs/config/config_transfer.py:386 cogs/config/event_reminders.py:252
 msgid "Event reminders"
 msgstr "イベントリマインダー"
 
-#: cogs/config/config_transfer.py:395 cogs/config/youtube.py:450
+#: cogs/config/config_transfer.py:397 cogs/config/youtube.py:456
 msgid "YouTube alerts"
 msgstr "YouTube通知"
 
-#: cogs/config/config_transfer.py:403
+#: cogs/config/config_transfer.py:405
 msgid "Server statistics"
 msgstr "サーバー統計"
 
-#: cogs/config/config_transfer.py:720
+#: cogs/config/config_transfer.py:722
 #, python-brace-format
 msgid "{field}: {name} -> {target} (matched by name)"
 msgstr "{field}: {name} -> {target}（名前で一致）"
 
-#: cogs/config/config_transfer.py:724
+#: cogs/config/config_transfer.py:726
 #, python-brace-format
 msgid "{field}: {target} dropped, it has powerful permissions"
 msgstr "{field}: {target}を破棄しました。強力な権限を持っています"
 
-#: cogs/config/config_transfer.py:728
+#: cogs/config/config_transfer.py:730
 #, python-brace-format
 msgid "{field}: {target} dropped, it can't be used for this"
 msgstr "{field}: {target}を破棄しました。これには使えません"
 
-#: cogs/config/config_transfer.py:732
+#: cogs/config/config_transfer.py:734
 #, python-brace-format
 msgid "{field}: {name} dropped, it is not the right kind here"
 msgstr "{field}: {name}を破棄しました。ここでは種類が合いません"
 
-#: cogs/config/config_transfer.py:735
+#: cogs/config/config_transfer.py:737
 #, python-brace-format
 msgid "{field}: {name} dropped, nothing with that name here"
 msgstr "{field}: {name}を破棄しました。ここにはその名前のものがありません"
 
-#: cogs/config/config_transfer.py:748
+#: cogs/config/config_transfer.py:750
 #, python-brace-format
 msgid "**{section}**: no change"
 msgstr "**{section}**: 変更はありません"
 
-#: cogs/config/config_transfer.py:752
+#: cogs/config/config_transfer.py:754
 #, python-brace-format
 msgid "**{section}**: skipped, I need {permissions} in {channel}"
 msgstr "**{section}**: スキップしました。私には{channel}で{permissions}が必要です"
 
-#: cogs/config/config_transfer.py:757
+#: cogs/config/config_transfer.py:759
 #, python-brace-format
 msgid "**{section}**: skipped, you need {permissions} in {channel}"
 msgstr "**{section}**: スキップしました。あなたには{channel}で{permissions}が必要です"
 
-#: cogs/config/config_transfer.py:762
+#: cogs/config/config_transfer.py:764
 #, python-brace-format
 msgid "**{section}**: will be updated ({keys})"
 msgstr "**{section}**: 更新されます ({keys})"
 
-#: cogs/config/config_transfer.py:830
+#: cogs/config/config_transfer.py:832
 #, python-brace-format
 msgid "**{section}**: applied"
 msgstr "**{section}**: 適用しました"
 
-#: cogs/config/config_transfer.py:832
+#: cogs/config/config_transfer.py:834
 #, python-brace-format
 msgid "**{section}**: failed, try again later"
 msgstr "**{section}**: 失敗しました。後でもう一度お試しください"
 
-#: cogs/config/config_transfer.py:841
+#: cogs/config/config_transfer.py:843
 #, python-brace-format
 msgid "That file is too large (the limit is {kb} KB)."
 msgstr "このファイルは大きすぎます（上限は{kb} KBです）。"
 
-#: cogs/config/config_transfer.py:843
+#: cogs/config/config_transfer.py:845
 msgid "That export comes from a version of Yasuho this one can't read."
 msgstr "このエクスポートは、私が読み込めないバージョンのYasuhoから作られています。"
 
-#: cogs/config/config_transfer.py:844
+#: cogs/config/config_transfer.py:846
 msgid "That file is not a Yasuho configuration export."
 msgstr "このファイルはYasuhoの設定エクスポートではありません。"
 
-#: cogs/config/config_transfer.py:866 cogs/config/config_transfer.py:933
+#: cogs/config/config_transfer.py:868 cogs/config/config_transfer.py:935
 msgid "Configuration import and templates are a Yasuho+ feature."
 msgstr "設定のインポートとテンプレートはYasuho+の機能です。"
 
-#: cogs/config/config_transfer.py:885
+#: cogs/config/config_transfer.py:887
 msgid "Apply"
 msgstr "適用"
 
-#: cogs/config/config_transfer.py:902
+#: cogs/config/config_transfer.py:904
 msgid "You need the Manage Server permission to do that."
 msgstr "その操作にはサーバー管理の権限が必要です。"
 
-#: cogs/config/config_transfer.py:911
+#: cogs/config/config_transfer.py:913
 msgid "Import finished"
 msgstr "インポートが完了しました"
 
-#: cogs/config/config_transfer.py:920
+#: cogs/config/config_transfer.py:922
 msgid "Import cancelled. Nothing was changed."
 msgstr "インポートをキャンセルしました。何も変更していません。"
 
-#: cogs/config/config_transfer.py:950
+#: cogs/config/config_transfer.py:952
 msgid "This configuration matches the current one: there is nothing to import."
 msgstr "この設定は現在の設定と同じです。インポートするものはありません。"
 
-#: cogs/config/config_transfer.py:954
+#: cogs/config/config_transfer.py:956
 msgid "Import preview"
 msgstr "インポートのプレビュー"
 
-#: cogs/config/config_transfer.py:957
+#: cogs/config/config_transfer.py:959
 msgid "Nothing is saved until you press Apply."
 msgstr "「適用」を押すまで何も保存されません。"
 
-#: cogs/config/config_transfer.py:969
+#: cogs/config/config_transfer.py:971
 msgid "Please use the slash command for this, so the answer stays private."
 msgstr "回答を非公開にするため、この操作はスラッシュコマンドを使ってください。"
 
-#: cogs/config/config_transfer.py:979
+#: cogs/config/config_transfer.py:981
 msgid "Here is this server's configuration. Load it with `/config import`."
 msgstr "このサーバーの設定です。`/config import`で読み込めます。"
 
-#: cogs/config/config_transfer.py:992 cogs/config/config_transfer.py:1097
+#: cogs/config/config_transfer.py:994 cogs/config/config_transfer.py:1099
 msgid "Please wait a moment before importing a configuration again."
 msgstr "設定を再度インポートする前に、少しお待ちください。"
 
-#: cogs/config/config_transfer.py:1066
+#: cogs/config/config_transfer.py:1068
 #, python-brace-format
 msgid "A template name is 1 to {n} characters."
 msgstr "テンプレート名は1から{n}文字で入力してください。"
 
-#: cogs/config/config_transfer.py:1076
+#: cogs/config/config_transfer.py:1078
 #, python-brace-format
 msgid "This server already has {n} template. Delete one first."
 msgid_plural "This server already has {n} templates. Delete one first."
 msgstr[0] "このサーバーにはすでに{n}個のテンプレートがあります。先に1つ削除してください。"
 
-#: cogs/config/config_transfer.py:1083
+#: cogs/config/config_transfer.py:1085
 #, python-brace-format
 msgid "Replaced the template **{name}**."
 msgstr "テンプレート**{name}**を置き換えました。"
 
-#: cogs/config/config_transfer.py:1085
+#: cogs/config/config_transfer.py:1087
 #, python-brace-format
 msgid "Saved the template **{name}**."
 msgstr "テンプレート**{name}**を保存しました。"
 
-#: cogs/config/config_transfer.py:1104 cogs/config/config_transfer.py:1142
+#: cogs/config/config_transfer.py:1106 cogs/config/config_transfer.py:1144
 #, python-brace-format
 msgid "No template is called **{name}**."
 msgstr "**{name}**という名前のテンプレートはありません。"
 
-#: cogs/config/config_transfer.py:1114
+#: cogs/config/config_transfer.py:1116
 msgid "That template can no longer be read. Delete it and save it again."
 msgstr "このテンプレートはもう読み込めません。削除してから保存し直してください。"
 
-#: cogs/config/config_transfer.py:1125
+#: cogs/config/config_transfer.py:1127
 msgid "This server has no configuration templates yet. Save one with `/config template save`."
 msgstr "このサーバーにはまだ設定テンプレートがありません。`/config template save`で保存できます。"
 
-#: cogs/config/config_transfer.py:1132
+#: cogs/config/config_transfer.py:1134
 msgid "Configuration templates"
 msgstr "設定テンプレート"
 
-#: cogs/config/config_transfer.py:1141
+#: cogs/config/config_transfer.py:1143
 #, python-brace-format
 msgid "Deleted the template **{name}**."
 msgstr "テンプレート**{name}**を削除しました。"
@@ -5406,7 +5410,7 @@ msgstr[0] "{count}個のボタン"
 msgid "Selected: {name}"
 msgstr "選択中: {name}"
 
-#: cogs/config/customcommands.py:710 cogs/config/youtube.py:464
+#: cogs/config/customcommands.py:710 cogs/config/youtube.py:470
 #, python-brace-format
 msgid "Placeholders: {placeholders}"
 msgstr "プレースホルダー: {placeholders}"
@@ -5483,7 +5487,7 @@ msgstr "メンションするロール"
 msgid "Yasuho+ unlocks the reminder times and a role ping."
 msgstr "Yasuho+ ではリマインドのタイミングとロールのメンションを設定できます。"
 
-#: cogs/config/event_reminders.py:322
+#: cogs/config/event_reminders.py:322 cogs/config/youtube.py:445
 msgid "You can't ping that role."
 msgstr "そのロールはメンションできません。"
 
@@ -7013,19 +7017,19 @@ msgstr "フォロー中のYouTubeチャンネル"
 msgid "I will not ping everyone."
 msgstr "全員にはメンションしません。"
 
-#: cogs/config/youtube.py:452
+#: cogs/config/youtube.py:458
 msgid "Ping role"
 msgstr "メンションするロール"
 
-#: cogs/config/youtube.py:457
+#: cogs/config/youtube.py:463
 msgid "Shorts"
 msgstr "Shorts"
 
-#: cogs/config/youtube.py:457
+#: cogs/config/youtube.py:463
 msgid "Posted"
 msgstr "投稿済み"
 
-#: cogs/config/youtube.py:461
+#: cogs/config/youtube.py:467
 msgid "Default"
 msgstr "既定"
 

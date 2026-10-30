@@ -79,13 +79,17 @@ class Role:
     def is_default(self):
         return self._default
 
+    def __ge__(self, other):  # discord.Role orders by position
+        return self.position >= other.position
+
 
 def member(uid=7, *, manage_guild=True, mention_everyone=False, manage_roles=True, top=50, me=False):
     return types.SimpleNamespace(
         id=uid,
         is_me=me,
         guild_permissions=types.SimpleNamespace(
-            manage_guild=manage_guild, mention_everyone=mention_everyone, manage_roles=manage_roles
+            manage_guild=manage_guild, mention_everyone=mention_everyone, manage_roles=manage_roles,
+            administrator=False,
         ),
         top_role=types.SimpleNamespace(position=top),
     )
@@ -94,6 +98,7 @@ def member(uid=7, *, manage_guild=True, mention_everyone=False, manage_roles=Tru
 class Guild:
     def __init__(self, gid, channels=(), roles=()):
         self.id = gid
+        self.owner_id = 1
         self.channels = list(channels)
         self.roles = [Role(gid, "@everyone", default=True), *roles]
         self.me = member(999, me=True)
@@ -345,6 +350,32 @@ async def test_feature_role_rules_are_reapplied():
     assert plans["event_reminders"].new["role_id"] is None  # nobody can ping it
     assert plans["suggestions"].new["staff_role_id"] is None  # @everyone
     assert {n.outcome for p in plans.values() for n in p.notes} == {"unusable"}
+
+
+async def test_birthday_role_import_needs_manage_roles_and_rank(monkeypatch):
+    pool = SettingsPool()
+    payload = {
+        "format": "yasuho-config", "version": 1, "sections": {
+            "birthdays": {"enabled": True, "role_id": {"id": "5", "name": "Party"}},
+        },
+    }
+    data = json.dumps(payload).encode()
+    target = Guild(6, roles=[Role(56, "Party", position=20)])  # below Yasuho (50), harmless
+
+    async def new_role(who):
+        plans = await ct.build_plan(pool, target, who, ct.parse_document(data))
+        return plans[0]
+
+    plan = await new_role(member(manage_roles=False))
+    assert plan.new["role_id"] is None and [n.outcome for n in plan.notes] == ["unusable"]
+    plan = await new_role(member(top=10))  # role above the importer's top role
+    assert plan.new["role_id"] is None and [n.outcome for n in plan.notes] == ["unusable"]
+    assert (await new_role(member(top=30))).new["role_id"] == 56
+    owner = member(uid=target.owner_id, manage_roles=True, top=1)
+    assert (await new_role(owner)).new["role_id"] == 56  # owner exempt from rank
+    # Negative control: without the new guard the manage-roles-less manager gets it.
+    monkeypatch.setattr(ct.birthdays_store, "member_cannot_grant", lambda *a: False)
+    assert (await new_role(member(manage_roles=False))).new["role_id"] == 56
 
 
 # -- strict parsing ---------------------------------------------------------------

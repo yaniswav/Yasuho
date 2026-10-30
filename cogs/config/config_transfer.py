@@ -121,7 +121,9 @@ def _role_usable(guild, role, member):
 
 
 def _birthday_role_usable(guild, role, member):
-    return not birthdays_store.role_problem(guild, role)
+    return not birthdays_store.role_problem(guild, role) and not birthdays_store.member_cannot_grant(
+        member, guild, role
+    )
 
 
 def _ping_role_usable(guild, role, member):

@@ -437,6 +437,12 @@ class YouTubeAlerts(commands.Cog):
         config = await self.get_config(ctx.guild.id)
         if role is not None and role.is_default():
             return await ctx.send(_("I will not ping everyone."), allowed_mentions=none)
+        # Same rule as the event reminders: a role the manager could ping by hand.
+        if role is not None and not role.mentionable and not (
+            ctx.author.guild_permissions.mention_everyone
+            and ctx.guild.me.guild_permissions.mention_everyone
+        ):
+            return await ctx.send(_("You can't ping that role."), allowed_mentions=none)
         if reset:
             config["role_id"], config["message"] = None, ""
         if role is not None:

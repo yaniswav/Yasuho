@@ -115,9 +115,20 @@ def member(uid, roles=()):
     return m
 
 
+class _Rank:
+    """A role or top role: discord.Role orders by position."""
+
+    def __init__(self, position=0, **attrs):
+        self.position = position
+        self.__dict__.update(attrs)
+
+    def __ge__(self, other):
+        return self.position >= other.position
+
+
 def make_guild(members, role_holders=(), role_ok=True, cached=None):
-    role = types.SimpleNamespace(
-        id=5, position=1, managed=False, is_default=lambda: False,
+    role = _Rank(
+        1, id=5, managed=False, is_default=lambda: False,
         permissions=discord.Permissions.none(),
     )
     role.members = list(role_holders)
@@ -128,10 +139,10 @@ def make_guild(members, role_holders=(), role_ok=True, cached=None):
     )
     me = types.SimpleNamespace(
         guild_permissions=discord.Permissions(manage_roles=role_ok),
-        top_role=types.SimpleNamespace(position=10),
+        top_role=_Rank(10),
     )
     guild = types.SimpleNamespace(
-        id=1, name="Srv", me=me,
+        id=1, name="Srv", me=me, owner_id=1,
         get_member=lambda uid: (members if cached is None else cached).get(uid),
         get_role=lambda rid: role if rid == 5 else None,
         get_channel=lambda cid: channel if cid == 9 else None,
@@ -349,13 +360,50 @@ def test_privacy_and_retention_wiring():
     assert privacy.EXPORT_VERSION == 20 and '"birthdays_shared"' in inspect.getsource(privacy)
 
 
+def _manager(manage_roles=True, top=5, uid=77):
+    return types.SimpleNamespace(
+        id=uid, top_role=_Rank(top),
+        guild_permissions=types.SimpleNamespace(manage_roles=manage_roles, administrator=False),
+    )
+
+
+async def _pick_as(user, monkeypatch=None):
+    guild, role = make_guild({})
+    view = panel.BirthdayPanel.__new__(panel.BirthdayPanel)
+    view.guild, view.cog, view.config = guild, make_cog(guild=guild), dict(store.normalise(CONFIG))
+    view.save_and_rerender = AsyncMock()
+    inter = types.SimpleNamespace(response=types.SimpleNamespace(send_message=AsyncMock()), user=user)
+    role.position = 3
+    await view.pick_role(inter, role)
+    return view, inter
+
+
+async def test_panel_role_pick_needs_manage_roles_and_rank(monkeypatch):
+    view, inter = await _pick_as(_manager(manage_roles=False))
+    inter.response.send_message.assert_awaited_once()
+    assert inter.response.send_message.await_args.kwargs["ephemeral"] is True
+    view.save_and_rerender.assert_not_awaited()
+    view, inter = await _pick_as(_manager(top=3))  # role equal to their top role
+    view.save_and_rerender.assert_not_awaited()
+    view, inter = await _pick_as(_manager(top=5))
+    view.save_and_rerender.assert_awaited_once()
+    view, inter = await _pick_as(_manager(top=1, uid=1))  # owner: rank exempt
+    view.save_and_rerender.assert_awaited_once()
+    # Negative control: with the guard neutralised the Manage-Roles-less member gets through.
+    monkeypatch.setattr(store, "member_cannot_grant", lambda *a: False)
+    view, inter = await _pick_as(_manager(manage_roles=False))
+    view.save_and_rerender.assert_awaited_once()
+
+
 async def test_panel_role_pick_refuses_unmanageable_roles():
     guild, role = make_guild({})
     cog = make_cog(guild=guild)
     view = panel.BirthdayPanel.__new__(panel.BirthdayPanel)
     view.guild, view.cog, view.config = guild, cog, dict(store.normalise(CONFIG))
     view.save_and_rerender = AsyncMock()
-    inter = types.SimpleNamespace(response=types.SimpleNamespace(send_message=AsyncMock()))
+    inter = types.SimpleNamespace(
+        response=types.SimpleNamespace(send_message=AsyncMock()), user=_manager()
+    )
     role.position = 99  # above the bot
     await view.pick_role(inter, role)
     inter.response.send_message.assert_awaited_once()

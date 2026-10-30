@@ -12,6 +12,7 @@ import calendar
 import datetime
 from zoneinfo import ZoneInfo
 
+from tools import modchecks
 from tools.snowflake import coerce_id
 
 SETTINGS_KEY = "birthdays"
@@ -140,6 +141,18 @@ async def claim_day(pool, guild_id, day):
         "WHERE birthday_state.last_day < EXCLUDED.last_day RETURNING guild_id",
         guild_id, day,
     ) is not None
+
+
+def member_cannot_grant(member, guild, role):
+    """True when ``member`` may not choose ``role`` as the birthday role.
+
+    Picking it hands it to whoever sets a birthday for today (themselves
+    included), so it takes Manage Roles AND outranking the role (owner and
+    Administrator exempt from the rank half, as everywhere else).
+    """
+    return not member.guild_permissions.manage_roles or bool(
+        modchecks.role_hierarchy_error_for(member, guild, role)
+    )
 
 
 def role_problem(guild, role):

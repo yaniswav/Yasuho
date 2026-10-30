@@ -229,6 +229,14 @@ class BirthdayPanel(AuthorView):
                     ),
                     ephemeral=True,
                 )
+            if store.member_cannot_grant(interaction.user, self.guild, role):
+                return await interaction.response.send_message(
+                    _(
+                        "You need Manage Roles, and that role must be below "
+                        "your highest role, to make it the birthday role."
+                    ),
+                    ephemeral=True,
+                )
         self.config["role_id"] = role.id if role is not None else None
         await self.save_and_rerender(interaction)
 
