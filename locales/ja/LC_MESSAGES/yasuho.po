@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-30 10:50+0000\n"
+"POT-Creation-Date: 2026-10-30 11:17+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -3969,25 +3969,105 @@ msgstr "このSteamプロフィールは非公開です。"
 msgid "Owns {count} games"
 msgstr "{count}本のゲームを所有"
 
-#: cogs/community/serverstats/cog.py:829
+#: cogs/community/serverstats/cog.py:943
 #, python-brace-format
 msgid "You need these permissions in {channel} yourself before you can schedule a weekly digest there: {permissions}."
 msgstr "{channel} で週間サマリーを予約するには、あなた自身に次の権限が必要です: {permissions}。"
 
-#: cogs/community/serverstats/cog.py:842 cogs/config/tickets/panel.py:675
-#: cogs/config/tickets/panel.py:819
+#: cogs/community/serverstats/cog.py:956 cogs/community/serverstats/cog.py:1054
+#: cogs/config/tickets/panel.py:675 cogs/config/tickets/panel.py:819
 #, python-brace-format
 msgid "I need these permissions in {channel} first: {permissions}."
 msgstr "まず {channel} で次の権限が必要です: {permissions}"
 
-#: cogs/community/serverstats/cog.py:851
+#: cogs/community/serverstats/cog.py:965
 #, python-brace-format
 msgid "Weekly digest on - I will post the last complete week's statistics in {channel} once a week, normally on Monday. Weeks I did not observe are skipped rather than reported as empty."
 msgstr "週間ダイジェストをオンにしました - 直近の完全な1週間の統計を、週に1回、通常は月曜日に {channel} に投稿します。観測できなかった週は、空として報告されるのではなくスキップされます。"
 
-#: cogs/community/serverstats/cog.py:868
+#: cogs/community/serverstats/cog.py:982
 msgid "Weekly digest off. Nothing else changes - I keep collecting."
 msgstr "週間ダイジェストをオフにしました。それ以外は何も変わりません - データの収集は続けます。"
+
+#: cogs/community/serverstats/cog.py:1032
+msgid "The daily summary is a Yasuho+ feature."
+msgstr "日次サマリーは Yasuho+ の機能です。"
+
+#: cogs/community/serverstats/cog.py:1043
+#, python-brace-format
+msgid "You need these permissions in {channel} yourself before you can schedule a daily summary there: {permissions}."
+msgstr "{channel} で日次サマリーを予約する前に、あなた自身がそこで次の権限を持っている必要があります: {permissions}。"
+
+#: cogs/community/serverstats/cog.py:1063
+#, python-brace-format
+msgid "Daily summary on - I will post yesterday's statistics in {channel} once a day (UTC days). Days I did not observe are skipped rather than reported as empty."
+msgstr "日次サマリーをオンにしました - 毎日1回（UTCの日単位で）、前日の統計を {channel} に投稿します。観測できなかった日は、空として報告せずに省略します。"
+
+#: cogs/community/serverstats/cog.py:1076
+msgid "Daily summary off. Nothing else changes - I keep collecting."
+msgstr "日次サマリーをオフにしました。それ以外は変わりません - 引き続き統計を収集します。"
+
+#: cogs/community/serverstats/cog.py:1089
+msgid "The statistics export is a Yasuho+ feature."
+msgstr "統計のエクスポートは Yasuho+ の機能です。"
+
+#: cogs/community/serverstats/cog.py:1104
+#, python-brace-format
+msgid "Daily statistics for the last complete day (UTC)."
+msgid_plural "Daily statistics for the last {days} complete days (UTC)."
+msgstr[0] "直近 {days} 日分の日次統計 (UTC、完全な日のみ)。"
+
+#: cogs/community/serverstats/daily.py:183
+msgid "Daily server summary"
+msgstr "サーバーの日次サマリー"
+
+#: cogs/community/serverstats/daily.py:184
+#, python-brace-format
+msgid "Here is what happened on {guild} yesterday."
+msgstr "昨日 {guild} で起きたことをお伝えします。"
+
+#: cogs/community/serverstats/daily.py:189
+#: cogs/community/serverstats/digest.py:505
+#, python-brace-format
+msgid "{total} messages"
+msgstr "{total} 件のメッセージ"
+
+#: cogs/community/serverstats/daily.py:191
+msgid "No comparable day before this one."
+msgstr "これより前に比較できる日はありません。"
+
+#: cogs/community/serverstats/daily.py:195
+#, python-brace-format
+msgid "{sign}{pct}% vs the day before"
+msgstr "{sign}{pct}% (前日比)"
+
+#: cogs/community/serverstats/daily.py:199
+#: cogs/community/serverstats/digest.py:517
+msgid "Messages"
+msgstr "メッセージ"
+
+#: cogs/community/serverstats/daily.py:202
+#: cogs/community/serverstats/digest.py:521
+#: cogs/community/serverstats/views.py:415
+#, python-brace-format
+msgid "{joins} joins / {leaves} leaves ({net} net, humans only)"
+msgstr "参加{joins}人 / 退出{leaves}人(純増減 {net}、人間のみ)"
+
+#: cogs/community/serverstats/daily.py:211
+#, python-brace-format
+msgid "{count} member at the start of the day"
+msgid_plural "{count} members at the start of the day"
+msgstr[0] "1日の始まりの時点で {count} 人のメンバー"
+
+#: cogs/community/serverstats/daily.py:216
+#: cogs/community/serverstats/digest.py:520 cogs/utility/info.py:155
+msgid "Members"
+msgstr "メンバー"
+
+#: cogs/community/serverstats/daily.py:218
+#, python-brace-format
+msgid "{day} (complete UTC day)."
+msgstr "{day} (UTCの完全な1日)。"
 
 #: cogs/community/serverstats/digest.py:120 cogs/config/tickets/preflight.py:73
 msgid "View Channel"
@@ -4010,11 +4090,6 @@ msgstr "週間サーバーダイジェスト"
 msgid "Here is what happened on {guild} last week."
 msgstr "{guild} で先週起きたことをお伝えします。"
 
-#: cogs/community/serverstats/digest.py:505
-#, python-brace-format
-msgid "{total} messages"
-msgstr "{total} 件のメッセージ"
-
 #: cogs/community/serverstats/digest.py:509
 msgid "No comparable full week before this one."
 msgstr "この週より前に比較できる完全な週がありません。"
@@ -4023,20 +4098,6 @@ msgstr "この週より前に比較できる完全な週がありません。"
 #, python-brace-format
 msgid "{sign}{pct:.1f}% vs the week before"
 msgstr "前週比 {sign}{pct:.1f}%"
-
-#: cogs/community/serverstats/digest.py:517
-msgid "Messages"
-msgstr "メッセージ"
-
-#: cogs/community/serverstats/digest.py:520 cogs/utility/info.py:155
-msgid "Members"
-msgstr "メンバー"
-
-#: cogs/community/serverstats/digest.py:521
-#: cogs/community/serverstats/views.py:415
-#, python-brace-format
-msgid "{joins} joins / {leaves} leaves ({net} net, humans only)"
-msgstr "参加{joins}人 / 退出{leaves}人(純増減 {net}、人間のみ)"
 
 #: cogs/community/serverstats/digest.py:529
 msgid "Most active day"
@@ -10699,8 +10760,8 @@ msgstr "キューが空のときも、Yasuhoがボイスチャンネルに残り
 msgid "**Extended server playlists**"
 msgstr "**拡張されたサーバープレイリスト**"
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:161
-#: tests/cogs/test_premium_panel.py:165
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:163
+#: tests/cogs/test_premium_panel.py:167
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr "最大{count}件のプレイリスト(各{tracks}曲)。"

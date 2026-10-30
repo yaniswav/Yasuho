@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-30 10:50+0000\n"
+"POT-Creation-Date: 2026-10-30 11:17+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -3993,25 +3993,107 @@ msgstr "Αυτό το προφίλ Steam είναι ιδιωτικό."
 msgid "Owns {count} games"
 msgstr "Κατέχει {count} παιχνίδια"
 
-#: cogs/community/serverstats/cog.py:829
+#: cogs/community/serverstats/cog.py:943
 #, python-brace-format
 msgid "You need these permissions in {channel} yourself before you can schedule a weekly digest there: {permissions}."
 msgstr "Χρειάζεσαι κι εσύ αυτά τα δικαιώματα στο {channel} για να προγραμματίσεις εκεί εβδομαδιαία σύνοψη: {permissions}."
 
-#: cogs/community/serverstats/cog.py:842 cogs/config/tickets/panel.py:675
-#: cogs/config/tickets/panel.py:819
+#: cogs/community/serverstats/cog.py:956 cogs/community/serverstats/cog.py:1054
+#: cogs/config/tickets/panel.py:675 cogs/config/tickets/panel.py:819
 #, python-brace-format
 msgid "I need these permissions in {channel} first: {permissions}."
 msgstr "Χρειάζομαι πρώτα αυτά τα δικαιώματα στο {channel}: {permissions}."
 
-#: cogs/community/serverstats/cog.py:851
+#: cogs/community/serverstats/cog.py:965
 #, python-brace-format
 msgid "Weekly digest on - I will post the last complete week's statistics in {channel} once a week, normally on Monday. Weeks I did not observe are skipped rather than reported as empty."
 msgstr "Εβδομαδιαία σύνοψη ενεργή - θα δημοσιεύω τα στατιστικά της τελευταίας πλήρους εβδομάδας στο {channel} μία φορά την εβδομάδα, συνήθως τη Δευτέρα. Οι εβδομάδες που δεν παρακολούθησα παραλείπονται αντί να αναφέρονται ως κενές."
 
-#: cogs/community/serverstats/cog.py:868
+#: cogs/community/serverstats/cog.py:982
 msgid "Weekly digest off. Nothing else changes - I keep collecting."
 msgstr "Εβδομαδιαία σύνοψη ανενεργή. Τίποτα άλλο δεν αλλάζει - συνεχίζω να συλλέγω."
+
+#: cogs/community/serverstats/cog.py:1032
+msgid "The daily summary is a Yasuho+ feature."
+msgstr "Η ημερήσια σύνοψη είναι δυνατότητα του Yasuho+."
+
+#: cogs/community/serverstats/cog.py:1043
+#, python-brace-format
+msgid "You need these permissions in {channel} yourself before you can schedule a daily summary there: {permissions}."
+msgstr "Χρειάζεστε εσείς οι ίδιοι αυτά τα δικαιώματα στο {channel} πριν μπορέσετε να προγραμματίσετε εκεί ημερήσια σύνοψη: {permissions}."
+
+#: cogs/community/serverstats/cog.py:1063
+#, python-brace-format
+msgid "Daily summary on - I will post yesterday's statistics in {channel} once a day (UTC days). Days I did not observe are skipped rather than reported as empty."
+msgstr "Η ημερήσια σύνοψη ενεργοποιήθηκε - θα δημοσιεύω τα στατιστικά της προηγούμενης ημέρας στο {channel} μία φορά την ημέρα (ημέρες UTC). Οι ημέρες που δεν παρατήρησα παραλείπονται αντί να αναφέρονται ως κενές."
+
+#: cogs/community/serverstats/cog.py:1076
+msgid "Daily summary off. Nothing else changes - I keep collecting."
+msgstr "Η ημερήσια σύνοψη απενεργοποιήθηκε. Τίποτε άλλο δεν αλλάζει - συνεχίζω να συλλέγω δεδομένα."
+
+#: cogs/community/serverstats/cog.py:1089
+msgid "The statistics export is a Yasuho+ feature."
+msgstr "Η εξαγωγή στατιστικών είναι δυνατότητα του Yasuho+."
+
+#: cogs/community/serverstats/cog.py:1104
+#, python-brace-format
+msgid "Daily statistics for the last complete day (UTC)."
+msgid_plural "Daily statistics for the last {days} complete days (UTC)."
+msgstr[0] "Ημερήσια στατιστικά της τελευταίας ολόκληρης ημέρας (UTC)."
+msgstr[1] "Ημερήσια στατιστικά των τελευταίων {days} ολόκληρων ημερών (UTC)."
+
+#: cogs/community/serverstats/daily.py:183
+msgid "Daily server summary"
+msgstr "Ημερήσια σύνοψη του διακομιστή"
+
+#: cogs/community/serverstats/daily.py:184
+#, python-brace-format
+msgid "Here is what happened on {guild} yesterday."
+msgstr "Αυτά συνέβησαν χθες στο {guild}."
+
+#: cogs/community/serverstats/daily.py:189
+#: cogs/community/serverstats/digest.py:505
+#, python-brace-format
+msgid "{total} messages"
+msgstr "{total} μηνύματα"
+
+#: cogs/community/serverstats/daily.py:191
+msgid "No comparable day before this one."
+msgstr "Δεν υπάρχει συγκρίσιμη ημέρα πριν από αυτή."
+
+#: cogs/community/serverstats/daily.py:195
+#, python-brace-format
+msgid "{sign}{pct}% vs the day before"
+msgstr "{sign}{pct}% σε σύγκριση με την προηγούμενη ημέρα"
+
+#: cogs/community/serverstats/daily.py:199
+#: cogs/community/serverstats/digest.py:517
+msgid "Messages"
+msgstr "Μηνύματα"
+
+#: cogs/community/serverstats/daily.py:202
+#: cogs/community/serverstats/digest.py:521
+#: cogs/community/serverstats/views.py:415
+#, python-brace-format
+msgid "{joins} joins / {leaves} leaves ({net} net, humans only)"
+msgstr "{joins} αφίξεις / {leaves} αποχωρήσεις (καθαρό {net}, μόνο άνθρωποι)"
+
+#: cogs/community/serverstats/daily.py:211
+#, python-brace-format
+msgid "{count} member at the start of the day"
+msgid_plural "{count} members at the start of the day"
+msgstr[0] "{count} μέλος στην αρχή της ημέρας"
+msgstr[1] "{count} μέλη στην αρχή της ημέρας"
+
+#: cogs/community/serverstats/daily.py:216
+#: cogs/community/serverstats/digest.py:520 cogs/utility/info.py:155
+msgid "Members"
+msgstr "Μέλη"
+
+#: cogs/community/serverstats/daily.py:218
+#, python-brace-format
+msgid "{day} (complete UTC day)."
+msgstr "{day} (ολόκληρη ημέρα UTC)."
 
 #: cogs/community/serverstats/digest.py:120 cogs/config/tickets/preflight.py:73
 msgid "View Channel"
@@ -4034,11 +4116,6 @@ msgstr "Εβδομαδιαία σύνοψη διακομιστή"
 msgid "Here is what happened on {guild} last week."
 msgstr "Ορίστε τι συνέβη στο {guild} την περασμένη εβδομάδα."
 
-#: cogs/community/serverstats/digest.py:505
-#, python-brace-format
-msgid "{total} messages"
-msgstr "{total} μηνύματα"
-
 #: cogs/community/serverstats/digest.py:509
 msgid "No comparable full week before this one."
 msgstr "Δεν υπάρχει συγκρίσιμη πλήρης εβδομάδα πριν από αυτή."
@@ -4047,20 +4124,6 @@ msgstr "Δεν υπάρχει συγκρίσιμη πλήρης εβδομάδα
 #, python-brace-format
 msgid "{sign}{pct:.1f}% vs the week before"
 msgstr "{sign}{pct:.1f}% σε σχέση με την προηγούμενη εβδομάδα"
-
-#: cogs/community/serverstats/digest.py:517
-msgid "Messages"
-msgstr "Μηνύματα"
-
-#: cogs/community/serverstats/digest.py:520 cogs/utility/info.py:155
-msgid "Members"
-msgstr "Μέλη"
-
-#: cogs/community/serverstats/digest.py:521
-#: cogs/community/serverstats/views.py:415
-#, python-brace-format
-msgid "{joins} joins / {leaves} leaves ({net} net, humans only)"
-msgstr "{joins} αφίξεις / {leaves} αποχωρήσεις (καθαρό {net}, μόνο άνθρωποι)"
 
 #: cogs/community/serverstats/digest.py:529
 msgid "Most active day"
@@ -10749,8 +10812,8 @@ msgstr "Το Yasuho μένει στο φωνητικό σου κανάλι, ακ
 msgid "**Extended server playlists**"
 msgstr "**Εκτεταμένες λίστες διακομιστή**"
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:161
-#: tests/cogs/test_premium_panel.py:165
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:163
+#: tests/cogs/test_premium_panel.py:167
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr "Έως {count} λίστες των {tracks} κομματιών."

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-30 10:50+0000\n"
+"POT-Creation-Date: 2026-10-30 11:17+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -3993,25 +3993,107 @@ msgstr "Este perfil de Steam es privado."
 msgid "Owns {count} games"
 msgstr "Posee {count} juegos"
 
-#: cogs/community/serverstats/cog.py:829
+#: cogs/community/serverstats/cog.py:943
 #, python-brace-format
 msgid "You need these permissions in {channel} yourself before you can schedule a weekly digest there: {permissions}."
 msgstr "Necesitas tu mismo estos permisos en {channel} para programar alli un resumen semanal: {permissions}."
 
-#: cogs/community/serverstats/cog.py:842 cogs/config/tickets/panel.py:675
-#: cogs/config/tickets/panel.py:819
+#: cogs/community/serverstats/cog.py:956 cogs/community/serverstats/cog.py:1054
+#: cogs/config/tickets/panel.py:675 cogs/config/tickets/panel.py:819
 #, python-brace-format
 msgid "I need these permissions in {channel} first: {permissions}."
 msgstr "Primero necesito estos permisos en {channel}: {permissions}."
 
-#: cogs/community/serverstats/cog.py:851
+#: cogs/community/serverstats/cog.py:965
 #, python-brace-format
 msgid "Weekly digest on - I will post the last complete week's statistics in {channel} once a week, normally on Monday. Weeks I did not observe are skipped rather than reported as empty."
 msgstr "Resumen semanal activado - publicaré las estadísticas de la última semana completa en {channel} una vez por semana, normalmente el lunes. Las semanas que no observé se omiten en lugar de reportarse como vacías."
 
-#: cogs/community/serverstats/cog.py:868
+#: cogs/community/serverstats/cog.py:982
 msgid "Weekly digest off. Nothing else changes - I keep collecting."
 msgstr "Resumen semanal desactivado. Nada más cambia - sigo recopilando datos."
+
+#: cogs/community/serverstats/cog.py:1032
+msgid "The daily summary is a Yasuho+ feature."
+msgstr "El resumen diario es una función de Yasuho+."
+
+#: cogs/community/serverstats/cog.py:1043
+#, python-brace-format
+msgid "You need these permissions in {channel} yourself before you can schedule a daily summary there: {permissions}."
+msgstr "Tú mismo necesitas estos permisos en {channel} antes de poder programar allí un resumen diario: {permissions}."
+
+#: cogs/community/serverstats/cog.py:1063
+#, python-brace-format
+msgid "Daily summary on - I will post yesterday's statistics in {channel} once a day (UTC days). Days I did not observe are skipped rather than reported as empty."
+msgstr "Resumen diario activado - publicaré las estadísticas de ayer en {channel} una vez al día (días UTC). Los días que no pude observar se omiten en lugar de mostrarse como vacíos."
+
+#: cogs/community/serverstats/cog.py:1076
+msgid "Daily summary off. Nothing else changes - I keep collecting."
+msgstr "Resumen diario desactivado. Nada más cambia - sigo recopilando datos."
+
+#: cogs/community/serverstats/cog.py:1089
+msgid "The statistics export is a Yasuho+ feature."
+msgstr "La exportación de estadísticas es una función de Yasuho+."
+
+#: cogs/community/serverstats/cog.py:1104
+#, python-brace-format
+msgid "Daily statistics for the last complete day (UTC)."
+msgid_plural "Daily statistics for the last {days} complete days (UTC)."
+msgstr[0] "Estadísticas diarias del último día completo (UTC)."
+msgstr[1] "Estadísticas diarias de los últimos {days} días completos (UTC)."
+
+#: cogs/community/serverstats/daily.py:183
+msgid "Daily server summary"
+msgstr "Resumen diario del servidor"
+
+#: cogs/community/serverstats/daily.py:184
+#, python-brace-format
+msgid "Here is what happened on {guild} yesterday."
+msgstr "Esto es lo que pasó ayer en {guild}."
+
+#: cogs/community/serverstats/daily.py:189
+#: cogs/community/serverstats/digest.py:505
+#, python-brace-format
+msgid "{total} messages"
+msgstr "{total} mensajes"
+
+#: cogs/community/serverstats/daily.py:191
+msgid "No comparable day before this one."
+msgstr "No hay ningún día comparable antes de este."
+
+#: cogs/community/serverstats/daily.py:195
+#, python-brace-format
+msgid "{sign}{pct}% vs the day before"
+msgstr "{sign}{pct}% frente al día anterior"
+
+#: cogs/community/serverstats/daily.py:199
+#: cogs/community/serverstats/digest.py:517
+msgid "Messages"
+msgstr "Mensajes"
+
+#: cogs/community/serverstats/daily.py:202
+#: cogs/community/serverstats/digest.py:521
+#: cogs/community/serverstats/views.py:415
+#, python-brace-format
+msgid "{joins} joins / {leaves} leaves ({net} net, humans only)"
+msgstr "{joins} entradas / {leaves} salidas (neto {net}, solo humanos)"
+
+#: cogs/community/serverstats/daily.py:211
+#, python-brace-format
+msgid "{count} member at the start of the day"
+msgid_plural "{count} members at the start of the day"
+msgstr[0] "{count} miembro al inicio del día"
+msgstr[1] "{count} miembros al inicio del día"
+
+#: cogs/community/serverstats/daily.py:216
+#: cogs/community/serverstats/digest.py:520 cogs/utility/info.py:155
+msgid "Members"
+msgstr "Miembros"
+
+#: cogs/community/serverstats/daily.py:218
+#, python-brace-format
+msgid "{day} (complete UTC day)."
+msgstr "{day} (día UTC completo)."
 
 #: cogs/community/serverstats/digest.py:120 cogs/config/tickets/preflight.py:73
 msgid "View Channel"
@@ -4034,11 +4116,6 @@ msgstr "Resumen semanal del servidor"
 msgid "Here is what happened on {guild} last week."
 msgstr "Esto es lo que pasó en {guild} la semana pasada."
 
-#: cogs/community/serverstats/digest.py:505
-#, python-brace-format
-msgid "{total} messages"
-msgstr "{total} mensajes"
-
 #: cogs/community/serverstats/digest.py:509
 msgid "No comparable full week before this one."
 msgstr "No hay una semana completa comparable antes de esta."
@@ -4047,20 +4124,6 @@ msgstr "No hay una semana completa comparable antes de esta."
 #, python-brace-format
 msgid "{sign}{pct:.1f}% vs the week before"
 msgstr "{sign}{pct:.1f}% frente a la semana anterior"
-
-#: cogs/community/serverstats/digest.py:517
-msgid "Messages"
-msgstr "Mensajes"
-
-#: cogs/community/serverstats/digest.py:520 cogs/utility/info.py:155
-msgid "Members"
-msgstr "Miembros"
-
-#: cogs/community/serverstats/digest.py:521
-#: cogs/community/serverstats/views.py:415
-#, python-brace-format
-msgid "{joins} joins / {leaves} leaves ({net} net, humans only)"
-msgstr "{joins} entradas / {leaves} salidas (neto {net}, solo humanos)"
 
 #: cogs/community/serverstats/digest.py:529
 msgid "Most active day"
@@ -10749,8 +10812,8 @@ msgstr "Yasuho se queda en tu canal de voz, incluso cuando la cola está vacía.
 msgid "**Extended server playlists**"
 msgstr "**Playlists del servidor ampliadas**"
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:161
-#: tests/cogs/test_premium_panel.py:165
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:163
+#: tests/cogs/test_premium_panel.py:167
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr "Hasta {count} playlists de {tracks} canciones."

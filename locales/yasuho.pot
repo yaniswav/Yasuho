@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-30 10:50+0000\n"
+"POT-Creation-Date: 2026-10-30 11:17+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -4128,20 +4128,20 @@ msgstr ""
 msgid "Owns {count} games"
 msgstr ""
 
-#: cogs/community/serverstats/cog.py:829
+#: cogs/community/serverstats/cog.py:943
 #, python-brace-format
 msgid ""
 "You need these permissions in {channel} yourself before you can schedule "
 "a weekly digest there: {permissions}."
 msgstr ""
 
-#: cogs/community/serverstats/cog.py:842 cogs/config/tickets/panel.py:675
-#: cogs/config/tickets/panel.py:819
+#: cogs/community/serverstats/cog.py:956 cogs/community/serverstats/cog.py:1054
+#: cogs/config/tickets/panel.py:675 cogs/config/tickets/panel.py:819
 #, python-brace-format
 msgid "I need these permissions in {channel} first: {permissions}."
 msgstr ""
 
-#: cogs/community/serverstats/cog.py:851
+#: cogs/community/serverstats/cog.py:965
 #, python-brace-format
 msgid ""
 "Weekly digest on - I will post the last complete week's statistics in "
@@ -4149,8 +4149,95 @@ msgid ""
 "skipped rather than reported as empty."
 msgstr ""
 
-#: cogs/community/serverstats/cog.py:868
+#: cogs/community/serverstats/cog.py:982
 msgid "Weekly digest off. Nothing else changes - I keep collecting."
+msgstr ""
+
+#: cogs/community/serverstats/cog.py:1032
+msgid "The daily summary is a Yasuho+ feature."
+msgstr ""
+
+#: cogs/community/serverstats/cog.py:1043
+#, python-brace-format
+msgid ""
+"You need these permissions in {channel} yourself before you can schedule "
+"a daily summary there: {permissions}."
+msgstr ""
+
+#: cogs/community/serverstats/cog.py:1063
+#, python-brace-format
+msgid ""
+"Daily summary on - I will post yesterday's statistics in {channel} once a"
+" day (UTC days). Days I did not observe are skipped rather than reported "
+"as empty."
+msgstr ""
+
+#: cogs/community/serverstats/cog.py:1076
+msgid "Daily summary off. Nothing else changes - I keep collecting."
+msgstr ""
+
+#: cogs/community/serverstats/cog.py:1089
+msgid "The statistics export is a Yasuho+ feature."
+msgstr ""
+
+#: cogs/community/serverstats/cog.py:1104
+#, python-brace-format
+msgid "Daily statistics for the last complete day (UTC)."
+msgid_plural "Daily statistics for the last {days} complete days (UTC)."
+msgstr[0] ""
+msgstr[1] ""
+
+#: cogs/community/serverstats/daily.py:183
+msgid "Daily server summary"
+msgstr ""
+
+#: cogs/community/serverstats/daily.py:184
+#, python-brace-format
+msgid "Here is what happened on {guild} yesterday."
+msgstr ""
+
+#: cogs/community/serverstats/daily.py:189
+#: cogs/community/serverstats/digest.py:505
+#, python-brace-format
+msgid "{total} messages"
+msgstr ""
+
+#: cogs/community/serverstats/daily.py:191
+msgid "No comparable day before this one."
+msgstr ""
+
+#: cogs/community/serverstats/daily.py:195
+#, python-brace-format
+msgid "{sign}{pct}% vs the day before"
+msgstr ""
+
+#: cogs/community/serverstats/daily.py:199
+#: cogs/community/serverstats/digest.py:517
+msgid "Messages"
+msgstr ""
+
+#: cogs/community/serverstats/daily.py:202
+#: cogs/community/serverstats/digest.py:521
+#: cogs/community/serverstats/views.py:415
+#, python-brace-format
+msgid "{joins} joins / {leaves} leaves ({net} net, humans only)"
+msgstr ""
+
+#: cogs/community/serverstats/daily.py:211
+#, python-brace-format
+msgid "{count} member at the start of the day"
+msgid_plural "{count} members at the start of the day"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cogs/community/serverstats/daily.py:216
+#: cogs/community/serverstats/digest.py:520 cogs/utility/info.py:155
+msgid "Members"
+msgstr ""
+
+#: cogs/community/serverstats/daily.py:218
+#, python-brace-format
+msgid "{day} (complete UTC day)."
 msgstr ""
 
 #: cogs/community/serverstats/digest.py:120 cogs/config/tickets/preflight.py:73
@@ -4174,11 +4261,6 @@ msgstr ""
 msgid "Here is what happened on {guild} last week."
 msgstr ""
 
-#: cogs/community/serverstats/digest.py:505
-#, python-brace-format
-msgid "{total} messages"
-msgstr ""
-
 #: cogs/community/serverstats/digest.py:509
 msgid "No comparable full week before this one."
 msgstr ""
@@ -4186,20 +4268,6 @@ msgstr ""
 #: cogs/community/serverstats/digest.py:513
 #, python-brace-format
 msgid "{sign}{pct:.1f}% vs the week before"
-msgstr ""
-
-#: cogs/community/serverstats/digest.py:517
-msgid "Messages"
-msgstr ""
-
-#: cogs/community/serverstats/digest.py:520 cogs/utility/info.py:155
-msgid "Members"
-msgstr ""
-
-#: cogs/community/serverstats/digest.py:521
-#: cogs/community/serverstats/views.py:415
-#, python-brace-format
-msgid "{joins} joins / {leaves} leaves ({net} net, humans only)"
 msgstr ""
 
 #: cogs/community/serverstats/digest.py:529
@@ -11067,8 +11135,8 @@ msgstr ""
 msgid "**Extended server playlists**"
 msgstr ""
 
-#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:161
-#: tests/cogs/test_premium_panel.py:165
+#: cogs/system/premium_panel.py:123 tests/cogs/test_premium_panel.py:163
+#: tests/cogs/test_premium_panel.py:167
 #, python-brace-format
 msgid "Up to {count} playlists of {tracks} tracks."
 msgstr ""
