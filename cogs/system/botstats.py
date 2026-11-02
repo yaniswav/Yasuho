@@ -30,7 +30,7 @@ Three rules the pages below obey:
    presenting it as a headcount. A guild whose count is missing outright sorts
    LAST and renders as "?" - never as zero members.
 3. ON-DEMAND ONLY. Every query is bounded and runs when its page is first
-   opened, never on a timer and never all four at once. A SUCCESSFUL read is
+   opened, never on a timer and never all six at once. A SUCCESSFUL read is
    then memoised for the card's lifetime, so re-clicking a page costs nothing;
    a FAILED one is not, so a transient pool error is retried on the next open
    instead of being frozen into the card. The in-memory half of a page is
@@ -78,7 +78,7 @@ import discord
 from discord.ext import commands, tasks
 
 from cogs.system import usage_stats
-from tools import interactions
+from tools import botstats_features, botstats_premium, interactions, premium_usage
 from tools.backup import human_size
 from tools.formats import format_dt, random_colour
 from tools.i18n import _
@@ -1046,17 +1046,26 @@ def render_data(row_counts, table_sizes, total_bytes):
 # ---------------------------------------------------------------------------
 # Page identity is an index into this tuple: (emoji, N_-free label callable).
 # Labels are built at render time so they localize for the reader.
-PAGE_OVERVIEW, PAGE_GUILDS, PAGE_USAGE, PAGE_DATA = range(4)
+PAGE_OVERVIEW, PAGE_GUILDS, PAGE_USAGE, PAGE_DATA, PAGE_FEATURES, PAGE_PREMIUM = range(6)
 PAGE_EMOJI = (
     "\N{BAR CHART}",
     "\N{TROPHY}",
     "\N{HIGH VOLTAGE SIGN}",
     "\N{FLOPPY DISK}",
+    "\N{SPARKLES}",
+    "\N{GEM STONE}",
 )
 
 
 def page_labels():
-    return (_("Overview"), _("Top servers"), _("Usage"), _("Data"))
+    return (
+        _("Overview"),
+        _("Top servers"),
+        _("Usage"),
+        _("Data"),
+        _("Features"),
+        _("Premium"),
+    )
 
 
 class _PageButton(discord.ui.Button):
@@ -1085,10 +1094,10 @@ class _PageButton(discord.ui.Button):
 
 
 class BotStatsDashboard(AuthorLayoutView):
-    """The ``?botstats`` Components V2 card: four pages, four button jumps.
+    """The ``?botstats`` Components V2 card: six pages, six button jumps.
 
     Each DB read runs the FIRST time a page that needs it is opened and is then
-    memoised for the card's lifetime, so the card costs at most four bounded
+    memoised for the card's lifetime, so the card costs at most six bounded
     query batches total no matter how much the owner clicks, and it never
     refreshes itself on a timer. The IN-MEMORY half of a page (guild rows,
     /proc, the usage counters) is recomputed on every open - it costs nothing
@@ -1105,11 +1114,16 @@ class BotStatsDashboard(AuthorLayoutView):
     READ_USAGE = "usage"
     READ_ROW_COUNTS = "row_counts"
     READ_TABLE_SIZES = "table_sizes"
+    READ_ADOPTION = "adoption"
+    READ_LIMIT_USAGE = "limit_usage"
+    READ_UPSELLS = "upsells"
     PAGE_READS = {
         PAGE_OVERVIEW: (READ_DB_SIZE,),
         PAGE_GUILDS: (),
         PAGE_USAGE: (READ_ACTIVITY, READ_USAGE),
         PAGE_DATA: (READ_ROW_COUNTS, READ_TABLE_SIZES),
+        PAGE_FEATURES: (READ_ADOPTION,),
+        PAGE_PREMIUM: (READ_LIMIT_USAGE, READ_UPSELLS),
     }
 
     def __init__(self, cog, author_id, *, timeout=300):
@@ -1169,6 +1183,10 @@ class BotStatsDashboard(AuthorLayoutView):
             sections = self._guild_sections()
         elif index == PAGE_USAGE:
             sections = await self._usage_sections()
+        elif index == PAGE_FEATURES:
+            sections = await self._features_sections()
+        elif index == PAGE_PREMIUM:
+            sections = await self._premium_sections()
         else:
             sections = await self._data_sections()
         return sections, self._taken_at(self.PAGE_READS[index])
@@ -1264,6 +1282,40 @@ class BotStatsDashboard(AuthorLayoutView):
         table_sizes, total_bytes = sizes if sizes is not None else (None, 0)
         return render_data(row_counts, table_sizes, total_bytes)
 
+    async def _features_sections(self):
+        guild_ids = [guild.id for guild in self.bot.guilds]
+        counts = await self._read(
+            self.READ_ADOPTION,
+            lambda: botstats_features.fetch_adoption(
+                self.bot.db_pool, guild_ids, timeout=QUERY_TIMEOUT
+            ),
+            "feature adoption",
+        )
+        return botstats_features.render_features(counts, len(guild_ids))
+
+    async def _premium_sections(self):
+        guilds = self.bot.guilds
+        wall = await self._read(
+            self.READ_LIMIT_USAGE,
+            # One ceiling for the whole 14-query sweep, not one per query.
+            lambda: asyncio.wait_for(
+                premium_usage.fetch_all(self.bot.db_pool),
+                QUERY_TIMEOUT,
+            ),
+            "limit usage",
+        )
+        upsells = await self._read(
+            self.READ_UPSELLS,
+            lambda: botstats_premium.fetch_upsell_counts(
+                self.bot.db_pool, timeout=QUERY_TIMEOUT
+            ),
+            "limit notes",
+        )
+        plus = botstats_premium.count_premium_guilds(
+            getattr(self.bot, "premium", None), guilds
+        )
+        return botstats_premium.render_premium(plus, len(guilds), wall, upsells)
+
     # -- layout -------------------------------------------------------------
 
     def _rerender(self, sections, taken_at):
@@ -1291,20 +1343,22 @@ class BotStatsDashboard(AuthorLayoutView):
             )
             container.add_item(discord.ui.Separator())
 
-        container.add_item(
-            discord.ui.ActionRow(
-                *(
-                    _PageButton(
-                        self,
-                        index,
-                        labels[index],
-                        PAGE_EMOJI[index],
-                        current=index == self.index,
+        # An ActionRow holds at most five buttons: two rows of three.
+        for start in range(0, len(labels), 3):
+            container.add_item(
+                discord.ui.ActionRow(
+                    *(
+                        _PageButton(
+                            self,
+                            index,
+                            labels[index],
+                            PAGE_EMOJI[index],
+                            current=index == self.index,
+                        )
+                        for index in range(start, min(start + 3, len(labels)))
                     )
-                    for index in range(len(labels))
                 )
             )
-        )
         container.add_item(
             discord.ui.TextDisplay(
                 "-# "
