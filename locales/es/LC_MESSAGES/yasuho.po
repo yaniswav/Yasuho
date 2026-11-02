@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-30 15:21+0000\n"
+"POT-Creation-Date: 2026-11-02 18:50+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -393,7 +393,7 @@ msgstr "Vol. {volume}"
 msgid "Official site"
 msgstr "Sitio oficial"
 
-#: cogs/anilist/chapters.py:717
+#: cogs/anilist/chapters.py:717 tools/botstats_health.py:598
 msgid "MangaDex"
 msgstr "MangaDex"
 
@@ -642,7 +642,7 @@ msgstr "No hay títulos coincidentes de ese tipo."
 #: cogs/config/rolemenus.py:732 cogs/config/welcome.py:144
 #: cogs/config/welcome.py:202 cogs/config/welcome.py:397
 #: cogs/config/welcome.py:653 cogs/music/playlists_shared.py:415
-#: cogs/system/botstats.py:1358
+#: cogs/system/botstats.py:1638
 msgid "Something went wrong."
 msgstr "Algo salió mal."
 
@@ -862,7 +862,7 @@ msgstr ""
 msgid "Muted: {muted}"
 msgstr "Silenciados: {muted}"
 
-#: cogs/anilist/feed.py:2982
+#: cogs/anilist/feed.py:2982 tools/botstats_features.py:62
 msgid "AniList feeds"
 msgstr "Feeds de AniList"
 
@@ -2590,6 +2590,7 @@ msgid "You need the Manage Server permission for this."
 msgstr "Necesitas el permiso Gestionar servidor para esto."
 
 #: cogs/community/birthdays/panel.py:164 cogs/config/config_transfer.py:365
+#: tools/botstats_features.py:83
 msgid "Birthdays"
 msgstr "Cumpleaños"
 
@@ -5091,6 +5092,7 @@ msgid "Buttons attached"
 msgstr "Botones adjuntados"
 
 #: cogs/config/buttonroles.py:959 cogs/config/buttonroles.py:981
+#: tools/botstats_features.py:85
 msgid "Button roles"
 msgstr "Roles de botones"
 
@@ -5125,7 +5127,7 @@ msgstr "Idioma"
 msgid "Welcome"
 msgstr "Bienvenida"
 
-#: cogs/config/config_transfer.py:333
+#: cogs/config/config_transfer.py:333 tools/botstats_features.py:61
 msgid "Tickets"
 msgstr "Tickets"
 
@@ -5137,7 +5139,7 @@ msgstr "Música"
 msgid "Member milestones"
 msgstr "Hitos de miembros"
 
-#: cogs/config/config_transfer.py:377
+#: cogs/config/config_transfer.py:377 tools/botstats_features.py:109
 msgid "Suggestions"
 msgstr "Sugerencias"
 
@@ -5501,7 +5503,7 @@ msgstr "Botones"
 msgid "Delete selected"
 msgstr "Eliminar seleccionado"
 
-#: cogs/config/customcommands.py:647
+#: cogs/config/customcommands.py:647 tools/botstats_features.py:110
 msgid "Custom commands"
 msgstr "Comandos personalizados"
 
@@ -5743,6 +5745,7 @@ msgid "Reaction role removed"
 msgstr "Rol de reacción eliminado"
 
 #: cogs/config/reactionroles.py:361 cogs/config/reactionroles.py:375
+#: tools/botstats_features.py:84
 msgid "Reaction roles"
 msgstr "Roles por reacción"
 
@@ -6486,6 +6489,7 @@ msgstr "Abrir el panel de control del registro de moderación"
 #: cogs/config/settings.py:120 cogs/config/settings.py:222
 #: cogs/config/starboard.py:356 cogs/config/starboard.py:393
 #: cogs/config/starboard.py:430 cogs/config/starboard.py:455
+#: tools/botstats_features.py:81
 msgid "Starboard"
 msgstr "Starboard"
 
@@ -8557,7 +8561,7 @@ msgstr "No puedes mover un rol al nivel o por encima de mi rol más alto."
 msgid "{role} moved."
 msgstr "{role} movido."
 
-#: cogs/moderation/moderation.py:1289 cogs/system/errors.py:686
+#: cogs/moderation/moderation.py:1289 cogs/system/errors.py:689
 msgid "You do not have permission to do that"
 msgstr "No tienes permiso para hacer eso"
 
@@ -8654,6 +8658,7 @@ msgid "Heads up: everyone can read {channel}, so edited and deleted message text
 msgstr "Aviso: todos pueden leer {channel}, así que el texto de los mensajes editados y eliminados se oculta allí. Hazlo solo para el staff para verlo."
 
 #: cogs/moderation/modlog.py:435 cogs/moderation/modlog.py:449
+#: tools/botstats_features.py:108
 msgid "Mod log"
 msgstr "Registro de moderación"
 
@@ -10768,339 +10773,359 @@ msgstr "Elegir {name}"
 msgid "Complete {command}"
 msgstr "Completa {command}"
 
-#: cogs/system/botstats.py:588
+#: cogs/system/botstats.py:600 tools/botstats_health.py:652
 msgid "unknown"
 msgstr "desconocido"
 
-#: cogs/system/botstats.py:609
+#: cogs/system/botstats.py:621
 #, python-brace-format
 msgid "Servers: {count}"
 msgstr "Servidores: {count}"
 
-#: cogs/system/botstats.py:610
+#: cogs/system/botstats.py:622
 #, python-brace-format
 msgid "Members: {count} (approximate, bots included)"
 msgstr "Miembros: {count} (aproximado, bots incluidos)"
 
-#: cogs/system/botstats.py:613
+#: cogs/system/botstats.py:625
 #, python-brace-format
 msgid "Cached users: {count}"
 msgstr "Usuarios en caché: {count}"
 
-#: cogs/system/botstats.py:614
+#: cogs/system/botstats.py:626
 #, python-brace-format
 msgid "Channels: {count}"
 msgstr "Canales: {count}"
 
-#: cogs/system/botstats.py:619 cogs/system/botstats.py:704
+#: cogs/system/botstats.py:631 cogs/system/botstats.py:716
 #, python-brace-format
 msgid "{count} server(s) report no member count and are excluded."
 msgstr "{count} servidor(es) no reportan recuento de miembros y quedan excluidos."
 
-#: cogs/system/botstats.py:626
+#: cogs/system/botstats.py:638
 msgid "Member counts come from Discord's guild payloads, not from a member cache (this bot never chunks one)."
 msgstr "Los recuentos de miembros provienen de los payloads de servidor de Discord, no de una caché de miembros (este bot nunca hace chunking de ninguna)."
 
-#: cogs/system/botstats.py:639
+#: cogs/system/botstats.py:651
 #, python-brace-format
 msgid "{duration} (since this cog loaded)"
 msgstr "{duration} (desde que se cargó este cog)"
 
-#: cogs/system/botstats.py:644
+#: cogs/system/botstats.py:656
 #, python-brace-format
 msgid "Uptime: {uptime}"
 msgstr "Tiempo activo: {uptime}"
 
-#: cogs/system/botstats.py:645
+#: cogs/system/botstats.py:657
 #, python-brace-format
 msgid "Memory (RSS): {size}"
 msgstr "Memoria (RSS): {size}"
 
-#: cogs/system/botstats.py:648
+#: cogs/system/botstats.py:660 tools/botstats_health.py:828
 #, python-brace-format
 msgid "Gateway latency: {latency}"
 msgstr "Latencia del gateway: {latency}"
 
-#: cogs/system/botstats.py:655
+#: cogs/system/botstats.py:667
 #, python-brace-format
 msgid "Shards: {count}"
 msgstr "Shards: {count}"
 
-#: cogs/system/botstats.py:659
+#: cogs/system/botstats.py:671
 #, python-brace-format
 msgid "Python {python} - discord.py {discord}"
 msgstr "Python {python} - discord.py {discord}"
 
-#: cogs/system/botstats.py:662
+#: cogs/system/botstats.py:674
 #, python-brace-format
 msgid "Database size: {size}"
 msgstr "Tamaño de la base de datos: {size}"
 
-#: cogs/system/botstats.py:668
+#: cogs/system/botstats.py:680
 msgid "Reach"
 msgstr "Alcance"
 
-#: cogs/system/botstats.py:669
+#: cogs/system/botstats.py:681 tools/botstats_health.py:881
 msgid "Process"
 msgstr "Proceso"
 
-#: cogs/system/botstats.py:670
+#: cogs/system/botstats.py:682
 msgid "Versions"
 msgstr "Versiones"
 
-#: cogs/system/botstats.py:677 cogs/system/botstats.py:1059
+#: cogs/system/botstats.py:689 cogs/system/botstats.py:1176
 msgid "Top servers"
 msgstr "Servidores principales"
 
-#: cogs/system/botstats.py:677
+#: cogs/system/botstats.py:689
 msgid "This bot is in no server."
 msgstr "Este bot no está en ningún servidor."
 
-#: cogs/system/botstats.py:688
+#: cogs/system/botstats.py:700
 #, python-brace-format
 msgid "`{rank:>2}.` **{name}** - {members} members - joined {joined}"
 msgstr "`{rank:>2}.` **{name}** - {members} miembros - se unió {joined}"
 
-#: cogs/system/botstats.py:698
+#: cogs/system/botstats.py:710
 #, python-brace-format
 msgid "{guilds} servers, {members} members total"
 msgstr "{guilds} servidores, {members} miembros en total"
 
-#: cogs/system/botstats.py:710
+#: cogs/system/botstats.py:722
 msgid "Member counts are Discord's approximation and include bots."
 msgstr "Los recuentos de miembros son una aproximación de Discord e incluyen bots."
 
-#: cogs/system/botstats.py:715
+#: cogs/system/botstats.py:727
 #, python-brace-format
 msgid "Top {count} servers by members"
 msgstr "Los {count} servidores principales por miembros"
 
-#: cogs/system/botstats.py:718
+#: cogs/system/botstats.py:730
 msgid "Fleet total"
 msgstr "Total de la flota"
 
-#: cogs/system/botstats.py:735
+#: cogs/system/botstats.py:747
 #, python-brace-format
 msgid "{total} commands run since boot ({elapsed} ago)"
 msgstr "{total} comandos ejecutados desde el arranque (hace {elapsed})"
 
-#: cogs/system/botstats.py:738
+#: cogs/system/botstats.py:750
 #, python-brace-format
 msgid "{prefix} prefix - {slash} slash"
 msgstr "{prefix} prefijo - {slash} slash"
 
-#: cogs/system/botstats.py:742
+#: cogs/system/botstats.py:754
 msgid "In-memory counters: they reset on every restart."
 msgstr "Contadores en memoria: se reinician en cada reinicio."
 
-#: cogs/system/botstats.py:747
+#: cogs/system/botstats.py:759
 msgid "No command has completed yet."
 msgstr "Ningún comando se ha completado todavía."
 
-#: cogs/system/botstats.py:750 cogs/system/botstats.py:949
+#: cogs/system/botstats.py:762 cogs/system/botstats.py:982
 #, python-brace-format
 msgid "`{rank:>2}.` `{name}` - {count}"
 msgstr "`{rank:>2}.` `{name}` - {count}"
 
-#: cogs/system/botstats.py:760
+#: cogs/system/botstats.py:772
 msgid "Commands since boot"
 msgstr "Comandos desde el arranque"
 
-#: cogs/system/botstats.py:761
+#: cogs/system/botstats.py:773
 msgid "Most used commands"
 msgstr "Comandos más usados"
 
-#: cogs/system/botstats.py:762
+#: cogs/system/botstats.py:774
 msgid "Recorded usage (UTC days)"
 msgstr "Uso registrado (días UTC)"
 
-#: cogs/system/botstats.py:763
+#: cogs/system/botstats.py:775
 msgid "Quiet hours (UTC)"
 msgstr "Horas tranquilas (UTC)"
 
-#: cogs/system/botstats.py:765
+#: cogs/system/botstats.py:777
 #, python-brace-format
 msgid "Most used commands ({days} days)"
 msgstr "Comandos más usados ({days} días)"
 
-#: cogs/system/botstats.py:769
+#: cogs/system/botstats.py:781
 #, python-brace-format
 msgid "Observed activity ({days} days)"
 msgstr "Actividad observada ({days} días)"
 
-#: cogs/system/botstats.py:799 cogs/system/botstats.py:902
-#: cogs/system/botstats.py:945
+#: cogs/system/botstats.py:811 cogs/system/botstats.py:914
+#: cogs/system/botstats.py:978
 msgid "Recorded usage is unavailable right now."
 msgstr "El uso registrado no está disponible ahora mismo."
 
-#: cogs/system/botstats.py:803
+#: cogs/system/botstats.py:815
 msgid "Nothing has been recorded yet - collection starts with the first flush after this bot came up."
 msgstr "Aún no se ha registrado nada - la recopilación empieza con el primer guardado tras el arranque del bot."
 
-#: cogs/system/botstats.py:812
+#: cogs/system/botstats.py:824
 #, python-brace-format
 msgid "Today: {count}"
 msgstr "Hoy: {count}"
 
-#: cogs/system/botstats.py:813 cogs/system/botstats.py:818
+#: cogs/system/botstats.py:825 cogs/system/botstats.py:830
 #, python-brace-format
 msgid "{days} days: {count} ({recorded} of {days} day(s) recorded)"
 msgstr "{days} días: {count} ({recorded} de {days} día(s) registrado(s))"
 
-#: cogs/system/botstats.py:825
+#: cogs/system/botstats.py:837
 msgid "Calendar UTC days ending today, today included - so today is a partial day."
 msgstr "Días de calendario UTC que terminan hoy, hoy incluido - así que hoy es un día parcial."
 
-#: cogs/system/botstats.py:834
+#: cogs/system/botstats.py:846
 #, python-brace-format
 msgid "Recorded since {date} ({days} day(s)): the longer window is not full yet."
 msgstr "Registrado desde el {date} ({days} día(s)): la ventana larga aún no está completa."
 
 #. Translators: the seven weekday abbreviations, Monday first. They label
 #. hour slots such as "Mon 04:00", so keep them SHORT (3 characters).
-#: cogs/system/botstats.py:855
+#: cogs/system/botstats.py:867
 msgid "Mon"
 msgstr "Lun"
 
-#: cogs/system/botstats.py:856
+#: cogs/system/botstats.py:868
 msgid "Tue"
 msgstr "Mar"
 
-#: cogs/system/botstats.py:857
+#: cogs/system/botstats.py:869
 msgid "Wed"
 msgstr "Mié"
 
-#: cogs/system/botstats.py:858
+#: cogs/system/botstats.py:870
 msgid "Thu"
 msgstr "Jue"
 
-#: cogs/system/botstats.py:859
+#: cogs/system/botstats.py:871
 msgid "Fri"
 msgstr "Vie"
 
-#: cogs/system/botstats.py:860
+#: cogs/system/botstats.py:872
 msgid "Sat"
 msgstr "Sáb"
 
-#: cogs/system/botstats.py:861
+#: cogs/system/botstats.py:873
 msgid "Sun"
 msgstr "Dom"
 
-#: cogs/system/botstats.py:906
+#: cogs/system/botstats.py:918
 #, python-brace-format
 msgid "Not enough hourly history yet: this needs {days} day(s) of collection and has {have}."
 msgstr "Aún no hay suficiente historial horario: se necesitan {days} día(s) de recopilación y hay {have}."
 
-#: cogs/system/botstats.py:918
+#: cogs/system/botstats.py:930
 msgid "No commands have been recorded in the hourly profile yet."
 msgstr "Aún no se ha registrado ningún comando en el perfil horario."
 
-#: cogs/system/botstats.py:922
+#: cogs/system/botstats.py:934
 #, python-brace-format
 msgid "Quietest: {count} of {total} slots recorded nothing at all."
 msgstr "Las más tranquilas: {count} de {total} franjas no registraron nada en absoluto."
 
-#: cogs/system/botstats.py:928
+#: cogs/system/botstats.py:940
 #, python-brace-format
 msgid "Quietest: {slots}"
 msgstr "Las más tranquilas: {slots}"
 
-#: cogs/system/botstats.py:933
+#: cogs/system/botstats.py:945
 #, python-brace-format
 msgid "Busiest: {slots}"
 msgstr "Las más cargadas: {slots}"
 
-#: cogs/system/botstats.py:936
+#: cogs/system/botstats.py:948
 #, python-brace-format
 msgid "Share of all recorded commands, by UTC hour of the week. The profile halves every {days} days, so recent weeks weigh most."
 msgstr "Proporción de todos los comandos registrados, por hora UTC de la semana. El perfil se reduce a la mitad cada {days} días, así que las semanas recientes pesan más."
 
-#: cogs/system/botstats.py:947
+#: cogs/system/botstats.py:980
 msgid "No command has been recorded in this window."
 msgstr "Ningún comando se ha registrado en esta ventana."
 
-#: cogs/system/botstats.py:964
+#: cogs/system/botstats.py:997
 msgid "Observed activity is unavailable right now."
 msgstr "La actividad observada no está disponible en este momento."
 
-#: cogs/system/botstats.py:969
+#: cogs/system/botstats.py:1002
 msgid "No server was observed in this window - this is not a zero."
 msgstr "Ningún servidor fue observado en esta ventana - esto no es un cero."
 
-#: cogs/system/botstats.py:974
+#: cogs/system/botstats.py:1007
 #, python-brace-format
 msgid "{messages} messages, across {guilds} observed server(s) and {days} observed day(s)"
 msgstr "{messages} mensajes, en {guilds} servidor(es) observado(s) y {days} día(s) observado(s)"
 
-#: cogs/system/botstats.py:984
+#: cogs/system/botstats.py:1017
 msgid "No join/leave day was recorded in this window."
 msgstr "Ningún día de entrada/salida fue registrado en esta ventana."
 
-#: cogs/system/botstats.py:988
+#: cogs/system/botstats.py:1021
 #, python-brace-format
 msgid "{joins} joins / {leaves} leaves, across {guilds} observed server(s) and {guild_days} observed server-day(s)"
 msgstr "{joins} entradas / {leaves} salidas, en {guilds} servidor(es) observado(s) y {guild_days} día(s)-servidor observado(s)"
 
-#: cogs/system/botstats.py:1001
+#: cogs/system/botstats.py:1034
 msgid "Observed servers only: a server with no row was not being watched, which is never the same as zero."
 msgstr "Solo servidores observados: un servidor sin fila no estaba siendo vigilado, lo cual nunca es lo mismo que un cero."
 
-#: cogs/system/botstats.py:1011
+#: cogs/system/botstats.py:1044
 msgid "Row counts are unavailable right now."
 msgstr "Los recuentos de filas no están disponibles en este momento."
 
-#: cogs/system/botstats.py:1013
+#: cogs/system/botstats.py:1046
 msgid "No featured table was counted."
 msgstr "Ninguna tabla destacada fue contada."
 
-#: cogs/system/botstats.py:1021
+#: cogs/system/botstats.py:1054
 msgid "Table sizes are unavailable right now."
 msgstr "Los tamaños de las tablas no están disponibles en este momento."
 
-#: cogs/system/botstats.py:1023
+#: cogs/system/botstats.py:1056
 msgid "No table in this database."
 msgstr "Ninguna tabla en esta base de datos."
 
-#: cogs/system/botstats.py:1032
+#: cogs/system/botstats.py:1065
 #, python-brace-format
 msgid "Every table: {size}"
 msgstr "Todas las tablas: {size}"
 
-#: cogs/system/botstats.py:1035
+#: cogs/system/botstats.py:1068
 msgid "Sizes include indexes and TOAST storage."
 msgstr "Los tamaños incluyen índices y almacenamiento TOAST."
 
-#: cogs/system/botstats.py:1039
+#: cogs/system/botstats.py:1072
 msgid "Featured tables"
 msgstr "Tablas destacadas"
 
-#: cogs/system/botstats.py:1040
+#: cogs/system/botstats.py:1073
 msgid "Largest tables"
 msgstr "Tablas más grandes"
 
-#: cogs/system/botstats.py:1059
+#: cogs/system/botstats.py:1175
 msgid "Overview"
 msgstr "Resumen"
 
-#: cogs/system/botstats.py:1059
+#: cogs/system/botstats.py:1177
 msgid "Usage"
 msgstr "Uso"
 
-#: cogs/system/botstats.py:1059
+#: cogs/system/botstats.py:1178
 msgid "Data"
 msgstr "Datos"
 
-#: cogs/system/botstats.py:1278
+#: cogs/system/botstats.py:1179
+msgid "Features"
+msgstr "Funciones"
+
+#: cogs/system/botstats.py:1180 cogs/system/premium.py:676
+msgid "Premium"
+msgstr "Premium"
+
+#: cogs/system/botstats.py:1181
+msgid "Health"
+msgstr "Estado"
+
+#: cogs/system/botstats.py:1182
+msgid "Growth"
+msgstr "Crecimiento"
+
+#: cogs/system/botstats.py:1183
+msgid "Summary"
+msgstr "Resumen"
+
+#: cogs/system/botstats.py:1555
 #, python-brace-format
 msgid "Bot statistics - {page}"
 msgstr "Estadísticas del bot - {page}"
 
-#: cogs/system/botstats.py:1311
+#: cogs/system/botstats.py:1591
 #, python-brace-format
 msgid "Snapshot taken {when}"
 msgstr "Instantánea tomada {when}"
 
-#: cogs/system/botstats.py:1313
+#: cogs/system/botstats.py:1593
 msgid "times out after 5 min"
 msgstr "expira después de 5 min"
 
@@ -11135,7 +11160,7 @@ msgid "**Seems like you're missing a required argument:**"
 msgstr "**Parece que te falta un argumento obligatorio:**"
 
 #: cogs/system/errors.py:536 cogs/system/errors.py:549
-#: cogs/system/errors.py:631 cogs/system/errors.py:671
+#: cogs/system/errors.py:631 cogs/system/errors.py:674
 #, python-brace-format
 msgid ""
 ":warning: Error: `{error}`\n"
@@ -11198,11 +11223,11 @@ msgstr "**Parece que hiciste algo mal:**"
 msgid "**Seems like you are missing permissions:**"
 msgstr "**Parece que te faltan permisos:**"
 
-#: cogs/system/errors.py:670
+#: cogs/system/errors.py:673
 msgid "**Seems like I am missing permissions:**"
 msgstr "**Parece que me faltan permisos:**"
 
-#: cogs/system/events.py:140
+#: cogs/system/events.py:144
 msgid "You are blacklisted from bot. You can ask to be unblacklisted by send a message to <@228895251576782858>"
 msgstr "Estás en la lista negra del bot. Puedes pedir que te quiten de la lista negra enviando un mensaje a <@228895251576782858>"
 
@@ -11500,10 +11525,6 @@ msgstr "Estado premium"
 #: cogs/system/premium.py:675
 msgid "Effective"
 msgstr "Efectivo"
-
-#: cogs/system/premium.py:676
-msgid "Premium"
-msgstr "Premium"
 
 #: cogs/system/premium.py:676
 msgid "Free"
@@ -13975,6 +13996,738 @@ msgstr "🥁 Bass Boost"
 #: tests/test_view_locale_hygiene.py:529 tools/views.py:79
 msgid "This menu isn't for you."
 msgstr "Este menú no es para ti."
+
+#: tools/botstats_features.py:52
+msgid "Server playlists"
+msgstr "Listas de reproducción del servidor"
+
+#: tools/botstats_features.py:53
+msgid "24/7 music"
+msgstr "Música 24/7"
+
+#: tools/botstats_features.py:56
+msgid "Music settings"
+msgstr "Ajustes de música"
+
+#: tools/botstats_features.py:63
+msgid "AniList follows"
+msgstr "Seguimientos de AniList"
+
+#: tools/botstats_features.py:64
+msgid "AniList channel subs"
+msgstr "Suscripciones de canal de AniList"
+
+#: tools/botstats_features.py:67
+msgid "MangaDex chapter alerts"
+msgstr "Alertas de capítulos de MangaDex"
+
+#: tools/botstats_features.py:71
+msgid "Airing ping roles"
+msgstr "Roles de aviso de emisiones"
+
+#: tools/botstats_features.py:72
+msgid "Watch-alongs"
+msgstr "Ver en grupo"
+
+#: tools/botstats_features.py:73
+msgid "Leveling enabled"
+msgstr "Niveles activados"
+
+#: tools/botstats_features.py:74
+msgid "Level role rewards"
+msgstr "Recompensas de rol por nivel"
+
+#: tools/botstats_features.py:77
+msgid "XP seasons"
+msgstr "Temporadas de XP"
+
+#: tools/botstats_features.py:82
+msgid "Welcome messages"
+msgstr "Mensajes de bienvenida"
+
+#: tools/botstats_features.py:86
+msgid "Role menus"
+msgstr "Menús de roles"
+
+#: tools/botstats_features.py:87
+msgid "Temporary roles"
+msgstr "Roles temporales"
+
+#: tools/botstats_features.py:88
+msgid "YouTube notifications"
+msgstr "Notificaciones de YouTube"
+
+#: tools/botstats_features.py:89
+msgid "Twitch alerts"
+msgstr "Alertas de Twitch"
+
+#: tools/botstats_features.py:95
+msgid "Server stats digest"
+msgstr "Resumen semanal de estadísticas del servidor"
+
+#: tools/botstats_features.py:103
+msgid "Automod"
+msgstr "Automod"
+
+#: tools/botstats_features.py:111
+msgid "Config templates"
+msgstr "Plantillas de configuración"
+
+#: tools/botstats_features.py:114
+msgid "Pending reminders"
+msgstr "Recordatorios pendientes"
+
+#: tools/botstats_features.py:120
+msgid "User profiles"
+msgstr "Perfiles de usuario"
+
+#: tools/botstats_features.py:121
+msgid "Linked social accounts"
+msgstr "Cuentas sociales vinculadas"
+
+#: tools/botstats_features.py:122
+msgid "Music favourites"
+msgstr "Favoritos de música"
+
+#: tools/botstats_features.py:125
+msgid "Chapter DM opt-ins"
+msgstr "Suscripciones por MD a capítulos"
+
+#: tools/botstats_features.py:130
+msgid "top.gg voters"
+msgstr "votantes de top.gg"
+
+#: tools/botstats_features.py:205
+msgid "Feature adoption"
+msgstr "Adopción de funciones"
+
+#: tools/botstats_features.py:205
+msgid "Adoption figures are unavailable right now."
+msgstr "Las cifras de adopción no están disponibles ahora mismo."
+
+#: tools/botstats_features.py:215 tools/botstats_features.py:234
+#, python-brace-format
+msgid "{label} - unknown"
+msgstr "{label} - desconocido"
+
+#: tools/botstats_features.py:218
+#, python-brace-format
+msgid "{label} - {count} of {total} ({percent})"
+msgstr "{label} - {count} de {total} ({percent})"
+
+#: tools/botstats_features.py:226 tools/botstats_health.py:713
+#: tools/botstats_premium.py:115
+#, python-brace-format
+msgid "... and {count} more"
+msgstr "... y {count} más"
+
+#: tools/botstats_features.py:228
+msgid "Servers using each feature"
+msgstr "Servidores que usan cada función"
+
+#: tools/botstats_features.py:237
+#, python-brace-format
+msgid "{label} - {count}"
+msgstr "{label} - {count}"
+
+#: tools/botstats_features.py:240
+msgid "People"
+msgstr "Personas"
+
+#: tools/botstats_features.py:251
+#, python-brace-format
+msgid ", ... and {count} more"
+msgstr ", ... y {count} más"
+
+#: tools/botstats_features.py:253
+#, python-brace-format, python-format
+msgid "Under 5% of servers: {names}."
+msgstr "Por debajo del 5% de servidores: {names}."
+
+#: tools/botstats_features.py:255
+#, python-format
+msgid "No feature is under 5% of servers."
+msgstr "Ninguna función está por debajo del 5% de los servidores."
+
+#: tools/botstats_features.py:257
+msgid "Least adopted"
+msgstr "Menos adoptadas"
+
+#: tools/botstats_features.py:261
+#, python-brace-format
+msgid "Counts cover only the {total} servers Yasuho is in right now."
+msgstr "Los recuentos solo cubren los {total} servidores en los que está Yasuho ahora mismo."
+
+#: tools/botstats_growth.py:208
+msgid "Join and leave figures are unavailable right now."
+msgstr "Las cifras de entradas y salidas no están disponibles ahora mismo."
+
+#: tools/botstats_growth.py:211 tools/botstats_growth.py:247
+msgid "No server join or leave has been recorded yet."
+msgstr "Todavía no se ha registrado ninguna entrada o salida de servidor."
+
+#: tools/botstats_growth.py:212
+msgid "The log starts with the first one after this feature shipped."
+msgstr "El registro empieza con el primero después de publicarse esta función."
+
+#: tools/botstats_growth.py:217
+#, python-brace-format
+msgid "{days} days: {joins} joined, {leaves} left, net {net}"
+msgstr "{days} días: {joins} entraron, {leaves} salieron, neto {net}"
+
+#: tools/botstats_growth.py:221
+#, python-brace-format
+msgid "history starts {date}"
+msgstr "el historial empieza el {date}"
+
+#: tools/botstats_growth.py:228
+msgid "No weekly figures yet."
+msgstr "Todavía no hay cifras semanales."
+
+#: tools/botstats_growth.py:235
+#, python-brace-format
+msgid "Week of {date}: {joins} joined, {leaves} left"
+msgstr "Semana del {date}: {joins} entraron, {leaves} salieron"
+
+#: tools/botstats_growth.py:239
+msgid "ISO weeks in UTC; the last one is not over yet."
+msgstr "Semanas ISO en UTC; la última aún no ha terminado."
+
+#: tools/botstats_growth.py:245
+msgid "Stay figures are unavailable right now."
+msgstr "Las cifras de permanencia no están disponibles ahora mismo."
+
+#: tools/botstats_growth.py:249
+msgid "No server that left in the last 90 days has a known stay."
+msgstr "Ningún servidor que se fue en los últimos 90 días tiene una permanencia conocida."
+
+#: tools/botstats_growth.py:253
+#, python-brace-format
+msgid "Median stay of servers that left: {duration}"
+msgstr "Permanencia mediana de los servidores que se fueron: {duration}"
+
+#: tools/botstats_growth.py:256
+#, python-brace-format
+msgid "Left within 24 h: {count} of {total} ({percent})"
+msgstr "Salidas en 24 h: {count} de {total} ({percent})"
+
+#: tools/botstats_growth.py:259
+#, python-brace-format
+msgid "Left within 7 days: {count} of {total} ({percent})"
+msgstr "Salidas en 7 días: {count} de {total} ({percent})"
+
+#: tools/botstats_growth.py:264
+#, python-brace-format
+msgid "Median size: {joined} members when joining, {left} when leaving"
+msgstr "Tamaño mediano: {joined} miembros al entrar, {left} al salir"
+
+#: tools/botstats_growth.py:272
+#, python-brace-format
+msgid "Small or short sample: only {days} day(s) of history, so these figures may not be typical yet."
+msgstr "Muestra pequeña o corta: solo {days} día(s) de historial, así que estas cifras aún pueden no ser representativas."
+
+#: tools/botstats_growth.py:281
+msgid "Joined in the last 7 days"
+msgstr "Entrada en los últimos 7 días"
+
+#: tools/botstats_growth.py:282
+msgid "Joined 8 to 30 days ago"
+msgstr "Entrada hace 8 a 30 días"
+
+#: tools/botstats_growth.py:283
+msgid "Joined 31 to 90 days ago"
+msgstr "Entrada hace 31 a 90 días"
+
+#: tools/botstats_growth.py:284
+msgid "Joined more than 90 days ago"
+msgstr "Entrada hace más de 90 días"
+
+#: tools/botstats_growth.py:285
+msgid "Join date unknown"
+msgstr "Fecha de entrada desconocida"
+
+#: tools/botstats_growth.py:288
+#, python-brace-format
+msgid "{label}: {count}"
+msgstr "{label}: {count}"
+
+#: tools/botstats_growth.py:293
+msgid "From each server's own join date; a rejoin counts from the latest one."
+msgstr "Según la fecha de entrada de cada servidor; si se vuelve a entrar, cuenta la más reciente."
+
+#: tools/botstats_growth.py:301
+msgid "Servers gained and lost"
+msgstr "Servidores ganados y perdidos"
+
+#: tools/botstats_growth.py:302
+msgid "Week by week"
+msgstr "Semana a semana"
+
+#: tools/botstats_growth.py:303
+msgid "First impressions (last 90 days)"
+msgstr "Primeras impresiones (últimos 90 días)"
+
+#: tools/botstats_growth.py:304
+msgid "Servers still here, by join date"
+msgstr "Servidores que siguen aquí, por fecha de entrada"
+
+#: tools/botstats_health.py:438
+msgid "connected"
+msgstr "conectado"
+
+#: tools/botstats_health.py:439
+msgid "connecting"
+msgstr "conectando"
+
+#: tools/botstats_health.py:440
+msgid "disconnected"
+msgstr "desconectado"
+
+#: tools/botstats_health.py:441
+msgid "closed"
+msgstr "cerrado"
+
+#: tools/botstats_health.py:442
+msgid "open"
+msgstr "abierto"
+
+#: tools/botstats_health.py:443
+msgid "half-open"
+msgstr "semiabierto"
+
+#: tools/botstats_health.py:561 tools/botstats_health.py:877
+msgid "Lavalink"
+msgstr "Lavalink"
+
+#: tools/botstats_health.py:563
+msgid "no Lavalink node"
+msgstr "sin nodo de Lavalink"
+
+#: tools/botstats_health.py:565
+msgid "Lavalink node not connected"
+msgstr "Nodo de Lavalink no conectado"
+
+#: tools/botstats_health.py:568
+msgid "AniList breaker"
+msgstr "Cortacircuitos de AniList"
+
+#: tools/botstats_health.py:571
+#, python-brace-format
+msgid "AniList breaker {state}"
+msgstr "Cortacircuitos de AniList {state}"
+
+#: tools/botstats_health.py:577
+msgid "timers"
+msgstr "temporizadores"
+
+#: tools/botstats_health.py:580
+#, python-brace-format
+msgid "{count} overdue timer(s)"
+msgstr "{count} temporizador(es) con retraso"
+
+#: tools/botstats_health.py:584
+msgid "dashboard actions"
+msgstr "acciones del panel"
+
+#: tools/botstats_health.py:587
+#, python-brace-format
+msgid "{count} stuck dashboard action(s)"
+msgstr "{count} acción(es) del panel atascada(s)"
+
+#: tools/botstats_health.py:593
+#, python-brace-format
+msgid "{count} error(s) today"
+msgstr "{count} error(es) hoy"
+
+#: tools/botstats_health.py:595
+msgid "persisted errors"
+msgstr "errores guardados"
+
+#: tools/botstats_health.py:600
+msgid "MangaDex paused by a rate limit"
+msgstr "MangaDex en pausa por límite de peticiones"
+
+#: tools/botstats_health.py:603
+msgid "gateway latency"
+msgstr "latencia del gateway"
+
+#: tools/botstats_health.py:605
+msgid "gateway counters"
+msgstr "contadores del gateway"
+
+#: tools/botstats_health.py:608
+msgid "database pool"
+msgstr "pool de base de datos"
+
+#: tools/botstats_health.py:610
+msgid "database pool saturated"
+msgstr "pool de base de datos saturado"
+
+#: tools/botstats_health.py:613
+msgid "extensions"
+msgstr "extensiones"
+
+#: tools/botstats_health.py:616
+#, python-brace-format
+msgid "{count} extension(s) not loaded"
+msgstr "{count} extensión(es) no cargada(s)"
+
+#: tools/botstats_health.py:626
+#, python-brace-format
+msgid "{count} issue(s): {issues}"
+msgstr "{count} problema(s): {issues}"
+
+#: tools/botstats_health.py:630
+#, python-brace-format
+msgid "No issue found, but {count} check(s) could not be read: {names}"
+msgstr "No se encontró ningún problema, pero no se pudo leer {count} comprobación(es): {names}"
+
+#: tools/botstats_health.py:634
+msgid "All green"
+msgstr "Todo en orden"
+
+#: tools/botstats_health.py:658
+msgid "Persisted error counts are unavailable right now."
+msgstr "Los recuentos de errores guardados no están disponibles ahora mismo."
+
+#: tools/botstats_health.py:661
+#, python-brace-format
+msgid "Today (UTC): {today} - last {days} days: {week}"
+msgstr "Hoy (UTC): {today} - últimos {days} días: {week}"
+
+#: tools/botstats_health.py:667
+#, python-brace-format
+msgid "{command} / {error}: {count}"
+msgstr "{command} / {error}: {count}"
+
+#: tools/botstats_health.py:674
+#, python-brace-format
+msgid "No unexpected error in the last {days} days."
+msgstr "Ningún error inesperado en los últimos {days} días."
+
+#: tools/botstats_health.py:681
+#, python-brace-format
+msgid "Oldest recorded error: {date}"
+msgstr "Error registrado más antiguo: {date}"
+
+#: tools/botstats_health.py:683
+#, python-brace-format
+msgid "Since boot: {count} (this process only)"
+msgstr "Desde el arranque: {count} (solo este proceso)"
+
+#: tools/botstats_health.py:687
+#, python-brace-format
+msgid "{count} not counted (buffer full)"
+msgstr "{count} no contados (búfer lleno)"
+
+#: tools/botstats_health.py:694
+#, python-brace-format
+msgid "Unexpected failures only (not bad input, cooldowns or missing permissions), by UTC day, kept {days} days."
+msgstr "Solo fallos inesperados (no entradas incorrectas, enfriamientos ni permisos que faltan), por día UTC, conservados {days} días."
+
+#: tools/botstats_health.py:703
+#, python-brace-format
+msgid "Lavalink nodes: {state}"
+msgstr "Nodos de Lavalink: {state}"
+
+#: tools/botstats_health.py:705
+msgid "No Lavalink node is registered."
+msgstr "No hay ningún nodo de Lavalink registrado."
+
+#: tools/botstats_health.py:708
+#, python-brace-format
+msgid "Node {node}: {state}"
+msgstr "Nodo {node}: {state}"
+
+#: tools/botstats_health.py:716
+#, python-brace-format
+msgid "Active players: {count}"
+msgstr "Jugadores activos: {count}"
+
+#: tools/botstats_health.py:726 tools/botstats_health.py:728
+#, python-brace-format
+msgid "AniList breaker: {state}"
+msgstr "Cortacircuitos de AniList: {state}"
+
+#: tools/botstats_health.py:732
+#, python-brace-format
+msgid "next probe in {duration}"
+msgstr "próxima prueba en {duration}"
+
+#: tools/botstats_health.py:738
+#, python-brace-format
+msgid "Outages since boot: {opens} - poller requests skipped: {skipped}"
+msgstr "Caídas desde el arranque: {opens} - peticiones de sondeo omitidas: {skipped}"
+
+#: tools/botstats_health.py:744
+#, python-brace-format
+msgid "MangaDex chapter alerts: {state}"
+msgstr "Alertas de capítulos de MangaDex: {state}"
+
+#: tools/botstats_health.py:747
+#, python-brace-format
+msgid "MangaDex chapter alerts: paused by a rate limit, {duration} left"
+msgstr "Alertas de capítulos de MangaDex: en pausa por límite de peticiones, quedan {duration}"
+
+#: tools/botstats_health.py:752
+msgid "MangaDex chapter alerts: no rate-limit pause"
+msgstr "Alertas de capítulos de MangaDex: sin pausa por límite de peticiones"
+
+#: tools/botstats_health.py:759
+msgid "Timer health is unavailable right now."
+msgstr "El estado de los temporizadores no está disponible ahora mismo."
+
+#: tools/botstats_health.py:763
+#, python-brace-format
+msgid "{count} timer(s) overdue by more than {minutes} minutes"
+msgstr "{count} temporizador(es) con más de {minutes} minutos de retraso"
+
+#: tools/botstats_health.py:769
+#, python-brace-format
+msgid "Oldest overdue: {age}"
+msgstr "Más antiguo con retraso: {age}"
+
+#: tools/botstats_health.py:772
+#, python-brace-format
+msgid "{event}: {count}"
+msgstr "{event}: {count}"
+
+#: tools/botstats_health.py:776
+#, python-brace-format
+msgid "No timer is more than {minutes} minutes overdue."
+msgstr "Ningún temporizador tiene más de {minutes} minutos de retraso."
+
+#: tools/botstats_health.py:778
+#, python-brace-format
+msgid "Timers retrying after a failed delivery: {count}"
+msgstr "Temporizadores reintentando tras un envío fallido: {count}"
+
+#: tools/botstats_health.py:786
+msgid "Dashboard action health is unavailable right now."
+msgstr "El estado de las acciones del panel no está disponible ahora mismo."
+
+#: tools/botstats_health.py:799
+#, python-brace-format
+msgid "Last {hours} h: {counts}"
+msgstr "Últimas {hours} h: {counts}"
+
+#: tools/botstats_health.py:805
+#, python-brace-format
+msgid "No dashboard action in the last {hours} hours."
+msgstr "Ninguna acción del panel en las últimas {hours} horas."
+
+#: tools/botstats_health.py:810
+#, python-brace-format
+msgid "Pending for over {minutes} minutes: {count}"
+msgstr "Pendientes desde hace más de {minutes} minutos: {count}"
+
+#: tools/botstats_health.py:815
+#, python-brace-format
+msgid "Failed in the last {days} days:"
+msgstr "Fallidas en los últimos {days} días:"
+
+#: tools/botstats_health.py:817
+#, python-brace-format
+msgid "{kind}: {count}"
+msgstr "{kind}: {count}"
+
+#: tools/botstats_health.py:821
+#, python-brace-format
+msgid "No failed action in the last {days} days."
+msgstr "Ninguna acción fallida en los últimos {days} días."
+
+#: tools/botstats_health.py:838
+#, python-brace-format
+msgid "Database pool: {state}"
+msgstr "Pool de base de datos: {state}"
+
+#: tools/botstats_health.py:841
+#, python-brace-format
+msgid "Database pool: {size} open, {idle} idle, max {max}"
+msgstr "Pool de base de datos: {size} abiertas, {idle} inactivas, máx. {max}"
+
+#: tools/botstats_health.py:846
+#, python-brace-format
+msgid "Gateway since boot: {state}"
+msgstr "Gateway desde el arranque: {state}"
+
+#: tools/botstats_health.py:850
+#, python-brace-format
+msgid "Gateway since boot: {resumes} resume(s), {disconnects} disconnect(s)"
+msgstr "Gateway desde el arranque: {resumes} reanudación(es), {disconnects} desconexión(es)"
+
+#: tools/botstats_health.py:856
+#, python-brace-format
+msgid "Extensions: {state}"
+msgstr "Extensiones: {state}"
+
+#: tools/botstats_health.py:859
+#, python-brace-format
+msgid "Extensions: {loaded} loaded, none failed"
+msgstr "Extensiones: {loaded} cargadas, ninguna fallida"
+
+#: tools/botstats_health.py:865
+#, python-brace-format
+msgid "Extensions not loaded: {names}"
+msgstr "Extensiones no cargadas: {names}"
+
+#: tools/botstats_health.py:875
+msgid "Verdict"
+msgstr "Veredicto"
+
+#: tools/botstats_health.py:876
+msgid "Errors"
+msgstr "Errores"
+
+#: tools/botstats_health.py:878
+msgid "AniList and MangaDex"
+msgstr "AniList y MangaDex"
+
+#: tools/botstats_health.py:879
+msgid "Timers"
+msgstr "Temporizadores"
+
+#: tools/botstats_health.py:880
+msgid "Dashboard actions"
+msgstr "Acciones del panel"
+
+#: tools/botstats_premium.py:83
+msgid "Yasuho+ servers are unknown right now."
+msgstr "No se sabe cuántos servidores tienen Yasuho+ ahora mismo."
+
+#: tools/botstats_premium.py:89
+#, python-brace-format
+msgid "{count} of {total} servers have Yasuho+ ({percent})"
+msgstr "{count} de {total} servidores tienen Yasuho+ ({percent})"
+
+#: tools/botstats_premium.py:95
+msgid "Limit usage is unavailable right now."
+msgstr "El uso de los límites no está disponible ahora mismo."
+
+#: tools/botstats_premium.py:99
+#, python-format
+msgid "No free limit has anyone at 80% or more."
+msgstr "Ningún límite gratuito tiene a nadie al 80% o más."
+
+#: tools/botstats_premium.py:103
+#, python-brace-format, python-format
+msgid "{label}: {full} at the free limit ({free}), {near} at 80% or more, of {scopes}"
+msgstr "{label}: {full} en el límite gratuito ({free}), {near} al 80% o más, de {scopes}"
+
+#: tools/botstats_premium.py:119
+msgid "Measured against the FREE limit across every server and person, Yasuho+ ones included."
+msgstr "Medido frente al límite GRATUITO en todos los servidores y personas, incluidos los de Yasuho+."
+
+#: tools/botstats_premium.py:125
+msgid "Limit notes are unavailable right now."
+msgstr "Las notas de límite no están disponibles ahora mismo."
+
+#: tools/botstats_premium.py:128
+#, python-brace-format
+msgid "No limit note was shown in the last {days} days."
+msgstr "No se mostró ninguna nota de límite en los últimos {days} días."
+
+#: tools/botstats_premium.py:134
+#, python-brace-format
+msgid "{key} - {people} people"
+msgstr "{key} - {people} personas"
+
+#: tools/botstats_premium.py:138
+msgid "... and more"
+msgstr "... y más"
+
+#: tools/botstats_premium.py:142
+#, python-brace-format
+msgid "People who saw each note in the last {days} days (older records are deleted)."
+msgstr "Personas que vieron cada nota en los últimos {days} días (los registros más antiguos se borran)."
+
+#: tools/botstats_premium.py:148
+msgid "Yasuho+"
+msgstr "Yasuho+"
+
+#: tools/botstats_premium.py:149
+msgid "Where free limits are hit"
+msgstr "Dónde se alcanzan los límites gratuitos"
+
+#: tools/botstats_premium.py:150
+msgid "Limit notes shown"
+msgstr "Notas de límite mostradas"
+
+#: tools/botstats_summary.py:38
+#, python-brace-format
+msgid "{label} is the most used feature ({percent} of servers); no feature is under 5%."
+msgstr "{label} es la función más usada ({percent} de los servidores); ninguna función está por debajo del 5%."
+
+#: tools/botstats_summary.py:45
+#, python-brace-format
+msgid "{label} is the most used feature ({percent} of servers); {count} feature(s) are under 5%: {names}."
+msgstr "{label} es la función más usada ({percent} de los servidores); {count} función(es) están por debajo del 5%: {names}."
+
+#: tools/botstats_summary.py:55
+#, python-format
+msgid "No free limit has anyone at 80% or more, so there is no upsell argument yet."
+msgstr "Ningún límite gratuito tiene a nadie al 80% o más, así que todavía no hay argumento de venta."
+
+#: tools/botstats_summary.py:58
+#, python-brace-format, python-format
+msgid "Best upsell argument: {label}, with {full} at the free limit and {near} at 80% or more."
+msgstr "Mejor argumento de venta: {label}, con {full} en el límite gratuito y {near} al 80% o más."
+
+#: tools/botstats_summary.py:67
+#, python-brace-format
+msgid "Health: {verdict}"
+msgstr "Estado: {verdict}"
+
+#: tools/botstats_summary.py:72
+#, python-brace-format
+msgid "Most frequent error this week: {command} / {error} ({count})."
+msgstr "Error más frecuente esta semana: {command} / {error} ({count})."
+
+#: tools/botstats_summary.py:83
+#, python-brace-format
+msgid "Growth: not enough history yet ({days} day(s) recorded)."
+msgstr "Crecimiento: aún no hay suficiente historial ({days} día(s) registrado(s))."
+
+#: tools/botstats_summary.py:90
+#, python-brace-format
+msgid "Over 30 days the bot gained {joins} and lost {leaves} server(s), net {net}."
+msgstr "En 30 días el bot ganó {joins} y perdió {leaves} servidor(es), neto {net}."
+
+#: tools/botstats_summary.py:93
+#, python-brace-format
+msgid "Over 30 days the bot gained {joins} and lost {leaves} server(s), net {net}; {percent} of the {known} servers that left in the last {days} day(s) stayed under 7 days."
+msgstr "En 30 días el bot ganó {joins} y perdió {leaves} servidor(es), neto {net}; el {percent} de los {known} servidores que se fueron en los últimos {days} día(s) permaneció menos de 7 días."
+
+#: tools/botstats_summary.py:115
+#, python-brace-format
+msgid "Most used command over {days} day(s): {name} ({count})."
+msgstr "Comando más usado en {days} día(s): {name} ({count})."
+
+#: tools/botstats_summary.py:123
+#, python-brace-format
+msgid "Busiest hour (UTC): {busiest}; quietest: {quietest}."
+msgstr "Hora más activa (UTC): {busiest}; más tranquila: {quietest}."
+
+#: tools/botstats_summary.py:128
+#, python-brace-format
+msgid "Busiest hour (UTC): {busiest}."
+msgstr "Hora más activa (UTC): {busiest}."
+
+#: tools/botstats_summary.py:153
+msgid "Not enough data yet to say anything useful."
+msgstr "Todavía no hay datos suficientes para decir nada útil."
+
+#: tools/botstats_summary.py:158
+msgid "What stands out"
+msgstr "Lo que destaca"
+
+#: tools/botstats_summary.py:160
+msgid "About this page"
+msgstr "Acerca de esta página"
+
+#: tools/botstats_summary.py:164
+msgid "Built only from the figures of the other pages; an insight is left out when its figure could not be read."
+msgstr "Se calcula solo con las cifras de las otras páginas; una observación se omite cuando su cifra no pudo leerse."
 
 #: tools/card_themes.py:60
 msgid "Classic"

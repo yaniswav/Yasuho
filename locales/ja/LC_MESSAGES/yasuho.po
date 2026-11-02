@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-30 15:21+0000\n"
+"POT-Creation-Date: 2026-11-02 18:50+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -392,7 +392,7 @@ msgstr "第{volume}巻"
 msgid "Official site"
 msgstr "公式サイト"
 
-#: cogs/anilist/chapters.py:717
+#: cogs/anilist/chapters.py:717 tools/botstats_health.py:598
 msgid "MangaDex"
 msgstr "MangaDex"
 
@@ -639,7 +639,7 @@ msgstr "そのタイプに一致するタイトルがありません。"
 #: cogs/config/rolemenus.py:732 cogs/config/welcome.py:144
 #: cogs/config/welcome.py:202 cogs/config/welcome.py:397
 #: cogs/config/welcome.py:653 cogs/music/playlists_shared.py:415
-#: cogs/system/botstats.py:1358
+#: cogs/system/botstats.py:1638
 msgid "Something went wrong."
 msgstr "問題が発生しました。"
 
@@ -858,7 +858,7 @@ msgstr ""
 msgid "Muted: {muted}"
 msgstr "ミュート: {muted}"
 
-#: cogs/anilist/feed.py:2982
+#: cogs/anilist/feed.py:2982 tools/botstats_features.py:62
 msgid "AniList feeds"
 msgstr "AniListフィード"
 
@@ -2567,6 +2567,7 @@ msgid "You need the Manage Server permission for this."
 msgstr "これにはサーバー管理権限が必要です。"
 
 #: cogs/community/birthdays/panel.py:164 cogs/config/config_transfer.py:365
+#: tools/botstats_features.py:83
 msgid "Birthdays"
 msgstr "誕生日"
 
@@ -5063,6 +5064,7 @@ msgid "Buttons attached"
 msgstr "ボタンを添付しました"
 
 #: cogs/config/buttonroles.py:959 cogs/config/buttonroles.py:981
+#: tools/botstats_features.py:85
 msgid "Button roles"
 msgstr "ボタンロール"
 
@@ -5097,7 +5099,7 @@ msgstr "言語"
 msgid "Welcome"
 msgstr "ウェルカム"
 
-#: cogs/config/config_transfer.py:333
+#: cogs/config/config_transfer.py:333 tools/botstats_features.py:61
 msgid "Tickets"
 msgstr "チケット"
 
@@ -5109,7 +5111,7 @@ msgstr "音楽"
 msgid "Member milestones"
 msgstr "メンバー数マイルストーン"
 
-#: cogs/config/config_transfer.py:377
+#: cogs/config/config_transfer.py:377 tools/botstats_features.py:109
 msgid "Suggestions"
 msgstr "提案"
 
@@ -5472,7 +5474,7 @@ msgstr "ボタン"
 msgid "Delete selected"
 msgstr "選択したものを削除"
 
-#: cogs/config/customcommands.py:647
+#: cogs/config/customcommands.py:647 tools/botstats_features.py:110
 msgid "Custom commands"
 msgstr "カスタムコマンド"
 
@@ -5713,6 +5715,7 @@ msgid "Reaction role removed"
 msgstr "リアクションロールを削除しました"
 
 #: cogs/config/reactionroles.py:361 cogs/config/reactionroles.py:375
+#: tools/botstats_features.py:84
 msgid "Reaction roles"
 msgstr "リアクションロール"
 
@@ -6455,6 +6458,7 @@ msgstr "モッドログ管理パネルを開く"
 #: cogs/config/settings.py:120 cogs/config/settings.py:222
 #: cogs/config/starboard.py:356 cogs/config/starboard.py:393
 #: cogs/config/starboard.py:430 cogs/config/starboard.py:455
+#: tools/botstats_features.py:81
 msgid "Starboard"
 msgstr "スターボード"
 
@@ -8518,7 +8522,7 @@ msgstr "私の最上位ロール以上の位置にロールを移動すること
 msgid "{role} moved."
 msgstr "{role} を移動しました。"
 
-#: cogs/moderation/moderation.py:1289 cogs/system/errors.py:686
+#: cogs/moderation/moderation.py:1289 cogs/system/errors.py:689
 msgid "You do not have permission to do that"
 msgstr "それを行う権限がありません"
 
@@ -8615,6 +8619,7 @@ msgid "Heads up: everyone can read {channel}, so edited and deleted message text
 msgstr "注意: {channel} は全員が閲覧できるため、編集・削除されたメッセージの本文はそこでは非表示になります。見るにはスタッフ専用にしてください。"
 
 #: cogs/moderation/modlog.py:435 cogs/moderation/modlog.py:449
+#: tools/botstats_features.py:108
 msgid "Mod log"
 msgstr "モッドログ"
 
@@ -10710,339 +10715,359 @@ msgstr "{name} を選択"
 msgid "Complete {command}"
 msgstr "{command} を完成"
 
-#: cogs/system/botstats.py:588
+#: cogs/system/botstats.py:600 tools/botstats_health.py:652
 msgid "unknown"
 msgstr "不明"
 
-#: cogs/system/botstats.py:609
+#: cogs/system/botstats.py:621
 #, python-brace-format
 msgid "Servers: {count}"
 msgstr "サーバー数: {count}"
 
-#: cogs/system/botstats.py:610
+#: cogs/system/botstats.py:622
 #, python-brace-format
 msgid "Members: {count} (approximate, bots included)"
 msgstr "メンバー数: {count} (概算、ボットを含む)"
 
-#: cogs/system/botstats.py:613
+#: cogs/system/botstats.py:625
 #, python-brace-format
 msgid "Cached users: {count}"
 msgstr "キャッシュ済みユーザー数: {count}"
 
-#: cogs/system/botstats.py:614
+#: cogs/system/botstats.py:626
 #, python-brace-format
 msgid "Channels: {count}"
 msgstr "チャンネル数: {count}"
 
-#: cogs/system/botstats.py:619 cogs/system/botstats.py:704
+#: cogs/system/botstats.py:631 cogs/system/botstats.py:716
 #, python-brace-format
 msgid "{count} server(s) report no member count and are excluded."
 msgstr "{count} 件のサーバーがメンバー数を報告しておらず、除外されています。"
 
-#: cogs/system/botstats.py:626
+#: cogs/system/botstats.py:638
 msgid "Member counts come from Discord's guild payloads, not from a member cache (this bot never chunks one)."
 msgstr "メンバー数は Discord のギルドペイロードによるもので、メンバーキャッシュ由来ではありません(このボットはメンバーチャンクを行いません)。"
 
-#: cogs/system/botstats.py:639
+#: cogs/system/botstats.py:651
 #, python-brace-format
 msgid "{duration} (since this cog loaded)"
 msgstr "{duration} (このコグの読み込み以降)"
 
-#: cogs/system/botstats.py:644
+#: cogs/system/botstats.py:656
 #, python-brace-format
 msgid "Uptime: {uptime}"
 msgstr "稼働時間: {uptime}"
 
-#: cogs/system/botstats.py:645
+#: cogs/system/botstats.py:657
 #, python-brace-format
 msgid "Memory (RSS): {size}"
 msgstr "メモリ (RSS): {size}"
 
-#: cogs/system/botstats.py:648
+#: cogs/system/botstats.py:660 tools/botstats_health.py:828
 #, python-brace-format
 msgid "Gateway latency: {latency}"
 msgstr "ゲートウェイ遅延: {latency}"
 
-#: cogs/system/botstats.py:655
+#: cogs/system/botstats.py:667
 #, python-brace-format
 msgid "Shards: {count}"
 msgstr "シャード数: {count}"
 
-#: cogs/system/botstats.py:659
+#: cogs/system/botstats.py:671
 #, python-brace-format
 msgid "Python {python} - discord.py {discord}"
 msgstr "Python {python} - discord.py {discord}"
 
-#: cogs/system/botstats.py:662
+#: cogs/system/botstats.py:674
 #, python-brace-format
 msgid "Database size: {size}"
 msgstr "データベースサイズ: {size}"
 
-#: cogs/system/botstats.py:668
+#: cogs/system/botstats.py:680
 msgid "Reach"
 msgstr "リーチ"
 
-#: cogs/system/botstats.py:669
+#: cogs/system/botstats.py:681 tools/botstats_health.py:881
 msgid "Process"
 msgstr "プロセス"
 
-#: cogs/system/botstats.py:670
+#: cogs/system/botstats.py:682
 msgid "Versions"
 msgstr "バージョン"
 
-#: cogs/system/botstats.py:677 cogs/system/botstats.py:1059
+#: cogs/system/botstats.py:689 cogs/system/botstats.py:1176
 msgid "Top servers"
 msgstr "上位サーバー"
 
-#: cogs/system/botstats.py:677
+#: cogs/system/botstats.py:689
 msgid "This bot is in no server."
 msgstr "このボットはどのサーバーにも参加していません。"
 
-#: cogs/system/botstats.py:688
+#: cogs/system/botstats.py:700
 #, python-brace-format
 msgid "`{rank:>2}.` **{name}** - {members} members - joined {joined}"
 msgstr "`{rank:>2}.` **{name}** - メンバー数 {members} - {joined} に参加"
 
-#: cogs/system/botstats.py:698
+#: cogs/system/botstats.py:710
 #, python-brace-format
 msgid "{guilds} servers, {members} members total"
 msgstr "{guilds} サーバー、合計 {members} メンバー"
 
-#: cogs/system/botstats.py:710
+#: cogs/system/botstats.py:722
 msgid "Member counts are Discord's approximation and include bots."
 msgstr "メンバー数は Discord による概算であり、ボットを含みます。"
 
-#: cogs/system/botstats.py:715
+#: cogs/system/botstats.py:727
 #, python-brace-format
 msgid "Top {count} servers by members"
 msgstr "メンバー数上位 {count} サーバー"
 
-#: cogs/system/botstats.py:718
+#: cogs/system/botstats.py:730
 msgid "Fleet total"
 msgstr "全体合計"
 
-#: cogs/system/botstats.py:735
+#: cogs/system/botstats.py:747
 #, python-brace-format
 msgid "{total} commands run since boot ({elapsed} ago)"
 msgstr "起動以降 {total} 回のコマンドが実行されました ({elapsed} 前)"
 
-#: cogs/system/botstats.py:738
+#: cogs/system/botstats.py:750
 #, python-brace-format
 msgid "{prefix} prefix - {slash} slash"
 msgstr "プレフィックス {prefix} 件 - スラッシュ {slash} 件"
 
-#: cogs/system/botstats.py:742
+#: cogs/system/botstats.py:754
 msgid "In-memory counters: they reset on every restart."
 msgstr "インメモリカウンター: 再起動のたびにリセットされます。"
 
-#: cogs/system/botstats.py:747
+#: cogs/system/botstats.py:759
 msgid "No command has completed yet."
 msgstr "まだ完了したコマンドはありません。"
 
-#: cogs/system/botstats.py:750 cogs/system/botstats.py:949
+#: cogs/system/botstats.py:762 cogs/system/botstats.py:982
 #, python-brace-format
 msgid "`{rank:>2}.` `{name}` - {count}"
 msgstr "`{rank:>2}.` `{name}` - {count}"
 
-#: cogs/system/botstats.py:760
+#: cogs/system/botstats.py:772
 msgid "Commands since boot"
 msgstr "起動以降のコマンド数"
 
-#: cogs/system/botstats.py:761
+#: cogs/system/botstats.py:773
 msgid "Most used commands"
 msgstr "最も使用されたコマンド"
 
-#: cogs/system/botstats.py:762
+#: cogs/system/botstats.py:774
 msgid "Recorded usage (UTC days)"
 msgstr "記録された使用状況 (UTC日)"
 
-#: cogs/system/botstats.py:763
+#: cogs/system/botstats.py:775
 msgid "Quiet hours (UTC)"
 msgstr "静かな時間帯 (UTC)"
 
-#: cogs/system/botstats.py:765
+#: cogs/system/botstats.py:777
 #, python-brace-format
 msgid "Most used commands ({days} days)"
 msgstr "よく使われたコマンド ({days}日間)"
 
-#: cogs/system/botstats.py:769
+#: cogs/system/botstats.py:781
 #, python-brace-format
 msgid "Observed activity ({days} days)"
 msgstr "観測されたアクティビティ ({days} 日間)"
 
-#: cogs/system/botstats.py:799 cogs/system/botstats.py:902
-#: cogs/system/botstats.py:945
+#: cogs/system/botstats.py:811 cogs/system/botstats.py:914
+#: cogs/system/botstats.py:978
 msgid "Recorded usage is unavailable right now."
 msgstr "記録された使用状況は現在利用できません。"
 
-#: cogs/system/botstats.py:803
+#: cogs/system/botstats.py:815
 msgid "Nothing has been recorded yet - collection starts with the first flush after this bot came up."
 msgstr "まだ何も記録されていません - 収集はボット起動後の最初のフラッシュから始まります。"
 
-#: cogs/system/botstats.py:812
+#: cogs/system/botstats.py:824
 #, python-brace-format
 msgid "Today: {count}"
 msgstr "今日: {count}"
 
-#: cogs/system/botstats.py:813 cogs/system/botstats.py:818
+#: cogs/system/botstats.py:825 cogs/system/botstats.py:830
 #, python-brace-format
 msgid "{days} days: {count} ({recorded} of {days} day(s) recorded)"
 msgstr "{days}日間: {count} ({days}日中{recorded}日を記録)"
 
-#: cogs/system/botstats.py:825
+#: cogs/system/botstats.py:837
 msgid "Calendar UTC days ending today, today included - so today is a partial day."
 msgstr "今日までのUTC暦日 (今日を含む) - そのため今日は部分的な日です。"
 
-#: cogs/system/botstats.py:834
+#: cogs/system/botstats.py:846
 #, python-brace-format
 msgid "Recorded since {date} ({days} day(s)): the longer window is not full yet."
 msgstr "{date}から記録中 ({days}日間): 長い方のウィンドウはまだ埋まっていません。"
 
 #. Translators: the seven weekday abbreviations, Monday first. They label
 #. hour slots such as "Mon 04:00", so keep them SHORT (3 characters).
-#: cogs/system/botstats.py:855
+#: cogs/system/botstats.py:867
 msgid "Mon"
 msgstr "月"
 
-#: cogs/system/botstats.py:856
+#: cogs/system/botstats.py:868
 msgid "Tue"
 msgstr "火"
 
-#: cogs/system/botstats.py:857
+#: cogs/system/botstats.py:869
 msgid "Wed"
 msgstr "水"
 
-#: cogs/system/botstats.py:858
+#: cogs/system/botstats.py:870
 msgid "Thu"
 msgstr "木"
 
-#: cogs/system/botstats.py:859
+#: cogs/system/botstats.py:871
 msgid "Fri"
 msgstr "金"
 
-#: cogs/system/botstats.py:860
+#: cogs/system/botstats.py:872
 msgid "Sat"
 msgstr "土"
 
-#: cogs/system/botstats.py:861
+#: cogs/system/botstats.py:873
 msgid "Sun"
 msgstr "日"
 
-#: cogs/system/botstats.py:906
+#: cogs/system/botstats.py:918
 #, python-brace-format
 msgid "Not enough hourly history yet: this needs {days} day(s) of collection and has {have}."
 msgstr "時間別の履歴がまだ不足しています: {days}日分の収集が必要ですが、現在{have}日分です。"
 
-#: cogs/system/botstats.py:918
+#: cogs/system/botstats.py:930
 msgid "No commands have been recorded in the hourly profile yet."
 msgstr "時間別プロファイルにはまだコマンドが記録されていません。"
 
-#: cogs/system/botstats.py:922
+#: cogs/system/botstats.py:934
 #, python-brace-format
 msgid "Quietest: {count} of {total} slots recorded nothing at all."
 msgstr "最も静か: {total}枠中{count}枠は何も記録されませんでした。"
 
-#: cogs/system/botstats.py:928
+#: cogs/system/botstats.py:940
 #, python-brace-format
 msgid "Quietest: {slots}"
 msgstr "最も静か: {slots}"
 
-#: cogs/system/botstats.py:933
+#: cogs/system/botstats.py:945
 #, python-brace-format
 msgid "Busiest: {slots}"
 msgstr "最も混雑: {slots}"
 
-#: cogs/system/botstats.py:936
+#: cogs/system/botstats.py:948
 #, python-brace-format
 msgid "Share of all recorded commands, by UTC hour of the week. The profile halves every {days} days, so recent weeks weigh most."
 msgstr "週のUTC時間帯別に見た全記録コマンドの割合。プロファイルは{days}日ごとに半減するため、直近の週が最も重くなります。"
 
-#: cogs/system/botstats.py:947
+#: cogs/system/botstats.py:980
 msgid "No command has been recorded in this window."
 msgstr "このウィンドウでは記録されたコマンドはありません。"
 
-#: cogs/system/botstats.py:964
+#: cogs/system/botstats.py:997
 msgid "Observed activity is unavailable right now."
 msgstr "現在、観測されたアクティビティは利用できません。"
 
-#: cogs/system/botstats.py:969
+#: cogs/system/botstats.py:1002
 msgid "No server was observed in this window - this is not a zero."
 msgstr "この期間ではどのサーバーも観測されませんでした - これはゼロではありません。"
 
-#: cogs/system/botstats.py:974
+#: cogs/system/botstats.py:1007
 #, python-brace-format
 msgid "{messages} messages, across {guilds} observed server(s) and {days} observed day(s)"
 msgstr "{messages} 件のメッセージ ({guilds} 件の観測サーバー、{days} 日間の観測日にわたる)"
 
-#: cogs/system/botstats.py:984
+#: cogs/system/botstats.py:1017
 msgid "No join/leave day was recorded in this window."
 msgstr "この期間では参加/退出が記録された日はありませんでした。"
 
-#: cogs/system/botstats.py:988
+#: cogs/system/botstats.py:1021
 #, python-brace-format
 msgid "{joins} joins / {leaves} leaves, across {guilds} observed server(s) and {guild_days} observed server-day(s)"
 msgstr "参加 {joins} 件 / 退出 {leaves} 件 ({guilds} 件の観測サーバー、{guild_days} サーバー日にわたる)"
 
-#: cogs/system/botstats.py:1001
+#: cogs/system/botstats.py:1034
 msgid "Observed servers only: a server with no row was not being watched, which is never the same as zero."
 msgstr "観測されたサーバーのみ: 行が存在しないサーバーは監視されていなかったのであり、それはゼロとは決して同じではありません。"
 
-#: cogs/system/botstats.py:1011
+#: cogs/system/botstats.py:1044
 msgid "Row counts are unavailable right now."
 msgstr "現在、行数は利用できません。"
 
-#: cogs/system/botstats.py:1013
+#: cogs/system/botstats.py:1046
 msgid "No featured table was counted."
 msgstr "注目テーブルはカウントされませんでした。"
 
-#: cogs/system/botstats.py:1021
+#: cogs/system/botstats.py:1054
 msgid "Table sizes are unavailable right now."
 msgstr "現在、テーブルサイズは利用できません。"
 
-#: cogs/system/botstats.py:1023
+#: cogs/system/botstats.py:1056
 msgid "No table in this database."
 msgstr "このデータベースにテーブルはありません。"
 
-#: cogs/system/botstats.py:1032
+#: cogs/system/botstats.py:1065
 #, python-brace-format
 msgid "Every table: {size}"
 msgstr "全テーブル: {size}"
 
-#: cogs/system/botstats.py:1035
+#: cogs/system/botstats.py:1068
 msgid "Sizes include indexes and TOAST storage."
 msgstr "サイズにはインデックスと TOAST ストレージを含みます。"
 
-#: cogs/system/botstats.py:1039
+#: cogs/system/botstats.py:1072
 msgid "Featured tables"
 msgstr "注目テーブル"
 
-#: cogs/system/botstats.py:1040
+#: cogs/system/botstats.py:1073
 msgid "Largest tables"
 msgstr "最大のテーブル"
 
-#: cogs/system/botstats.py:1059
+#: cogs/system/botstats.py:1175
 msgid "Overview"
 msgstr "概要"
 
-#: cogs/system/botstats.py:1059
+#: cogs/system/botstats.py:1177
 msgid "Usage"
 msgstr "使用状況"
 
-#: cogs/system/botstats.py:1059
+#: cogs/system/botstats.py:1178
 msgid "Data"
 msgstr "データ"
 
-#: cogs/system/botstats.py:1278
+#: cogs/system/botstats.py:1179
+msgid "Features"
+msgstr "機能"
+
+#: cogs/system/botstats.py:1180 cogs/system/premium.py:676
+msgid "Premium"
+msgstr "プレミアム"
+
+#: cogs/system/botstats.py:1181
+msgid "Health"
+msgstr "状態"
+
+#: cogs/system/botstats.py:1182
+msgid "Growth"
+msgstr "成長"
+
+#: cogs/system/botstats.py:1183
+msgid "Summary"
+msgstr "概要"
+
+#: cogs/system/botstats.py:1555
 #, python-brace-format
 msgid "Bot statistics - {page}"
 msgstr "ボット統計 - {page}"
 
-#: cogs/system/botstats.py:1311
+#: cogs/system/botstats.py:1591
 #, python-brace-format
 msgid "Snapshot taken {when}"
 msgstr "{when} に取得したスナップショット"
 
-#: cogs/system/botstats.py:1313
+#: cogs/system/botstats.py:1593
 msgid "times out after 5 min"
 msgstr "5分後にタイムアウトします"
 
@@ -11077,7 +11102,7 @@ msgid "**Seems like you're missing a required argument:**"
 msgstr "**必須の引数が不足しているようです:**"
 
 #: cogs/system/errors.py:536 cogs/system/errors.py:549
-#: cogs/system/errors.py:631 cogs/system/errors.py:671
+#: cogs/system/errors.py:631 cogs/system/errors.py:674
 #, python-brace-format
 msgid ""
 ":warning: Error: `{error}`\n"
@@ -11140,11 +11165,11 @@ msgstr "**何か間違ったことをしたようです:**"
 msgid "**Seems like you are missing permissions:**"
 msgstr "**権限が不足しているようです:**"
 
-#: cogs/system/errors.py:670
+#: cogs/system/errors.py:673
 msgid "**Seems like I am missing permissions:**"
 msgstr "**私の権限が不足しているようです:**"
 
-#: cogs/system/events.py:140
+#: cogs/system/events.py:144
 msgid "You are blacklisted from bot. You can ask to be unblacklisted by send a message to <@228895251576782858>"
 msgstr "あなたはボットのブラックリストに登録されています。<@228895251576782858> にメッセージを送って解除を依頼できます"
 
@@ -11439,10 +11464,6 @@ msgstr "プレミアムの状態"
 #: cogs/system/premium.py:675
 msgid "Effective"
 msgstr "適用中"
-
-#: cogs/system/premium.py:676
-msgid "Premium"
-msgstr "プレミアム"
 
 #: cogs/system/premium.py:676
 msgid "Free"
@@ -13914,6 +13935,738 @@ msgstr "🥁 ベースブースト"
 #: tests/test_view_locale_hygiene.py:529 tools/views.py:79
 msgid "This menu isn't for you."
 msgstr "このメニューはあなた用ではありません。"
+
+#: tools/botstats_features.py:52
+msgid "Server playlists"
+msgstr "サーバーのプレイリスト"
+
+#: tools/botstats_features.py:53
+msgid "24/7 music"
+msgstr "24/7 音楽"
+
+#: tools/botstats_features.py:56
+msgid "Music settings"
+msgstr "音楽の設定"
+
+#: tools/botstats_features.py:63
+msgid "AniList follows"
+msgstr "AniList フォロー"
+
+#: tools/botstats_features.py:64
+msgid "AniList channel subs"
+msgstr "AniList チャンネル購読"
+
+#: tools/botstats_features.py:67
+msgid "MangaDex chapter alerts"
+msgstr "MangaDex チャプター通知"
+
+#: tools/botstats_features.py:71
+msgid "Airing ping roles"
+msgstr "放送通知ロール"
+
+#: tools/botstats_features.py:72
+msgid "Watch-alongs"
+msgstr "一緒に視聴"
+
+#: tools/botstats_features.py:73
+msgid "Leveling enabled"
+msgstr "レベルシステム有効"
+
+#: tools/botstats_features.py:74
+msgid "Level role rewards"
+msgstr "レベルのロール報酬"
+
+#: tools/botstats_features.py:77
+msgid "XP seasons"
+msgstr "XP シーズン"
+
+#: tools/botstats_features.py:82
+msgid "Welcome messages"
+msgstr "ウェルカムメッセージ"
+
+#: tools/botstats_features.py:86
+msgid "Role menus"
+msgstr "ロールメニュー"
+
+#: tools/botstats_features.py:87
+msgid "Temporary roles"
+msgstr "一時ロール"
+
+#: tools/botstats_features.py:88
+msgid "YouTube notifications"
+msgstr "YouTube 通知"
+
+#: tools/botstats_features.py:89
+msgid "Twitch alerts"
+msgstr "Twitch 通知"
+
+#: tools/botstats_features.py:95
+msgid "Server stats digest"
+msgstr "サーバー統計のダイジェスト"
+
+#: tools/botstats_features.py:103
+msgid "Automod"
+msgstr "自動モデレーション"
+
+#: tools/botstats_features.py:111
+msgid "Config templates"
+msgstr "設定テンプレート"
+
+#: tools/botstats_features.py:114
+msgid "Pending reminders"
+msgstr "保留中のリマインダー"
+
+#: tools/botstats_features.py:120
+msgid "User profiles"
+msgstr "ユーザープロフィール"
+
+#: tools/botstats_features.py:121
+msgid "Linked social accounts"
+msgstr "連携済みの SNS アカウント"
+
+#: tools/botstats_features.py:122
+msgid "Music favourites"
+msgstr "音楽のお気に入り"
+
+#: tools/botstats_features.py:125
+msgid "Chapter DM opt-ins"
+msgstr "チャプターDM の受信登録"
+
+#: tools/botstats_features.py:130
+msgid "top.gg voters"
+msgstr "top.gg の投票者"
+
+#: tools/botstats_features.py:205
+msgid "Feature adoption"
+msgstr "機能の利用状況"
+
+#: tools/botstats_features.py:205
+msgid "Adoption figures are unavailable right now."
+msgstr "利用状況の数値は現在取得できません。"
+
+#: tools/botstats_features.py:215 tools/botstats_features.py:234
+#, python-brace-format
+msgid "{label} - unknown"
+msgstr "{label} - 不明"
+
+#: tools/botstats_features.py:218
+#, python-brace-format
+msgid "{label} - {count} of {total} ({percent})"
+msgstr "{label} - {total} 件中 {count} 件 ({percent})"
+
+#: tools/botstats_features.py:226 tools/botstats_health.py:713
+#: tools/botstats_premium.py:115
+#, python-brace-format
+msgid "... and {count} more"
+msgstr "...ほか {count} 件"
+
+#: tools/botstats_features.py:228
+msgid "Servers using each feature"
+msgstr "機能ごとの利用サーバー数"
+
+#: tools/botstats_features.py:237
+#, python-brace-format
+msgid "{label} - {count}"
+msgstr "{label} - {count}"
+
+#: tools/botstats_features.py:240
+msgid "People"
+msgstr "ユーザー"
+
+#: tools/botstats_features.py:251
+#, python-brace-format
+msgid ", ... and {count} more"
+msgstr ", ...ほか {count} 件"
+
+#: tools/botstats_features.py:253
+#, python-brace-format, python-format
+msgid "Under 5% of servers: {names}."
+msgstr "サーバーの 5% 未満: {names}。"
+
+#: tools/botstats_features.py:255
+#, python-format
+msgid "No feature is under 5% of servers."
+msgstr "サーバーの 5% 未満しか利用されていない機能はありません。"
+
+#: tools/botstats_features.py:257
+msgid "Least adopted"
+msgstr "利用が少ない機能"
+
+#: tools/botstats_features.py:261
+#, python-brace-format
+msgid "Counts cover only the {total} servers Yasuho is in right now."
+msgstr "集計は、現在 Yasuho が参加している {total} サーバーのみが対象です。"
+
+#: tools/botstats_growth.py:208
+msgid "Join and leave figures are unavailable right now."
+msgstr "参加・退出の数値は現在取得できません。"
+
+#: tools/botstats_growth.py:211 tools/botstats_growth.py:247
+msgid "No server join or leave has been recorded yet."
+msgstr "まだサーバーの参加・退出は記録されていません。"
+
+#: tools/botstats_growth.py:212
+msgid "The log starts with the first one after this feature shipped."
+msgstr "ログは、この機能の公開後に最初に発生したものから始まります。"
+
+#: tools/botstats_growth.py:217
+#, python-brace-format
+msgid "{days} days: {joins} joined, {leaves} left, net {net}"
+msgstr "{days} 日間: {joins} 件参加、{leaves} 件退出、差し引き {net}"
+
+#: tools/botstats_growth.py:221
+#, python-brace-format
+msgid "history starts {date}"
+msgstr "履歴の開始: {date}"
+
+#: tools/botstats_growth.py:228
+msgid "No weekly figures yet."
+msgstr "まだ週次の数値はありません。"
+
+#: tools/botstats_growth.py:235
+#, python-brace-format
+msgid "Week of {date}: {joins} joined, {leaves} left"
+msgstr "{date} 週: {joins} 件参加、{leaves} 件退出"
+
+#: tools/botstats_growth.py:239
+msgid "ISO weeks in UTC; the last one is not over yet."
+msgstr "ISO 週 (UTC 基準)。最後の週はまだ終わっていません。"
+
+#: tools/botstats_growth.py:245
+msgid "Stay figures are unavailable right now."
+msgstr "滞在期間の数値は現在取得できません。"
+
+#: tools/botstats_growth.py:249
+msgid "No server that left in the last 90 days has a known stay."
+msgstr "直近 90 日に退出したサーバーで、滞在期間が判明しているものはありません。"
+
+#: tools/botstats_growth.py:253
+#, python-brace-format
+msgid "Median stay of servers that left: {duration}"
+msgstr "退出したサーバーの滞在期間の中央値: {duration}"
+
+#: tools/botstats_growth.py:256
+#, python-brace-format
+msgid "Left within 24 h: {count} of {total} ({percent})"
+msgstr "24 時間以内に退出: {total} 件中 {count} 件 ({percent})"
+
+#: tools/botstats_growth.py:259
+#, python-brace-format
+msgid "Left within 7 days: {count} of {total} ({percent})"
+msgstr "7 日以内に退出: {total} 件中 {count} 件 ({percent})"
+
+#: tools/botstats_growth.py:264
+#, python-brace-format
+msgid "Median size: {joined} members when joining, {left} when leaving"
+msgstr "中央値の規模: 参加時 {joined} 人、退出時 {left} 人"
+
+#: tools/botstats_growth.py:272
+#, python-brace-format
+msgid "Small or short sample: only {days} day(s) of history, so these figures may not be typical yet."
+msgstr "サンプルが少ないか短い: 履歴は {days} 日分のみのため、これらの数値はまだ典型的でない可能性があります。"
+
+#: tools/botstats_growth.py:281
+msgid "Joined in the last 7 days"
+msgstr "直近 7 日以内に参加"
+
+#: tools/botstats_growth.py:282
+msgid "Joined 8 to 30 days ago"
+msgstr "8-30 日前に参加"
+
+#: tools/botstats_growth.py:283
+msgid "Joined 31 to 90 days ago"
+msgstr "31-90 日前に参加"
+
+#: tools/botstats_growth.py:284
+msgid "Joined more than 90 days ago"
+msgstr "90 日より前に参加"
+
+#: tools/botstats_growth.py:285
+msgid "Join date unknown"
+msgstr "参加日不明"
+
+#: tools/botstats_growth.py:288
+#, python-brace-format
+msgid "{label}: {count}"
+msgstr "{label}: {count}"
+
+#: tools/botstats_growth.py:293
+msgid "From each server's own join date; a rejoin counts from the latest one."
+msgstr "各サーバーの参加日を基準にしています。再参加した場合は、最新の参加日から数えます。"
+
+#: tools/botstats_growth.py:301
+msgid "Servers gained and lost"
+msgstr "サーバーの増減"
+
+#: tools/botstats_growth.py:302
+msgid "Week by week"
+msgstr "週ごと"
+
+#: tools/botstats_growth.py:303
+msgid "First impressions (last 90 days)"
+msgstr "初回の印象 (直近 90 日)"
+
+#: tools/botstats_growth.py:304
+msgid "Servers still here, by join date"
+msgstr "参加日別の現在のサーバー"
+
+#: tools/botstats_health.py:438
+msgid "connected"
+msgstr "接続済み"
+
+#: tools/botstats_health.py:439
+msgid "connecting"
+msgstr "接続中"
+
+#: tools/botstats_health.py:440
+msgid "disconnected"
+msgstr "切断"
+
+#: tools/botstats_health.py:441
+msgid "closed"
+msgstr "通常"
+
+#: tools/botstats_health.py:442
+msgid "open"
+msgstr "遮断中"
+
+#: tools/botstats_health.py:443
+msgid "half-open"
+msgstr "試行中"
+
+#: tools/botstats_health.py:561 tools/botstats_health.py:877
+msgid "Lavalink"
+msgstr "Lavalink"
+
+#: tools/botstats_health.py:563
+msgid "no Lavalink node"
+msgstr "Lavalink ノードなし"
+
+#: tools/botstats_health.py:565
+msgid "Lavalink node not connected"
+msgstr "Lavalink ノードが接続されていません"
+
+#: tools/botstats_health.py:568
+msgid "AniList breaker"
+msgstr "AniList サーキットブレーカー"
+
+#: tools/botstats_health.py:571
+#, python-brace-format
+msgid "AniList breaker {state}"
+msgstr "AniList サーキットブレーカー {state}"
+
+#: tools/botstats_health.py:577
+msgid "timers"
+msgstr "タイマー"
+
+#: tools/botstats_health.py:580
+#, python-brace-format
+msgid "{count} overdue timer(s)"
+msgstr "遅延中のタイマー {count} 件"
+
+#: tools/botstats_health.py:584
+msgid "dashboard actions"
+msgstr "ダッシュボード操作"
+
+#: tools/botstats_health.py:587
+#, python-brace-format
+msgid "{count} stuck dashboard action(s)"
+msgstr "停止中のダッシュボード操作 {count} 件"
+
+#: tools/botstats_health.py:593
+#, python-brace-format
+msgid "{count} error(s) today"
+msgstr "本日のエラー {count} 件"
+
+#: tools/botstats_health.py:595
+msgid "persisted errors"
+msgstr "保存済みエラー"
+
+#: tools/botstats_health.py:600
+msgid "MangaDex paused by a rate limit"
+msgstr "MangaDex はレート制限により一時停止中"
+
+#: tools/botstats_health.py:603
+msgid "gateway latency"
+msgstr "ゲートウェイのレイテンシ"
+
+#: tools/botstats_health.py:605
+msgid "gateway counters"
+msgstr "ゲートウェイのカウンター"
+
+#: tools/botstats_health.py:608
+msgid "database pool"
+msgstr "データベース接続プール"
+
+#: tools/botstats_health.py:610
+msgid "database pool saturated"
+msgstr "データベース接続プールが飽和"
+
+#: tools/botstats_health.py:613
+msgid "extensions"
+msgstr "拡張機能"
+
+#: tools/botstats_health.py:616
+#, python-brace-format
+msgid "{count} extension(s) not loaded"
+msgstr "読み込まれていない拡張機能 {count} 件"
+
+#: tools/botstats_health.py:626
+#, python-brace-format
+msgid "{count} issue(s): {issues}"
+msgstr "問題 {count} 件: {issues}"
+
+#: tools/botstats_health.py:630
+#, python-brace-format
+msgid "No issue found, but {count} check(s) could not be read: {names}"
+msgstr "問題は見つかりませんでしたが、{count} 件のチェックを読み取れませんでした: {names}"
+
+#: tools/botstats_health.py:634
+msgid "All green"
+msgstr "すべて正常"
+
+#: tools/botstats_health.py:658
+msgid "Persisted error counts are unavailable right now."
+msgstr "保存済みのエラー件数は現在取得できません。"
+
+#: tools/botstats_health.py:661
+#, python-brace-format
+msgid "Today (UTC): {today} - last {days} days: {week}"
+msgstr "今日 (UTC): {today} - 直近 {days} 日: {week}"
+
+#: tools/botstats_health.py:667
+#, python-brace-format
+msgid "{command} / {error}: {count}"
+msgstr "{command} / {error}: {count}"
+
+#: tools/botstats_health.py:674
+#, python-brace-format
+msgid "No unexpected error in the last {days} days."
+msgstr "直近 {days} 日間に予期しないエラーはありません。"
+
+#: tools/botstats_health.py:681
+#, python-brace-format
+msgid "Oldest recorded error: {date}"
+msgstr "最も古い記録済みエラー: {date}"
+
+#: tools/botstats_health.py:683
+#, python-brace-format
+msgid "Since boot: {count} (this process only)"
+msgstr "起動後: {count} 件 (このプロセスのみ)"
+
+#: tools/botstats_health.py:687
+#, python-brace-format
+msgid "{count} not counted (buffer full)"
+msgstr "{count} 件は未集計 (バッファ満杯)"
+
+#: tools/botstats_health.py:694
+#, python-brace-format
+msgid "Unexpected failures only (not bad input, cooldowns or missing permissions), by UTC day, kept {days} days."
+msgstr "予期しない失敗のみ (不正な入力、クールダウン、権限不足は除く)。UTC の日付ごとに、{days} 日間保持されます。"
+
+#: tools/botstats_health.py:703
+#, python-brace-format
+msgid "Lavalink nodes: {state}"
+msgstr "Lavalink ノード: {state}"
+
+#: tools/botstats_health.py:705
+msgid "No Lavalink node is registered."
+msgstr "登録された Lavalink ノードはありません。"
+
+#: tools/botstats_health.py:708
+#, python-brace-format
+msgid "Node {node}: {state}"
+msgstr "ノード {node}: {state}"
+
+#: tools/botstats_health.py:716
+#, python-brace-format
+msgid "Active players: {count}"
+msgstr "アクティブなプレイヤー: {count}"
+
+#: tools/botstats_health.py:726 tools/botstats_health.py:728
+#, python-brace-format
+msgid "AniList breaker: {state}"
+msgstr "AniList サーキットブレーカー: {state}"
+
+#: tools/botstats_health.py:732
+#, python-brace-format
+msgid "next probe in {duration}"
+msgstr "次の確認まで {duration}"
+
+#: tools/botstats_health.py:738
+#, python-brace-format
+msgid "Outages since boot: {opens} - poller requests skipped: {skipped}"
+msgstr "起動後の障害: {opens} 回 - スキップされたポーリング要求: {skipped} 件"
+
+#: tools/botstats_health.py:744
+#, python-brace-format
+msgid "MangaDex chapter alerts: {state}"
+msgstr "MangaDex チャプター通知: {state}"
+
+#: tools/botstats_health.py:747
+#, python-brace-format
+msgid "MangaDex chapter alerts: paused by a rate limit, {duration} left"
+msgstr "MangaDex チャプター通知: レート制限により一時停止中、残り {duration}"
+
+#: tools/botstats_health.py:752
+msgid "MangaDex chapter alerts: no rate-limit pause"
+msgstr "MangaDex チャプター通知: レート制限による一時停止なし"
+
+#: tools/botstats_health.py:759
+msgid "Timer health is unavailable right now."
+msgstr "タイマーの状態は現在取得できません。"
+
+#: tools/botstats_health.py:763
+#, python-brace-format
+msgid "{count} timer(s) overdue by more than {minutes} minutes"
+msgstr "{minutes} 分を超えて遅延しているタイマー {count} 件"
+
+#: tools/botstats_health.py:769
+#, python-brace-format
+msgid "Oldest overdue: {age}"
+msgstr "最も古い遅延: {age}"
+
+#: tools/botstats_health.py:772
+#, python-brace-format
+msgid "{event}: {count}"
+msgstr "{event}: {count}"
+
+#: tools/botstats_health.py:776
+#, python-brace-format
+msgid "No timer is more than {minutes} minutes overdue."
+msgstr "{minutes} 分を超えて遅延しているタイマーはありません。"
+
+#: tools/botstats_health.py:778
+#, python-brace-format
+msgid "Timers retrying after a failed delivery: {count}"
+msgstr "配信失敗後に再試行中のタイマー: {count} 件"
+
+#: tools/botstats_health.py:786
+msgid "Dashboard action health is unavailable right now."
+msgstr "ダッシュボード操作の状態は現在取得できません。"
+
+#: tools/botstats_health.py:799
+#, python-brace-format
+msgid "Last {hours} h: {counts}"
+msgstr "直近 {hours} 時間: {counts}"
+
+#: tools/botstats_health.py:805
+#, python-brace-format
+msgid "No dashboard action in the last {hours} hours."
+msgstr "直近 {hours} 時間にダッシュボード操作はありません。"
+
+#: tools/botstats_health.py:810
+#, python-brace-format
+msgid "Pending for over {minutes} minutes: {count}"
+msgstr "{minutes} 分を超えて保留中: {count} 件"
+
+#: tools/botstats_health.py:815
+#, python-brace-format
+msgid "Failed in the last {days} days:"
+msgstr "直近 {days} 日間の失敗:"
+
+#: tools/botstats_health.py:817
+#, python-brace-format
+msgid "{kind}: {count}"
+msgstr "{kind}: {count}"
+
+#: tools/botstats_health.py:821
+#, python-brace-format
+msgid "No failed action in the last {days} days."
+msgstr "直近 {days} 日間に失敗した操作はありません。"
+
+#: tools/botstats_health.py:838
+#, python-brace-format
+msgid "Database pool: {state}"
+msgstr "データベース接続プール: {state}"
+
+#: tools/botstats_health.py:841
+#, python-brace-format
+msgid "Database pool: {size} open, {idle} idle, max {max}"
+msgstr "データベース接続プール: 使用中 {size}、待機 {idle}、上限 {max}"
+
+#: tools/botstats_health.py:846
+#, python-brace-format
+msgid "Gateway since boot: {state}"
+msgstr "起動後のゲートウェイ: {state}"
+
+#: tools/botstats_health.py:850
+#, python-brace-format
+msgid "Gateway since boot: {resumes} resume(s), {disconnects} disconnect(s)"
+msgstr "起動後のゲートウェイ: 再開 {resumes} 回、切断 {disconnects} 回"
+
+#: tools/botstats_health.py:856
+#, python-brace-format
+msgid "Extensions: {state}"
+msgstr "拡張機能: {state}"
+
+#: tools/botstats_health.py:859
+#, python-brace-format
+msgid "Extensions: {loaded} loaded, none failed"
+msgstr "拡張機能: {loaded} 件読み込み済み、失敗はありません"
+
+#: tools/botstats_health.py:865
+#, python-brace-format
+msgid "Extensions not loaded: {names}"
+msgstr "読み込まれていない拡張機能: {names}"
+
+#: tools/botstats_health.py:875
+msgid "Verdict"
+msgstr "判定"
+
+#: tools/botstats_health.py:876
+msgid "Errors"
+msgstr "エラー"
+
+#: tools/botstats_health.py:878
+msgid "AniList and MangaDex"
+msgstr "AniList と MangaDex"
+
+#: tools/botstats_health.py:879
+msgid "Timers"
+msgstr "タイマー"
+
+#: tools/botstats_health.py:880
+msgid "Dashboard actions"
+msgstr "ダッシュボード操作"
+
+#: tools/botstats_premium.py:83
+msgid "Yasuho+ servers are unknown right now."
+msgstr "Yasuho+ のサーバー数は現在不明です。"
+
+#: tools/botstats_premium.py:89
+#, python-brace-format
+msgid "{count} of {total} servers have Yasuho+ ({percent})"
+msgstr "{total} サーバーのうち {count} サーバーが Yasuho+ を利用中 ({percent})"
+
+#: tools/botstats_premium.py:95
+msgid "Limit usage is unavailable right now."
+msgstr "上限の使用状況は現在取得できません。"
+
+#: tools/botstats_premium.py:99
+#, python-format
+msgid "No free limit has anyone at 80% or more."
+msgstr "80% 以上に達している無料上限はありません。"
+
+#: tools/botstats_premium.py:103
+#, python-brace-format, python-format
+msgid "{label}: {full} at the free limit ({free}), {near} at 80% or more, of {scopes}"
+msgstr "{label}: 無料上限に達した {full} ({free})、80% 以上に達した {near}、対象 {scopes}"
+
+#: tools/botstats_premium.py:119
+msgid "Measured against the FREE limit across every server and person, Yasuho+ ones included."
+msgstr "Yasuho+ のものを含め、すべてのサーバーとユーザーを無料上限と比較して計測しています。"
+
+#: tools/botstats_premium.py:125
+msgid "Limit notes are unavailable right now."
+msgstr "上限のお知らせは現在取得できません。"
+
+#: tools/botstats_premium.py:128
+#, python-brace-format
+msgid "No limit note was shown in the last {days} days."
+msgstr "直近 {days} 日間に上限のお知らせは表示されていません。"
+
+#: tools/botstats_premium.py:134
+#, python-brace-format
+msgid "{key} - {people} people"
+msgstr "{key} - {people} 人"
+
+#: tools/botstats_premium.py:138
+msgid "... and more"
+msgstr "...ほか多数"
+
+#: tools/botstats_premium.py:142
+#, python-brace-format
+msgid "People who saw each note in the last {days} days (older records are deleted)."
+msgstr "直近 {days} 日間に各お知らせを見たユーザー (古い記録は削除されます)。"
+
+#: tools/botstats_premium.py:148
+msgid "Yasuho+"
+msgstr "Yasuho+"
+
+#: tools/botstats_premium.py:149
+msgid "Where free limits are hit"
+msgstr "無料上限に達している箇所"
+
+#: tools/botstats_premium.py:150
+msgid "Limit notes shown"
+msgstr "表示された上限のお知らせ"
+
+#: tools/botstats_summary.py:38
+#, python-brace-format
+msgid "{label} is the most used feature ({percent} of servers); no feature is under 5%."
+msgstr "{label} が最も使われている機能です ({percent} のサーバーで利用)。5% 未満の機能はありません。"
+
+#: tools/botstats_summary.py:45
+#, python-brace-format
+msgid "{label} is the most used feature ({percent} of servers); {count} feature(s) are under 5%: {names}."
+msgstr "{label} が最も使われている機能です ({percent} のサーバーで利用)。5% 未満の機能は {count} 件です: {names}。"
+
+#: tools/botstats_summary.py:55
+#, python-format
+msgid "No free limit has anyone at 80% or more, so there is no upsell argument yet."
+msgstr "80% 以上に達している無料上限はないため、アップセルの根拠はまだありません。"
+
+#: tools/botstats_summary.py:58
+#, python-brace-format, python-format
+msgid "Best upsell argument: {label}, with {full} at the free limit and {near} at 80% or more."
+msgstr "最も効果的なアップセルの根拠: {label}。無料上限に達した {full} と、80% 以上に達した {near} があります。"
+
+#: tools/botstats_summary.py:67
+#, python-brace-format
+msgid "Health: {verdict}"
+msgstr "状態: {verdict}"
+
+#: tools/botstats_summary.py:72
+#, python-brace-format
+msgid "Most frequent error this week: {command} / {error} ({count})."
+msgstr "今週最も多いエラー: {command} / {error} ({count} 件)。"
+
+#: tools/botstats_summary.py:83
+#, python-brace-format
+msgid "Growth: not enough history yet ({days} day(s) recorded)."
+msgstr "成長: 履歴がまだ十分ではありません (記録 {days} 日分)。"
+
+#: tools/botstats_summary.py:90
+#, python-brace-format
+msgid "Over 30 days the bot gained {joins} and lost {leaves} server(s), net {net}."
+msgstr "直近 30 日間で、Bot はサーバーを {joins} 件追加し、{leaves} 件失いました。差し引き {net} 件です。"
+
+#: tools/botstats_summary.py:93
+#, python-brace-format
+msgid "Over 30 days the bot gained {joins} and lost {leaves} server(s), net {net}; {percent} of the {known} servers that left in the last {days} day(s) stayed under 7 days."
+msgstr "直近 30 日間で、Bot はサーバーを {joins} 件追加し、{leaves} 件失いました。差し引き {net} 件です。直近 {days} 日に退出した {known} サーバーのうち {percent} は、滞在期間が 7 日未満でした。"
+
+#: tools/botstats_summary.py:115
+#, python-brace-format
+msgid "Most used command over {days} day(s): {name} ({count})."
+msgstr "直近 {days} 日間で最も使われたコマンド: {name} ({count} 回)。"
+
+#: tools/botstats_summary.py:123
+#, python-brace-format
+msgid "Busiest hour (UTC): {busiest}; quietest: {quietest}."
+msgstr "最も混雑する時間帯 (UTC): {busiest}。最も静かな時間帯: {quietest}。"
+
+#: tools/botstats_summary.py:128
+#, python-brace-format
+msgid "Busiest hour (UTC): {busiest}."
+msgstr "最も混雑する時間帯 (UTC): {busiest}。"
+
+#: tools/botstats_summary.py:153
+msgid "Not enough data yet to say anything useful."
+msgstr "有用なことを述べるにはまだデータが不足しています。"
+
+#: tools/botstats_summary.py:158
+msgid "What stands out"
+msgstr "注目点"
+
+#: tools/botstats_summary.py:160
+msgid "About this page"
+msgstr "このページについて"
+
+#: tools/botstats_summary.py:164
+msgid "Built only from the figures of the other pages; an insight is left out when its figure could not be read."
+msgstr "他のページの数値のみから作成しています。数値を読み取れない場合、その分析は省略されます。"
 
 #: tools/card_themes.py:60
 msgid "Classic"
