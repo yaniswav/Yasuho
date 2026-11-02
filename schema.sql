@@ -1715,6 +1715,34 @@ CREATE TABLE IF NOT EXISTS command_usage_hourly_state (
 );
 
 -- ============================================================
+-- Unexpected command errors (GLOBAL aggregates only)
+-- ============================================================
+-- Owner: cogs/system/botstats.py + tools/botstats_health.py (the Health page of
+-- ?botstats). One row per (UTC day, command name, exception class name) for the
+-- WHOLE bot: how many times a command failed in a way cogs/system/errors.py
+-- logs at ERROR. User mistakes (bad arguments, cooldowns, missing permissions,
+-- unknown commands) are never counted here.
+--
+-- Like command_usage there is deliberately NO user_id and NO guild_id: no
+-- message, no argument and no exception text either, only the CLASS name, so
+-- the table holds nothing personal, nothing belongs to a guild, and it needs no
+-- entry in the /mydata export nor in the departed-guild purge (both are driven
+-- structurally off those columns).
+--
+-- The only writer is the botstats flush loop, an ADDITIVE upsert (the batch is
+-- added onto the row), so the write rate depends on time, not on traffic. Rows
+-- older than tools/botstats_health.RETENTION_DAYS (30) are deleted by the same
+-- once-a-day hook that prunes command_usage. ``count`` is BIGINT for the same
+-- reason command_usage's are.
+CREATE TABLE IF NOT EXISTS command_errors (
+    day        DATE   NOT NULL,          -- UTC day the command failed on
+    command    TEXT   NOT NULL,          -- qualified_name, from this repo's source
+    error_type TEXT   NOT NULL,          -- exception class name, e.g. 'KeyError'
+    count      BIGINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (day, command, error_type)
+);
+
+-- ============================================================
 -- Support tickets (METADATA ONLY)
 -- ============================================================
 -- Owner: cogs/config/tickets/. A ticket is a PRIVATE THREAD on the panel

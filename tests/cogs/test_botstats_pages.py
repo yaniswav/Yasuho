@@ -252,7 +252,7 @@ async def test_features_page_memoises_and_retries_failures():
     assert len(failing.calls) == 2  # a failure is not memoised
 
 
-async def test_premium_page_loads_and_card_lays_out_six_buttons_in_two_rows():
+async def test_premium_page_loads_and_card_lays_out_seven_buttons_in_three_rows():
     pool = _Pool()
     card = _card(pool)
     sections, taken = await card._load(botstats.PAGE_PREMIUM)
@@ -262,4 +262,4 @@ async def test_premium_page_loads_and_card_lays_out_six_buttons_in_two_rows():
     container = card.children[0]
     rows = [c for c in container.children if hasattr(c, "children") and any(
         isinstance(i, botstats._PageButton) for i in c.children)]
-    assert [len(r.children) for r in rows] == [3, 3]
+    assert [len(r.children) for r in rows] == [3, 3, 1]

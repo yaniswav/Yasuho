@@ -30,7 +30,7 @@ Three rules the pages below obey:
    presenting it as a headcount. A guild whose count is missing outright sorts
    LAST and renders as "?" - never as zero members.
 3. ON-DEMAND ONLY. Every query is bounded and runs when its page is first
-   opened, never on a timer and never all six at once. A SUCCESSFUL read is
+   opened, never on a timer and never all seven at once. A SUCCESSFUL read is
    then memoised for the card's lifetime, so re-clicking a page costs nothing;
    a FAILED one is not, so a transient pool error is retried on the next open
    instead of being frozen into the card. The in-memory half of a page is
@@ -71,6 +71,7 @@ import logging
 import math
 import os
 import platform
+import time
 from collections import Counter
 from dataclasses import dataclass
 
@@ -78,7 +79,13 @@ import discord
 from discord.ext import commands, tasks
 
 from cogs.system import usage_stats
-from tools import botstats_features, botstats_premium, interactions, premium_usage
+from tools import (
+    botstats_features,
+    botstats_health,
+    botstats_premium,
+    interactions,
+    premium_usage,
+)
 from tools.backup import human_size
 from tools.formats import format_dt, random_colour
 from tools.i18n import _
@@ -1044,9 +1051,65 @@ def render_data(row_counts, table_sizes, total_bytes):
 # ---------------------------------------------------------------------------
 # The dashboard
 # ---------------------------------------------------------------------------
+# Live readers for the Health page. Each returns None (UNKNOWN, never zero) when
+# the owning cog is not loaded or the read fails: a monitor must not be the thing
+# that crashes the card. They read other cogs through get_cog + getattr, the same
+# defensive shape cogs/system/health.py uses for its LOAD line.
+# ---------------------------------------------------------------------------
+def count_music_players(bot):
+    """Voice clients that are Lavalink players, or ``None`` when unknowable."""
+    try:
+        from cogs.music.player import Player
+
+        return sum(1 for vc in list(bot.voice_clients) if isinstance(vc, Player))
+    except Exception:
+        return None
+
+
+def anilist_breaker(bot):
+    """The shared AniList poller breaker, or ``None`` if none was ever created.
+
+    Imported here, not at module scope, for the reason cogs/system/health.py gives:
+    an AniList import fault must not take the owner dashboard down with it.
+    """
+    try:
+        from cogs.anilist.breaker import breaker_state
+
+        return breaker_state(bot)
+    except Exception:
+        return None
+
+
+def chapters_embargo_seconds(bot):
+    """Seconds left on the chapter poller's 429 pause (0.0: none), else ``None``."""
+    try:
+        until = bot.get_cog("AniListChapters")._embargo_until
+        return max(0.0, until - time.time())
+    except Exception:
+        return None
+
+
+def gateway_counters(bot):
+    """``(resumes, disconnects)`` from the Health cog's lifetime counters."""
+    try:
+        health = bot.get_cog("Health")
+        return int(health.gw_resumes), int(health.gw_disconnects)
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------------------
 # Page identity is an index into this tuple: (emoji, N_-free label callable).
 # Labels are built at render time so they localize for the reader.
-PAGE_OVERVIEW, PAGE_GUILDS, PAGE_USAGE, PAGE_DATA, PAGE_FEATURES, PAGE_PREMIUM = range(6)
+(
+    PAGE_OVERVIEW,
+    PAGE_GUILDS,
+    PAGE_USAGE,
+    PAGE_DATA,
+    PAGE_FEATURES,
+    PAGE_PREMIUM,
+    PAGE_HEALTH,
+) = range(7)
 PAGE_EMOJI = (
     "\N{BAR CHART}",
     "\N{TROPHY}",
@@ -1054,6 +1117,7 @@ PAGE_EMOJI = (
     "\N{FLOPPY DISK}",
     "\N{SPARKLES}",
     "\N{GEM STONE}",
+    "\N{STETHOSCOPE}",
 )
 
 
@@ -1065,6 +1129,7 @@ def page_labels():
         _("Data"),
         _("Features"),
         _("Premium"),
+        _("Health"),
     )
 
 
@@ -1094,10 +1159,10 @@ class _PageButton(discord.ui.Button):
 
 
 class BotStatsDashboard(AuthorLayoutView):
-    """The ``?botstats`` Components V2 card: six pages, six button jumps.
+    """The ``?botstats`` Components V2 card: seven pages, seven button jumps.
 
     Each DB read runs the FIRST time a page that needs it is opened and is then
-    memoised for the card's lifetime, so the card costs at most six bounded
+    memoised for the card's lifetime, so the card costs at most seven bounded
     query batches total no matter how much the owner clicks, and it never
     refreshes itself on a timer. The IN-MEMORY half of a page (guild rows,
     /proc, the usage counters) is recomputed on every open - it costs nothing
@@ -1117,6 +1182,9 @@ class BotStatsDashboard(AuthorLayoutView):
     READ_ADOPTION = "adoption"
     READ_LIMIT_USAGE = "limit_usage"
     READ_UPSELLS = "upsells"
+    READ_ERRORS = "errors"
+    READ_TIMERS = "timers"
+    READ_ACTIONS = "actions"
     PAGE_READS = {
         PAGE_OVERVIEW: (READ_DB_SIZE,),
         PAGE_GUILDS: (),
@@ -1124,6 +1192,7 @@ class BotStatsDashboard(AuthorLayoutView):
         PAGE_DATA: (READ_ROW_COUNTS, READ_TABLE_SIZES),
         PAGE_FEATURES: (READ_ADOPTION,),
         PAGE_PREMIUM: (READ_LIMIT_USAGE, READ_UPSELLS),
+        PAGE_HEALTH: (READ_ERRORS, READ_TIMERS, READ_ACTIONS),
     }
 
     def __init__(self, cog, author_id, *, timeout=300):
@@ -1187,6 +1256,8 @@ class BotStatsDashboard(AuthorLayoutView):
             sections = await self._features_sections()
         elif index == PAGE_PREMIUM:
             sections = await self._premium_sections()
+        elif index == PAGE_HEALTH:
+            sections = await self._health_sections()
         else:
             sections = await self._data_sections()
         return sections, self._taken_at(self.PAGE_READS[index])
@@ -1316,6 +1387,46 @@ class BotStatsDashboard(AuthorLayoutView):
         )
         return botstats_premium.render_premium(plus, len(guilds), wall, upsells)
 
+    async def _health_sections(self):
+        """Three memoised DB reads plus a live, free half recomputed every open."""
+        bot = self.bot
+        pool = bot.db_pool
+        errors = await self._read(
+            self.READ_ERRORS,
+            lambda: botstats_health.fetch_error_stats(pool, timeout=QUERY_TIMEOUT),
+            "error counts",
+        )
+        timers = await self._read(
+            self.READ_TIMERS,
+            lambda: botstats_health.fetch_timer_stats(pool, timeout=QUERY_TIMEOUT),
+            "timer health",
+        )
+        actions = await self._read(
+            self.READ_ACTIONS,
+            lambda: botstats_health.fetch_action_stats(pool, timeout=QUERY_TIMEOUT),
+            "dashboard action health",
+        )
+        buffer = self.cog.errors
+        failed = getattr(bot, "failed_extensions", None)
+        snapshot = botstats_health.HealthSnapshot(
+            errors=errors,
+            errors_since_boot=buffer.seen,
+            errors_dropped=self.cog._flush_stats["error_dropped"] + buffer.dropped,
+            errors_today_in_memory=buffer.seen_on(botstats_health.utc_today()),
+            nodes=botstats_health.node_states(getattr(bot, "sl_client", None)),
+            players=count_music_players(bot),
+            breaker=botstats_health.breaker_state(anilist_breaker(bot)),
+            chapters_embargo_seconds=chapters_embargo_seconds(bot),
+            timers=timers,
+            actions=actions,
+            latency=botstats_health.finite_latency(bot.latency),
+            pool=botstats_health.pool_state(pool),
+            gateway=gateway_counters(bot),
+            failed_extensions=tuple(failed) if failed is not None else None,
+            loaded_extensions=len(getattr(bot, "extensions", ())),
+        )
+        return botstats_health.render_health(snapshot, fmt_duration=format_duration)
+
     # -- layout -------------------------------------------------------------
 
     def _rerender(self, sections, taken_at):
@@ -1424,6 +1535,9 @@ class BotStats(commands.Cog):
         # The persisted half: a bounded buffer the listeners feed and the flush
         # loop drains (cogs/system/usage_stats.py).
         self.buffer = usage_stats.UsageBuffer()
+        # The persisted unexpected-error counters, fed by cogs/system/errors.py
+        # through botstats_health.note_error and drained by the SAME flush loop.
+        self.errors = botstats_health.ErrorBuffer()
         # UTC day (a date) whose retention prune has already run. In-memory
         # marker: a restart re-runs it once, which is a bounded delete of
         # already-expired rows, i.e. harmless.
@@ -1435,6 +1549,8 @@ class BotStats(commands.Cog):
             "dropped": 0,
             "pruned": 0,
             "halved": 0,
+            "error_rows": 0,
+            "error_dropped": 0,
         }
         # Fallback uptime source for a host without /proc (see the Overview
         # page). It is the COG's load time, so it is always <= the process
@@ -1473,10 +1589,10 @@ class BotStats(commands.Cog):
         self._flush_loop.cancel()
         if task is not None and not task.done():
             await asyncio.wait({task}, timeout=UNLOAD_CANCEL_TIMEOUT)
-        if self.buffer.is_empty:
+        if self.buffer.is_empty and self.errors.is_empty:
             return
         try:
-            await asyncio.wait_for(self._write_usage(), UNLOAD_FLUSH_TIMEOUT)
+            await asyncio.wait_for(self._write_everything(), UNLOAD_FLUSH_TIMEOUT)
         except Exception:
             log.exception("botstats: final usage flush on unload failed")
 
@@ -1548,7 +1664,18 @@ class BotStats(commands.Cog):
         if today is None:
             today = usage_stats.utc_today()
         await self._write_usage()
+        try:
+            await self._write_errors()
+        except Exception:
+            # Handed back to the buffer already; the prune below must not wait
+            # on a statistic that failed to land.
+            log.exception("botstats: error counter flush failed")
         await self._maybe_prune(today)
+
+    async def _write_everything(self):
+        """The final flush on unload: usage, then errors (both bounded together)."""
+        await self._write_usage()
+        await self._write_errors()
 
     async def _write_usage(self):
         """One additive upsert for everything counted since the last tick.
@@ -1591,6 +1718,31 @@ class BotStats(commands.Cog):
         self._flush_stats["rows"] += len(drained.rows)
         log.debug("botstats usage flush: %d command-day row(s)", len(drained.rows))
 
+    async def _write_errors(self):
+        """One additive upsert for the unexpected errors counted since last tick.
+
+        Same contract as :meth:`_write_usage` (drain before the await, hand the
+        generation back on ANY failure including a cancellation, at-least-once),
+        and the same rule that nothing else ever writes this table.
+        """
+        drained = self.errors.drain()
+        if drained.dropped:
+            self._flush_stats["error_dropped"] += drained.dropped
+            log.warning(
+                "botstats: error buffer cap reached, dropped %d key(s) this interval",
+                drained.dropped,
+            )
+        if drained.is_empty:
+            return
+        try:
+            await self.bot.db_pool.execute(
+                botstats_health.FLUSH, *botstats_health.build_flush_payload(drained)
+            )
+        except BaseException:
+            self.errors.restore(drained)
+            raise
+        self._flush_stats["error_rows"] += len(drained.rows)
+
     async def _maybe_prune(self, today):
         """The once-a-day maintenance hook: the retention prune, then the decay.
 
@@ -1613,6 +1765,11 @@ class BotStats(commands.Cog):
             if batch < usage_stats.PRUNE_BATCH_SIZE:
                 break
         await self._decay_hourly(today)
+        row = await self.bot.db_pool.fetchrow(
+            botstats_health.PRUNE,
+            today - datetime.timedelta(days=botstats_health.RETENTION_DAYS),
+        )
+        deleted += int(row["rows"]) if row else 0
         # Marked only after the batches ran, so a failed prune is retried on the
         # next tick instead of being lost for the whole day.
         self._prune_day = today

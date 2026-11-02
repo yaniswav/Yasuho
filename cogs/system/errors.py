@@ -7,7 +7,7 @@ import Levenshtein as lv
 from discord.ext import commands
 
 from . import arg_completion
-from tools import interactions
+from tools import botstats_health, interactions
 from tools.formats import random_colour
 from tools.i18n import _
 
@@ -653,6 +653,9 @@ class Errors(commands.Cog):
                     original.__traceback__,
                 ),
             )
+            # Counted next to the log line it mirrors; never raises (see
+            # tools/botstats_health.note_error).
+            botstats_health.note_error(ctx, original)
             # The error_id is in the log ABOVE this line, so it survives even
             # when every rung of _safe_send fails and the user sees nothing.
             await _safe_send(
@@ -708,6 +711,7 @@ class Errors(commands.Cog):
                 ctx.guild.id if ctx.guild else None,
                 exc_info=(type(error), error, error.__traceback__),
             )
+            botstats_health.note_error(ctx, error)
             await _safe_send(
                 ctx,
                 embed=_generic_report(ctx, error_id),

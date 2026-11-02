@@ -450,6 +450,8 @@ class Yasuho(commands.Bot):
             except Exception:
                 log.exception("Error while trying to load %s", extension)
                 failed_extensions.append(extension)
+        # Kept on the bot for the ?botstats Health page (read-only there).
+        self.failed_extensions = tuple(failed_extensions)
 
         log.info("Prefix count: %d", len(self.prefixes))
         log.info("i18n locales: %s", ", ".join(sorted(i18n.LOCALES)))
