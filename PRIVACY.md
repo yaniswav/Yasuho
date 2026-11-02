@@ -176,7 +176,7 @@ ID, no server ID. Unexpected command errors are counted the same way (command
 name x error type x day).
 
 **Bot joins and leaves**: when the bot is added to or removed from a server, it
-logs the date, the server's member count and, on removal, how long it stayed.
+logs the hour, the server's member count and, on removal, how long it stayed.
 No server ID, no server name, no user ID.
 
 ## What we do NOT do

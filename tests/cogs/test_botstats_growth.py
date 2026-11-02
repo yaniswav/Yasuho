@@ -118,7 +118,7 @@ def test_the_guild_event_row_has_no_identifier_column():
         schema = fh.read()
     body = schema.split("CREATE TABLE IF NOT EXISTS guild_events (")[1].split(");")[0]
     assert "guild_id" not in body and "user_id" not in body and "name" not in body
-    assert "INSERT INTO guild_events (kind, member_count, stayed_seconds)" in bg.INSERT
+    assert "date_trunc('hour', now())" in bg.INSERT  # the minute is never stored
 
 
 # ---------------------------------------------------------------------------
@@ -194,7 +194,7 @@ def test_stay_block_reports_median_early_churn_and_member_medians():
 
 def test_short_history_warns_that_long_stays_cannot_show_up():
     text = _flat(bg.render_growth(_stats(since=_days_ago(10)), (0,) * 5, fmt_duration=_dur))
-    assert "Only 11 day(s) of history" in text
+    assert "Small or short sample: only 11 day(s) of history" in text
 
 
 def test_no_known_stay_says_so():
@@ -232,6 +232,7 @@ async def test_fetch_growth_shapes_rows_and_uses_the_pinned_now():
 def _health(**overrides):
     base = dict(
         errors=bh.ErrorStats(NOW.date(), 0, 0, NOW.date(), ()),
+        chapters_embargo_seconds=0.0, latency=0.05, gateway=(1, 2),
         nodes=[("main", "connected")],
         players=0,
         breaker=bh.BreakerState("closed", 0.0, 0, 0),
@@ -249,7 +250,7 @@ def _persisted(**overrides):
     base = dict(
         as_of=NOW.date(), today=5, week=50, month=90, week_days=7, month_days=30,
         week_recorded=7, month_recorded=30, since=NOW.date() - datetime.timedelta(days=40),
-        top=(("play", 1234),),
+        top=(("play", 1234),), covered_days=41,
     )
     base.update(overrides)
     return types.SimpleNamespace(**base)
@@ -303,7 +304,7 @@ def test_growth_needs_thirty_days_before_it_calls_a_trend():
     (full,) = bs.build_insights(growth=_stats())
     assert full == (
         "Over 30 days the bot gained 6 and lost 3 server(s), net +3; "
-        "50% of the servers that left in 90 days stayed under 7 days."
+        "50% of the 4 servers that left in the last 90 day(s) stayed under 7 days."
     )
     (no_stay,) = bs.build_insights(growth=_stats(stay_known=0))
     assert no_stay.endswith("net +3.")
@@ -314,11 +315,11 @@ def test_usage_reports_the_top_command_and_the_hour_extremes():
         persisted=_persisted(), busiest="Mon 14:00 (3.0%)", quietest="Tue 04:00 (0.1%)"
     )
     assert lines == [
-        "Most used command over 7 days: play (1,234).",
-        "Busiest hour: Mon 14:00 (3.0%); quietest: Tue 04:00 (0.1%).",
+        "Most used command over 7 day(s): play (1,234).",
+        "Busiest hour (UTC): Mon 14:00 (3.0%); quietest: Tue 04:00 (0.1%).",
     ]
     only = bs.build_insights(persisted=_persisted(top=()), busiest="Mon 14:00 (3.0%)")
-    assert only == ["Busiest hour: Mon 14:00 (3.0%)."]
+    assert only == ["Busiest hour (UTC): Mon 14:00 (3.0%)."]
     assert bs.build_insights(persisted=_persisted(since=None)) == [
         "Not enough data yet to say anything useful."
     ]

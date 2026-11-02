@@ -1115,6 +1115,25 @@ def chapters_embargo_seconds(bot):
         return None
 
 
+def missing_extensions(bot):
+    """Extensions the boot expected that are not loaded NOW, or ``None``.
+
+    Computed at render time, so a later ``?reload`` that fixes one clears it and
+    one that fails afterwards shows up. ``expected_extensions`` is the discovery
+    result core.py stored at boot; without it the boot failure list is kept but
+    filtered against what is loaded.
+    """
+    loaded = getattr(bot, "extensions", None)
+    if loaded is None:
+        return None
+    expected = getattr(bot, "expected_extensions", None)
+    if expected is None:
+        expected = getattr(bot, "failed_extensions", None)
+    if expected is None:
+        return None
+    return tuple(name for name in expected if name not in loaded)
+
+
 def gateway_counters(bot):
     """``(resumes, disconnects)`` from the Health cog's lifetime counters."""
     try:
@@ -1468,7 +1487,7 @@ class BotStatsDashboard(AuthorLayoutView):
             "dashboard action health",
         )
         buffer = self.cog.errors
-        failed = getattr(bot, "failed_extensions", None)
+        failed = missing_extensions(bot)
         return botstats_health.HealthSnapshot(
             errors=errors,
             errors_since_boot=buffer.seen,
@@ -1483,7 +1502,7 @@ class BotStatsDashboard(AuthorLayoutView):
             latency=botstats_health.finite_latency(bot.latency),
             pool=botstats_health.pool_state(pool),
             gateway=gateway_counters(bot),
-            failed_extensions=tuple(failed) if failed is not None else None,
+            failed_extensions=failed,
             loaded_extensions=len(getattr(bot, "extensions", ())),
         )
 
@@ -1549,7 +1568,8 @@ class BotStatsDashboard(AuthorLayoutView):
             )
             container.add_item(discord.ui.Separator())
 
-        # An ActionRow holds at most five buttons: two rows of three.
+        # An ActionRow holds at most five buttons; rows of three keep the pages
+        # in a tidy grid (nine pages: three rows).
         for start in range(0, len(labels), 3):
             container.add_item(
                 discord.ui.ActionRow(

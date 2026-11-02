@@ -57,7 +57,25 @@ def test_feature_keys_are_unique_and_tables_exist_in_schema():
     with open(path, encoding="utf-8") as fh:
         schema = fh.read()
     tables = set(re.findall(r"CREATE TABLE IF NOT EXISTS (\w+)", schema))
-    assert {f.table for f in bf.FEATURES} <= tables
+    used = {f.table for f in bf.FEATURES} | {t for f in bf.FEATURES for t, _w in f.also}
+    assert used <= tables
+
+
+def test_a_feature_stored_in_two_places_is_the_union_counted_once_per_guild():
+    sql = bf.build_adoption_sql([bf.Feature("a", "A", "t1", where="x", also=(("t2", "y = 'true'"),))])
+    assert sql == (
+        "SELECT 'a' AS key, COUNT(DISTINCT guild_id)::bigint AS n FROM "
+        "(SELECT guild_id FROM t1 WHERE (x) UNION "
+        "SELECT guild_id FROM t2 WHERE (y = 'true')) AS u "
+        "WHERE guild_id = ANY($1::bigint[])"
+    )
+
+
+def test_digest_counts_the_configured_channel_and_automod_includes_the_invite_filter():
+    by_key = {f.key: f for f in bf.FEATURES}
+    assert by_key["digest"].table == "guild_settings"
+    assert "serverstats_digest_channel' IS NOT NULL" in by_key["digest"].where
+    assert ("guild_settings", "settings ->> 'antiinvite' = 'true'") in by_key["automod"].also
 
 
 async def test_fetch_adoption_passes_guild_ids_and_maps_rows():

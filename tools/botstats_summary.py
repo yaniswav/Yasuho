@@ -79,7 +79,7 @@ def health_insights(snapshot):
 def growth_insight(growth):
     if growth is None:
         return None
-    if growth.covered_days < GROWTH_MIN_DAYS:
+    if not growth.covers(GROWTH_MIN_DAYS):
         return _("Growth: not enough history yet ({days} day(s) recorded).").format(
             days=growth.covered_days
         )
@@ -91,12 +91,15 @@ def growth_insight(growth):
         ).format(joins=joins, leaves=leaves, net=net)
     return _(
         "Over 30 days the bot gained {joins} and lost {leaves} server(s), net {net}; "
-        "{percent} of the servers that left in 90 days stayed under 7 days."
+        "{percent} of the {known} servers that left in the last {days} day(s) "
+        "stayed under 7 days."
     ).format(
         joins=joins,
         leaves=leaves,
         net=net,
         percent=_percent(growth.early[1], growth.stay_known),
+        known=growth.stay_known,
+        days=min(90, growth.covered_days),
     )
 
 
@@ -107,18 +110,22 @@ def usage_insights(persisted, busiest, quietest):
     if persisted.top:
         name, count = persisted.top[0]
         lines.append(
-            _("Most used command over {days} days: {name} ({count}).").format(
-                days=persisted.week_days, name=name, count="{:,}".format(count)
+            # The recorded days, when fewer than the window: a partial window
+            # must not be quoted as the whole week.
+            _("Most used command over {days} day(s): {name} ({count}).").format(
+                days=min(persisted.week_days, persisted.covered_days),
+                name=name,
+                count="{:,}".format(count),
             )
         )
     if busiest and quietest:
         lines.append(
-            _("Busiest hour: {busiest}; quietest: {quietest}.").format(
+            _("Busiest hour (UTC): {busiest}; quietest: {quietest}.").format(
                 busiest=busiest, quietest=quietest
             )
         )
     elif busiest:
-        lines.append(_("Busiest hour: {busiest}.").format(busiest=busiest))
+        lines.append(_("Busiest hour (UTC): {busiest}.").format(busiest=busiest))
     return lines
 
 

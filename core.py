@@ -443,7 +443,11 @@ class Yasuho(commands.Bot):
         # delete every command the missing cog owns. tree_sync refuses on a
         # non-empty list; see tools/tree_sync.decide.
         failed_extensions = []
-        for extension in discover_extensions():
+        expected_extensions = discover_extensions()
+        # What SHOULD be loaded, for the ?botstats Health page to compare with
+        # bot.extensions at render time (a later ?reload can fix or break one).
+        self.expected_extensions = tuple(expected_extensions)
+        for extension in expected_extensions:
             try:
                 await self.load_extension(extension)
                 log.info("Loaded %s", extension)

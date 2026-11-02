@@ -620,10 +620,26 @@ def test_each_degradation_is_an_issue():
         "3 error(s) today": dict(errors=bh.ErrorStats(DAY, 3, 3, DAY, ())),
         "database pool saturated": dict(pool=bh.PoolState(10, 0, 10)),
         "1 extension(s) not loaded": dict(failed_extensions=("cogs.x",)),
+        "MangaDex paused by a rate limit": dict(chapters_embargo_seconds=30.0),
     }
     for expected, override in cases.items():
         line = bh.render_verdict(_snapshot(**override))[0]
         assert line.startswith("1 issue(s):") and expected in line, (expected, line)
+
+
+def test_unreadable_mangadex_latency_and_gateway_are_listed_not_green():
+    line = bh.render_verdict(
+        _snapshot(chapters_embargo_seconds=None, latency=None, gateway=None)
+    )[0]
+    assert line.startswith("No issue found, but 3 check(s) could not be read")
+    for name in ("MangaDex", "gateway latency", "gateway counters"):
+        assert name in line
+
+
+def test_stuck_pending_actions_are_judged_by_updated_at():
+    # A row the boot reconcile put back to pending keeps its old created_at.
+    assert "updated_at < now() - $3::int" in bh.ACTION_HEALTH
+    assert "created_at < now() - $3" not in bh.ACTION_HEALTH
 
 
 def test_issue_count_and_list():
@@ -697,7 +713,8 @@ def test_degraded_page_shows_the_details():
     text = _flat(bh.render_health(snap, fmt_duration=_dur))
     assert "Today (UTC): 4 - last 7 days: 20" in text
     assert "play / KeyError: 15" in text
-    assert "Counting is recent: 3 day(s) of history." in text
+    assert "Oldest recorded error: %s" % (DAY - datetime.timedelta(days=2)).isoformat() in text
+    assert "Counting is recent" not in text
     assert "Since boot: 6 (this process only) - 2 not counted (buffer full)" in text
     assert "Node main: connecting" in text
     assert "AniList breaker: open - next probe in 600s" in text
@@ -745,7 +762,7 @@ def test_an_empty_error_week_says_so_and_a_failed_read_is_not_a_zero():
     quiet = bh.ErrorStats(DAY, 0, 0, DAY - datetime.timedelta(days=40), ())
     text = _flat(bh.render_health(_snapshot(errors=quiet), fmt_duration=_dur))
     assert "No unexpected error in the last 7 days." in text
-    assert "Counting is recent" not in text
+    assert "Oldest recorded error: %s" % (DAY - datetime.timedelta(days=40)).isoformat() in text
 
 
 def test_the_whole_page_fits_the_card_text_budget():
@@ -907,3 +924,52 @@ def test_page_identity_is_append_only():
     ) == (0, 1, 2, 3, 4, 5)
     assert set(botstats.BotStatsDashboard.PAGE_READS) == set(range(9))
     assert botstats.page_labels()[botstats.PAGE_HEALTH] == "Health"
+
+
+def test_worst_case_labels_stay_inside_the_components_v2_text_budget():
+    """Discord caps a V2 message's TOTAL text at 4000 characters. Every
+    free-text field at its longest (64 for stored names, 80 for the rest) with
+    every list at its cap, plus room for the title and footer."""
+    long = lambda tag: (tag * 80)[:80]  # noqa: E731
+    snap = _snapshot(
+        errors=bh.ErrorStats(
+            DAY, 999999, 999999, DAY - datetime.timedelta(days=30),
+            tuple(("c" * bh.COMMAND_NAME_LIMIT, "E" * bh.ERROR_TYPE_LIMIT, 999999)
+                  for _n in range(bh.ERROR_TOP_LIMIT)),
+        ),
+        errors_since_boot=999999,
+        errors_dropped=999999,
+        nodes=[(long("n"), "disconnected") for _n in range(bh.NODE_LIMIT + 3)],
+        breaker=bh.BreakerState("open", 99999.0, 9999, 999999),
+        chapters_embargo_seconds=99999.0,
+        timers=bh.TimerStats(
+            999999, 999999.0,
+            tuple((long("e"), 999999) for _n in range(bh.TIMER_TOP_LIMIT)), 999999,
+        ),
+        actions=bh.ActionStats(
+            {long("s%d" % i): 999999 for i in range(4)},
+            tuple((long("k"), 999999) for _n in range(bh.ACTION_FAILED_LIMIT)),
+            999999,
+        ),
+        failed_extensions=tuple(long("x") for _n in range(40)),
+    )
+    text = _flat(bh.render_health(snap, fmt_duration=_dur))
+    assert len(text) + 300 < 4000, len(text)
+
+
+def test_missing_extensions_are_computed_against_what_is_loaded_now():
+    bot = types.SimpleNamespace(
+        expected_extensions=("cogs.a", "cogs.b", "cogs.c"),
+        extensions={"cogs.a": 1, "cogs.c": 1},
+        failed_extensions=("cogs.zzz",),
+    )
+    assert botstats.missing_extensions(bot) == ("cogs.b",)
+    bot.extensions["cogs.b"] = 1  # a later ?reload fixed it
+    assert botstats.missing_extensions(bot) == ()
+    del bot.extensions["cogs.c"]  # one that fails later shows up
+    assert botstats.missing_extensions(bot) == ("cogs.c",)
+    # No discovery list: the boot failure list, filtered against what is loaded.
+    del bot.expected_extensions
+    bot.extensions["cogs.zzz"] = 1
+    assert botstats.missing_extensions(bot) == ()
+    assert botstats.missing_extensions(types.SimpleNamespace()) is None

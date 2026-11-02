@@ -1756,6 +1756,9 @@ CREATE TABLE IF NOT EXISTS command_errors (
 -- member_count is NULL when Discord gave none (never 0); stayed_seconds is set on
 -- a leave from the bot member's own joined_at and is NULL when unknown.
 --
+-- ``at`` is written truncated to the HOUR (tools/botstats_growth.INSERT): the
+-- minute of a join is not needed and, with a member count, helps identify a server.
+--
 -- Rows older than tools/botstats_growth.RETENTION_DAYS (400) are deleted by the
 -- once-a-day botstats hook.
 CREATE TABLE IF NOT EXISTS guild_events (

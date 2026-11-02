@@ -307,7 +307,9 @@ TIMER_HEALTH = """
 
 # One scan of the recent slice (the last $1 days by updated_at, plus every
 # pending row, however old) feeds three tagged arms: status counts for the last
-# $4 hours (by created_at), the failed kinds ranking and the stuck pending count.
+# $4 hours (by created_at), the failed kinds ranking and the stuck pending count
+# (by updated_at: the boot reconcile resets stale rows and stamps updated_at, so
+# a row it just put back to pending is not "stuck" because it was created long ago).
 # updated_at >= created_at, so everything created in the last 24 hours is inside
 # the slice. dashboard_actions has no time index; the table is bounded (user
 # rows are pruned at 30 days, guild rows die with their guild) and the read
@@ -333,7 +335,7 @@ ACTION_HEALTH = """
     SELECT 'stuck', NULL::text, count(*)::bigint
     FROM recent
     WHERE status = 'pending'
-      AND created_at < now() - $3::int * interval '1 minute'
+      AND updated_at < now() - $3::int * interval '1 minute'
     """
 
 
@@ -592,6 +594,16 @@ def assess(snapshot):
     if snapshot.errors is None:
         unknown.append(_("persisted errors"))
 
+    if snapshot.chapters_embargo_seconds is None:
+        unknown.append(_("MangaDex"))
+    elif snapshot.chapters_embargo_seconds > 0:
+        issues.append(_("MangaDex paused by a rate limit"))
+
+    if snapshot.latency is None:
+        unknown.append(_("gateway latency"))
+    if snapshot.gateway is None:
+        unknown.append(_("gateway counters"))
+
     if snapshot.pool is None:
         unknown.append(_("database pool"))
     elif snapshot.pool.saturated:
@@ -626,6 +638,16 @@ def render_verdict(snapshot):
 # ---------------------------------------------------------------------------
 # Rendering - [(heading, lines)] from plain data only
 # ---------------------------------------------------------------------------
+# Free-text labels (node ids, event and action kinds, extension names) are cut to
+# this many characters: a Components V2 message carries 4000 characters in total.
+LABEL_LIMIT = 48
+
+
+def _clip(text):
+    text = str(text)
+    return text if len(text) <= LABEL_LIMIT else text[: LABEL_LIMIT - 3] + "..."
+
+
 def _unknown():
     return _("unknown")
 
@@ -643,7 +665,7 @@ def render_errors(snapshot):
         if stats.top:
             lines.extend(
                 _("{command} / {error}: {count}").format(
-                    command=command, error=error, count=total
+                    command=_clip(command), error=_clip(error), count=total
                 )
                 for command, error, total in stats.top
             )
@@ -653,12 +675,10 @@ def render_errors(snapshot):
                     days=ERROR_WINDOW_DAYS
                 )
             )
-        if stats.covered_days < ERROR_WINDOW_DAYS:
+        if stats.since is not None:
             lines.append(
                 "-# "
-                + _("Counting is recent: {days} day(s) of history.").format(
-                    days=stats.covered_days
-                )
+                + _("Oldest recorded error: {date}").format(date=stats.since.isoformat())
             )
     since_boot = _("Since boot: {count} (this process only)").format(
         count=snapshot.errors_since_boot
@@ -685,7 +705,7 @@ def render_lavalink(snapshot):
         lines = [_("No Lavalink node is registered.")]
     else:
         lines = [
-            _("Node {node}: {state}").format(node=node_id, state=_(STATE_LABELS[state]))
+            _("Node {node}: {state}").format(node=_clip(node_id), state=_(STATE_LABELS[state]))
             for node_id, state in snapshot.nodes[:NODE_LIMIT]
         ]
         if len(snapshot.nodes) > NODE_LIMIT:
@@ -749,7 +769,7 @@ def render_timers(snapshot, *, fmt_duration):
                 _("Oldest overdue: {age}").format(age=fmt_duration(stats.oldest_seconds))
             )
         lines.extend(
-            _("{event}: {count}").format(event=event, count=n)
+            _("{event}: {count}").format(event=_clip(event), count=n)
             for event, n in stats.by_event
         )
     else:
@@ -765,12 +785,12 @@ def render_actions(snapshot):
     if stats is None:
         return [_("Dashboard action health is unavailable right now.")]
     seen = [
-        "{0} {1}".format(status, stats.by_status[status])
+        "{0} {1}".format(_clip(status), stats.by_status[status])
         for status in ACTION_STATUSES
         if status in stats.by_status
     ]
     seen.extend(
-        "{0} {1}".format(status, n)
+        "{0} {1}".format(_clip(status), n)
         for status, n in sorted(stats.by_status.items())
         if status not in ACTION_STATUSES
     )
@@ -794,7 +814,7 @@ def render_actions(snapshot):
     if stats.failed:
         lines.append(_("Failed in the last {days} days:").format(days=ACTION_FAILED_DAYS))
         lines.extend(
-            _("{kind}: {count}").format(kind=kind, count=n) for kind, n in stats.failed
+            _("{kind}: {count}").format(kind=_clip(kind), count=n) for kind, n in stats.failed
         )
     else:
         lines.append(
@@ -843,7 +863,7 @@ def render_process(snapshot):
         )
     else:
         lines.append(_("Extensions not loaded: {names}").format(
-            names=", ".join(failed[:EXTENSION_LIMIT])
+            names=", ".join(_clip(name) for name in failed[:EXTENSION_LIMIT])
             + ("" if len(failed) <= EXTENSION_LIMIT else ", ...")
         ))
     return lines

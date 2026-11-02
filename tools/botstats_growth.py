@@ -30,8 +30,8 @@ WEEKS = 8
 EARLY_SECONDS = (86400, 7 * 86400)
 
 INSERT = """
-    INSERT INTO guild_events (kind, member_count, stayed_seconds)
-    VALUES ($1, $2, $3)
+    INSERT INTO guild_events (at, kind, member_count, stayed_seconds)
+    VALUES (date_trunc('hour', now()), $1, $2, $3)
     """
 
 PRUNE = """
@@ -269,8 +269,8 @@ def render_stay(stats, *, fmt_duration):
         lines.append(
             "-# "
             + _(
-                "Only {days} day(s) of history: long stays cannot show up yet, so "
-                "these figures lean towards early leavers."
+                "Small or short sample: only {days} day(s) of history, so these "
+                "figures may not be typical yet."
             ).format(days=stats.covered_days)
         )
     return lines

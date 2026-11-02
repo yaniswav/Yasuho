@@ -43,6 +43,9 @@ class Feature:
     scope: str = "guild"
     where: str | None = None
     column: str | None = None
+    # More (table, where) arms whose guilds also count: ONE feature stored in
+    # several places is the UNION of them, still counted once per guild.
+    also: tuple = ()
 
 
 FEATURES = (
@@ -84,12 +87,23 @@ FEATURES = (
     Feature("temp_roles", N_("Temporary roles"), "temp_roles"),
     Feature("youtube", N_("YouTube notifications"), "youtube_follows"),
     Feature("twitch", N_("Twitch alerts"), "twitch_alert"),
-    Feature("digest", N_("Server stats digest"), "serverstats_digest_state"),
+    # The digest channel is the setting that turns it on (digest.py reads the
+    # same key); serverstats_digest_state only appears after a first delivery.
+    # ->> is NULL for an absent key and for a JSON null alike.
+    Feature(
+        "digest",
+        N_("Server stats digest"),
+        "guild_settings",
+        where="settings ->> 'serverstats_digest_channel' IS NOT NULL",
+    ),
+    # The invite filter is a guild_settings flag (cogs/moderation/automod.py),
+    # stored as a JSON boolean: ->> reads 'true' or 'false'.
     Feature(
         "automod",
         N_("Automod"),
         "automod",
         where="antilink OR antispam",
+        also=(("guild_settings", "settings ->> 'antiinvite' = 'true'"),),
     ),
     Feature("modlog", N_("Mod log"), "modlog"),
     Feature("suggestions", N_("Suggestions"), "suggestions"),
@@ -135,12 +149,22 @@ def build_adoption_sql(features):
             predicates = []
         if feature.where:
             predicates.append("(" + feature.where + ")")
+        source = feature.table
+        if feature.also:
+            arms = ((feature.table, feature.where),) + tuple(feature.also)
+            source = "(" + " UNION ".join(
+                "SELECT {column} FROM {table}{where}".format(
+                    column=column, table=table, where=" WHERE (" + where + ")" if where else ""
+                )
+                for table, where in arms
+            ) + ") AS u"
+            predicates = predicates[:1]
         parts.append(
             "SELECT '{key}' AS key, COUNT(DISTINCT {column})::bigint AS n "
             "FROM {table}{where}".format(
                 key=feature.key,
                 column=column,
-                table=feature.table,
+                table=source,
                 where=" WHERE " + " AND ".join(predicates) if predicates else "",
             )
         )
