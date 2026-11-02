@@ -5,7 +5,7 @@ import discord
 from discord.ext import commands, tasks
 
 from cogs.moderation import mute_perms
-from tools import retention, role_audit
+from tools import botstats_growth, retention, role_audit
 from tools.i18n import _
 
 log = logging.getLogger(__name__)
@@ -105,6 +105,9 @@ class Events(commands.Cog):
                 "Failed to cancel/restore retention state for guild %s",
                 guild.id,
             )
+        # Last, so the statistic can never delay or break the restore above;
+        # record_guild_event swallows and logs its own failures.
+        await botstats_growth.record_guild_event(self.bot.db_pool, guild, "join")
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
@@ -124,6 +127,7 @@ class Events(commands.Cog):
             )
         finally:
             retention.invalidate_guild_caches(self.bot, guild.id)
+        await botstats_growth.record_guild_event(self.bot.db_pool, guild, "leave")
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):

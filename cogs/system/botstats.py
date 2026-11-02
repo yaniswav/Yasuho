@@ -30,8 +30,11 @@ Three rules the pages below obey:
    presenting it as a headcount. A guild whose count is missing outright sorts
    LAST and renders as "?" - never as zero members.
 3. ON-DEMAND ONLY. Every query is bounded and runs when its page is first
-   opened, never on a timer and never all seven at once. A SUCCESSFUL read is
-   then memoised for the card's lifetime, so re-clicking a page costs nothing;
+   opened, never on a timer. The one exception is the Summary page, which is
+   built from the figures of the other pages: opened FIRST it triggers their
+   reads once (owner-only, each bounded), opened after them it costs nothing.
+   A SUCCESSFUL read is then memoised for the card's lifetime, so re-clicking
+   a page costs nothing;
    a FAILED one is not, so a transient pool error is retried on the next open
    instead of being frozen into the card. The in-memory half of a page is
    recomputed every time (it is free), and the footer dates the page against
@@ -81,8 +84,10 @@ from discord.ext import commands, tasks
 from cogs.system import usage_stats
 from tools import (
     botstats_features,
+    botstats_growth,
     botstats_health,
     botstats_premium,
+    botstats_summary,
     interactions,
     premium_usage,
 )
@@ -946,6 +951,27 @@ def render_quiet_hours(persisted):
     ]
 
 
+def peak_hours(persisted):
+    """``(busiest, quietest)`` slot texts for the Summary, ``None`` where unknown.
+
+    Same gates as :func:`render_quiet_hours`: a young profile says nothing, and
+    a quiet side tied across too many slots is not named.
+    """
+    if not usage_stats.hourly_is_ready(persisted.hourly_covered_days):
+        return None, None
+    ranked = usage_stats.rank_hour_slots(
+        persisted.hourly, covered_days=persisted.hourly_covered_days
+    )
+    if ranked is None:
+        return None, None
+    quietest = (
+        None
+        if ranked.quiet_slots > usage_stats.QUIET_SLOT_LIMIT
+        else format_hour_slots(ranked.quietest[:1])
+    )
+    return format_hour_slots(ranked.busiest[:1]), quietest
+
+
 def render_persisted_ranking(persisted):
     """The persisted top-N over the middle window."""
     if persisted is None:
@@ -1109,7 +1135,9 @@ def gateway_counters(bot):
     PAGE_FEATURES,
     PAGE_PREMIUM,
     PAGE_HEALTH,
-) = range(7)
+    PAGE_GROWTH,
+    PAGE_SUMMARY,
+) = range(9)
 PAGE_EMOJI = (
     "\N{BAR CHART}",
     "\N{TROPHY}",
@@ -1118,6 +1146,8 @@ PAGE_EMOJI = (
     "\N{SPARKLES}",
     "\N{GEM STONE}",
     "\N{STETHOSCOPE}",
+    "\N{CHART WITH UPWARDS TREND}",
+    "\N{MEMO}",
 )
 
 
@@ -1130,6 +1160,8 @@ def page_labels():
         _("Features"),
         _("Premium"),
         _("Health"),
+        _("Growth"),
+        _("Summary"),
     )
 
 
@@ -1159,11 +1191,11 @@ class _PageButton(discord.ui.Button):
 
 
 class BotStatsDashboard(AuthorLayoutView):
-    """The ``?botstats`` Components V2 card: seven pages, seven button jumps.
+    """The ``?botstats`` Components V2 card: one page per button.
 
     Each DB read runs the FIRST time a page that needs it is opened and is then
-    memoised for the card's lifetime, so the card costs at most seven bounded
-    query batches total no matter how much the owner clicks, and it never
+    memoised for the card's lifetime, so the card costs at most one bounded
+    batch per page total no matter how much the owner clicks, and it never
     refreshes itself on a timer. The IN-MEMORY half of a page (guild rows,
     /proc, the usage counters) is recomputed on every open - it costs nothing
     and freezing it would make the card lie about a live process.
@@ -1185,6 +1217,7 @@ class BotStatsDashboard(AuthorLayoutView):
     READ_ERRORS = "errors"
     READ_TIMERS = "timers"
     READ_ACTIONS = "actions"
+    READ_GROWTH = "growth"
     PAGE_READS = {
         PAGE_OVERVIEW: (READ_DB_SIZE,),
         PAGE_GUILDS: (),
@@ -1193,6 +1226,17 @@ class BotStatsDashboard(AuthorLayoutView):
         PAGE_FEATURES: (READ_ADOPTION,),
         PAGE_PREMIUM: (READ_LIMIT_USAGE, READ_UPSELLS),
         PAGE_HEALTH: (READ_ERRORS, READ_TIMERS, READ_ACTIONS),
+        PAGE_GROWTH: (READ_GROWTH,),
+        # The Summary reuses the other pages' memoised reads (same keys).
+        PAGE_SUMMARY: (
+            READ_ADOPTION,
+            READ_LIMIT_USAGE,
+            READ_USAGE,
+            READ_ERRORS,
+            READ_TIMERS,
+            READ_ACTIONS,
+            READ_GROWTH,
+        ),
     }
 
     def __init__(self, cog, author_id, *, timeout=300):
@@ -1258,6 +1302,10 @@ class BotStatsDashboard(AuthorLayoutView):
             sections = await self._premium_sections()
         elif index == PAGE_HEALTH:
             sections = await self._health_sections()
+        elif index == PAGE_GROWTH:
+            sections = await self._growth_sections()
+        elif index == PAGE_SUMMARY:
+            sections = await self._summary_sections()
         else:
             sections = await self._data_sections()
         return sections, self._taken_at(self.PAGE_READS[index])
@@ -1330,14 +1378,17 @@ class BotStatsDashboard(AuthorLayoutView):
             lambda: fetch_observed_activity(self.bot.db_pool, today=today),
             "observed activity",
         )
-        persisted = await self._read(
+        persisted = await self._persisted_usage(today)
+        return render_usage(self.cog.usage, activity, persisted)
+
+    async def _persisted_usage(self, today):
+        return await self._read(
             self.READ_USAGE,
             lambda: usage_stats.fetch_persisted_usage(
                 self.bot.db_pool, timeout=QUERY_TIMEOUT, today=today
             ),
             "recorded usage",
         )
-        return render_usage(self.cog.usage, activity, persisted)
 
     async def _data_sections(self):
         row_counts = await self._read(
@@ -1353,20 +1404,22 @@ class BotStatsDashboard(AuthorLayoutView):
         table_sizes, total_bytes = sizes if sizes is not None else (None, 0)
         return render_data(row_counts, table_sizes, total_bytes)
 
-    async def _features_sections(self):
+    async def _adoption_counts(self):
         guild_ids = [guild.id for guild in self.bot.guilds]
-        counts = await self._read(
+        return await self._read(
             self.READ_ADOPTION,
             lambda: botstats_features.fetch_adoption(
                 self.bot.db_pool, guild_ids, timeout=QUERY_TIMEOUT
             ),
             "feature adoption",
         )
-        return botstats_features.render_features(counts, len(guild_ids))
 
-    async def _premium_sections(self):
-        guilds = self.bot.guilds
-        wall = await self._read(
+    async def _features_sections(self):
+        counts = await self._adoption_counts()
+        return botstats_features.render_features(counts, len(self.bot.guilds))
+
+    async def _limit_usage(self):
+        return await self._read(
             self.READ_LIMIT_USAGE,
             # One ceiling for the whole 14-query sweep, not one per query.
             lambda: asyncio.wait_for(
@@ -1375,6 +1428,10 @@ class BotStatsDashboard(AuthorLayoutView):
             ),
             "limit usage",
         )
+
+    async def _premium_sections(self):
+        guilds = self.bot.guilds
+        wall = await self._limit_usage()
         upsells = await self._read(
             self.READ_UPSELLS,
             lambda: botstats_premium.fetch_upsell_counts(
@@ -1388,6 +1445,10 @@ class BotStatsDashboard(AuthorLayoutView):
         return botstats_premium.render_premium(plus, len(guilds), wall, upsells)
 
     async def _health_sections(self):
+        snapshot = await self._health_snapshot()
+        return botstats_health.render_health(snapshot, fmt_duration=format_duration)
+
+    async def _health_snapshot(self):
         """Three memoised DB reads plus a live, free half recomputed every open."""
         bot = self.bot
         pool = bot.db_pool
@@ -1408,7 +1469,7 @@ class BotStatsDashboard(AuthorLayoutView):
         )
         buffer = self.cog.errors
         failed = getattr(bot, "failed_extensions", None)
-        snapshot = botstats_health.HealthSnapshot(
+        return botstats_health.HealthSnapshot(
             errors=errors,
             errors_since_boot=buffer.seen,
             errors_dropped=self.cog._flush_stats["error_dropped"] + buffer.dropped,
@@ -1425,7 +1486,41 @@ class BotStatsDashboard(AuthorLayoutView):
             failed_extensions=tuple(failed) if failed is not None else None,
             loaded_extensions=len(getattr(bot, "extensions", ())),
         )
-        return botstats_health.render_health(snapshot, fmt_duration=format_duration)
+
+    async def _growth_stats(self):
+        return await self._read(
+            self.READ_GROWTH,
+            lambda: botstats_growth.fetch_growth(
+                self.bot.db_pool, timeout=QUERY_TIMEOUT
+            ),
+            "growth",
+        )
+
+    async def _growth_sections(self):
+        """One memoised read (two statements) plus a free in-memory join-age half."""
+        stats = await self._growth_stats()
+        return botstats_growth.render_growth(
+            stats,
+            botstats_growth.join_age_counts(self.bot.guilds),
+            fmt_duration=format_duration,
+        )
+
+    async def _summary_sections(self):
+        """Insights from the other pages' reads: memoised, so free once seen."""
+        busiest, quietest = None, None
+        persisted = await self._persisted_usage(usage_stats.utc_today())
+        if persisted is not None:
+            busiest, quietest = peak_hours(persisted)
+        return botstats_summary.render_summary(
+            adoption=await self._adoption_counts(),
+            guild_total=len(self.bot.guilds),
+            wall=await self._limit_usage(),
+            health=await self._health_snapshot(),
+            growth=await self._growth_stats(),
+            persisted=persisted,
+            busiest=busiest,
+            quietest=quietest,
+        )
 
     # -- layout -------------------------------------------------------------
 
@@ -1770,6 +1865,11 @@ class BotStats(commands.Cog):
             today - datetime.timedelta(days=botstats_health.RETENTION_DAYS),
         )
         deleted += int(row["rows"]) if row else 0
+        row = await self.bot.db_pool.fetchrow(
+            botstats_growth.PRUNE,
+            botstats_growth.prune_cutoff(today),
+        )
+        deleted += int(row["rows"]) if row else 0
         # Marked only after the batches ran, so a failed prune is retried on the
         # next tick instead of being lost for the whole day.
         self._prune_day = today
@@ -1822,7 +1922,7 @@ class BotStats(commands.Cog):
 
     @commands.command(hidden=True, name="botstats", aliases=["bstats"])
     async def botstats(self, ctx):
-        """Open the owner bot-statistics dashboard (4 pages)."""
+        """Open the owner bot-statistics dashboard."""
         async with ctx.typing():
             view = BotStatsDashboard(self, ctx.author.id)
             await view.start()

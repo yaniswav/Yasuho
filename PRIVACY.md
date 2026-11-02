@@ -1,6 +1,6 @@
 # Yasuho - Privacy Policy
 
-_Last updated: October 30, 2026_
+_Last updated: November 2, 2026_
 
 Yasuho ("the bot") is a Discord community bot. This document explains what data
 the bot processes, what it stores, for how long, and how you can see or delete
@@ -172,7 +172,12 @@ if you had turned saving off, that on/off marker (it holds no settings) is kept 
 the erasure does not turn saving back on.
 
 **Command usage**: anonymous aggregate counters (command name x day). No user
-ID, no server ID.
+ID, no server ID. Unexpected command errors are counted the same way (command
+name x error type x day).
+
+**Bot joins and leaves**: when the bot is added to or removed from a server, it
+logs the date, the server's member count and, on removal, how long it stayed.
+No server ID, no server name, no user ID.
 
 ## What we do NOT do
 
@@ -279,6 +284,8 @@ dashboard all stay in France.
   dashboard): 90 days, and purged in full when the bot is removed from the
   server.
 - Anonymous command-usage aggregates: 400 days.
+- Anonymous command-error counters: 30 days.
+- Anonymous bot join/leave log: 400 days.
 - Technical logs: the bot's logs and the dashboard's service logs, 30 days; the
   dashboard's web access logs (IP address, browser user-agent, requested page,
   date), 15 days. Logs never contain message text, and Discord IDs appear in

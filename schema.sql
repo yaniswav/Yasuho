@@ -1743,6 +1743,31 @@ CREATE TABLE IF NOT EXISTS command_errors (
 );
 
 -- ============================================================
+-- Guild join / leave log (GLOBAL, ANONYMOUS)
+-- ============================================================
+-- Owner: cogs/system/events.py (writer) + tools/botstats_growth.py (the Growth
+-- page of ?botstats). One row per time the bot joined or left a server, so the
+-- owner can see growth and churn and how long servers stay.
+--
+-- Deliberately NO guild_id, NO user_id and NO guild name: a row says only that
+-- "a server of about N members joined / left", so it identifies nothing, belongs
+-- to no guild, and survives the departed-guild data purge (which is driven off
+-- guild_id columns) without holding anything that purge is meant to delete.
+-- member_count is NULL when Discord gave none (never 0); stayed_seconds is set on
+-- a leave from the bot member's own joined_at and is NULL when unknown.
+--
+-- Rows older than tools/botstats_growth.RETENTION_DAYS (400) are deleted by the
+-- once-a-day botstats hook.
+CREATE TABLE IF NOT EXISTS guild_events (
+    id             BIGSERIAL PRIMARY KEY,
+    at             TIMESTAMPTZ NOT NULL DEFAULT now(),
+    kind           TEXT        NOT NULL CHECK (kind IN ('join', 'leave')),
+    member_count   INTEGER,
+    stayed_seconds BIGINT
+);
+CREATE INDEX IF NOT EXISTS guild_events_at_idx ON guild_events (at);
+
+-- ============================================================
 -- Support tickets (METADATA ONLY)
 -- ============================================================
 -- Owner: cogs/config/tickets/. A ticket is a PRIVATE THREAD on the panel

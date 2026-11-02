@@ -880,7 +880,7 @@ async def test_the_page_adds_no_timer_and_no_writer():
     assert not hasattr(botstats.BotStats, "_health_loop")
 
 
-async def test_card_lays_out_seven_buttons_in_three_rows():
+async def test_card_lays_out_nine_buttons_in_three_rows():
     card = _card(_CardPool())
     sections, taken = await card._load(botstats.PAGE_HEALTH)
     card.index = botstats.PAGE_HEALTH
@@ -892,7 +892,7 @@ async def test_card_lays_out_seven_buttons_in_three_rows():
         if hasattr(c, "children")
         and any(isinstance(i, botstats._PageButton) for i in c.children)
     ]
-    assert [len(r.children) for r in rows] == [3, 3, 1]
+    assert [len(r.children) for r in rows] == [3, 3, 3]
 
 
 def test_page_identity_is_append_only():
@@ -905,5 +905,5 @@ def test_page_identity_is_append_only():
         botstats.PAGE_FEATURES,
         botstats.PAGE_PREMIUM,
     ) == (0, 1, 2, 3, 4, 5)
-    assert set(botstats.BotStatsDashboard.PAGE_READS) == set(range(7))
+    assert set(botstats.BotStatsDashboard.PAGE_READS) == set(range(9))
     assert botstats.page_labels()[botstats.PAGE_HEALTH] == "Health"

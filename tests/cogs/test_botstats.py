@@ -1094,7 +1094,7 @@ async def test_card_is_author_gated(make_interaction):
 
 
 def test_page_labels_cover_every_page_emoji():
-    assert len(botstats.page_labels()) == len(botstats.PAGE_EMOJI) == 7
+    assert len(botstats.page_labels()) == len(botstats.PAGE_EMOJI) == 9
 
 
 # ---------------------------------------------------------------------------
