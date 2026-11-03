@@ -18,9 +18,9 @@ from datetime import datetime, timedelta, timezone
 import discord
 from discord.ext import commands
 
-from tools import i18n, settings
-from tools.i18n import _
-from tools.views import LocaleLayoutView
+from tools import i18n, interactions, settings
+from tools.i18n import N_, _
+from tools.views import LocaleDynamicItem, LocaleLayoutView
 
 log = logging.getLogger(__name__)
 
@@ -135,18 +135,96 @@ def _marker_is_recent(marker, *, now=None):
     return (now - posted) < REPOST_AFTER
 
 
-class OnboardingCardView(LocaleLayoutView):
-    """Single-page Components V2 card: Yasuho's greeting (read-only, no controls).
+# custom_id namespace of the card's buttons: ``onb:<kind>``. The kind is the only
+# thing the id carries - the guild always comes from the click itself
+# (``interaction.guild``), never from a value a client could have edited.
+CUSTOM_ID_PREFIX = "onb:"
+_KIND_PATTERN = r"alerts|settings|help"
+BUTTON_TEMPLATE = r"onb:(?P<kind>" + _KIND_PATTERN + r")"
 
-    Five children in one container, far under the 40-child / 4000-character
-    Components V2 ceilings, and every line is short enough to read on a phone.
+# kind -> (label msgid, button style, needs Manage Server).
+_BUTTONS = {
+    "alerts": (N_("Set up anime alerts"), discord.ButtonStyle.primary, True),
+    "settings": (N_("Server settings"), discord.ButtonStyle.secondary, True),
+    "help": (N_("Help"), discord.ButtonStyle.secondary, False),
+}
+
+
+async def _open_alerts(interaction):
+    from cogs.anilist.alerts_wizard import open_anime_alerts_wizard
+
+    await open_anime_alerts_wizard(interaction)
+
+
+async def _open_settings(interaction):
+    from cogs.config.settings import open_config_panel
+
+    await open_config_panel(interaction)
+
+
+async def _open_help(interaction):
+    from cogs.system.help import open_help_home
+
+    await open_help_home(interaction)
+
+
+_OPENERS = {"alerts": _open_alerts, "settings": _open_settings, "help": _open_help}
+
+
+class OnboardingButton(LocaleDynamicItem[discord.ui.Button], template=BUTTON_TEMPLATE):
+    """One of the card's persistent buttons.
+
+    A DynamicItem, so a click is matched on its custom_id against the template
+    registered at load: it works on a card posted before a restart and long after
+    the card's own view is gone (the view has no timeout and retains nothing).
+    The clicker's locale is applied by :class:`~tools.views.LocaleDynamicItem`
+    before the callback, so every response (all ephemeral) speaks the clicker's
+    language; the card itself was rendered once in the guild's language.
     """
 
-    def __init__(self, guild, *, timeout=180):
-        super().__init__(timeout=timeout)
-        self._build(guild)
+    def __init__(self, kind):
+        self.kind = kind
+        label, style, _manager = _BUTTONS[kind]
+        super().__init__(
+            discord.ui.Button(
+                label=_(label), style=style, custom_id=CUSTOM_ID_PREFIX + kind
+            )
+        )
 
-    def _build(self, guild):
+    @classmethod
+    async def from_custom_id(cls, interaction, item, match, /):
+        return cls(match["kind"])
+
+    async def callback(self, interaction):
+        if interaction.guild is None:
+            return await interactions.reply(
+                interaction, _("This only works in a server.")
+            )
+        _label, _style, needs_manager = _BUTTONS[self.kind]
+        # Checked here, on the live click: the card is public and anyone can
+        # press it, so the button must not trust where it was posted.
+        if needs_manager and not interaction.user.guild_permissions.manage_guild:
+            return await interactions.reply(
+                interaction,
+                _("You need the Manage Server permission to use this button."),
+            )
+        await _OPENERS[self.kind](interaction)
+
+
+class OnboardingCardView(LocaleLayoutView):
+    """Single-page Components V2 card: a short pitch and three persistent buttons.
+
+    ``timeout=None``: the buttons are DynamicItems (see :class:`OnboardingButton`),
+    so discord.py retains no per-message entry and starts no timeout task, and
+    there is no expiry to disable them. ``with_buttons=False`` is the owner-DM
+    variant: the buttons act on a server, which a DM does not have.
+    """
+
+    def __init__(self, guild, *, with_buttons=True, timeout=None):
+        super().__init__(timeout=timeout)
+        self._build(guild, with_buttons)
+
+    def _build(self, guild, with_buttons):
         container = discord.ui.Container(accent_colour=PANEL_ACCENT_DEFAULT)
 
         container.add_item(
@@ -157,38 +235,29 @@ class OnboardingCardView(LocaleLayoutView):
         )
         container.add_item(discord.ui.Separator())
 
-        intro_lines = [
-            _("I'm ready and delighted to help out here. Here's what I can do:"),
+        lines = [
+            _("I'm the bot for anime and manga servers."),
             "",
             _(
-                "- **Music**: full-featured player with queues, effects, "
-                "and synced lyrics."
+                "- **Anime & manga**: AniList feed, episode and chapter "
+                "alerts, watch-alongs."
             ),
-            _(
-                "- **Moderation**: automod, warnings, mutes, and a "
-                "searchable case history."
-            ),
-            _("- **Leveling**: XP, levels, and role rewards for your members."),
-            _(
-                "- **AniList & manga**: watch/reading lists, airing alerts, "
-                "and new-chapter alerts."
-            ),
-            _("- **Fun**: games and more to keep the server lively."),
+            _("- **Music**: queues, effects and synced lyrics."),
+            _("- **Plus** levels, moderation, tickets and more."),
         ]
-        container.add_item(discord.ui.TextDisplay("\n".join(intro_lines)))
-        container.add_item(discord.ui.Separator())
+        if with_buttons:
+            lines += ["", _("Use the buttons below to get started.")]
+        container.add_item(discord.ui.TextDisplay("\n".join(lines)))
 
-        start_lines = [
-            "**" + _("Getting started") + "**",
-            _(
-                "Use `/config panel` to set up prefixes, autorole, leveling, "
-                "starboard, automod, mod-log, and welcome messages in one place."
-            ),
-            _("Use `/help` to browse every command."),
-            _("Right-click a message, then **Apps > Quote**, to quote it."),
-            _("Use `/language` to pick the language I speak in this server."),
-        ]
-        container.add_item(discord.ui.TextDisplay("\n".join(start_lines)))
+        if with_buttons:
+            container.add_item(
+                discord.ui.ActionRow(*(OnboardingButton(kind) for kind in _BUTTONS))
+            )
+        container.add_item(
+            discord.ui.TextDisplay(
+                "-# " + _("Use `/language` to pick the language I speak in this server.")
+            )
+        )
 
         self.add_item(container)
 
@@ -198,6 +267,14 @@ class Onboarding(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+
+    async def cog_load(self):
+        # Process-wide, so the buttons of every card ever posted dispatch,
+        # including the ones from before this start.
+        self.bot.add_dynamic_items(OnboardingButton)
+
+    def cog_unload(self):
+        self.bot.remove_dynamic_items(OnboardingButton)
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
@@ -230,6 +307,7 @@ class Onboarding(commands.Cog):
             return
 
         target = _pick_channel(guild)
+        in_server = target is not None
         if target is None:
             # Nothing writable: fall back to the owner's DMs. ``guild.owner`` is
             # a cache read and may be None (uncached owner, outage), in which
@@ -249,7 +327,7 @@ class Onboarding(commands.Cog):
             # context manager resets in a finally, so a raised send can never
             # leak this guild's locale into the next event handled by this task.
             with i18n.locale(loc):
-                view = OnboardingCardView(guild)
+                view = OnboardingCardView(guild, with_buttons=in_server)
                 await target.send(
                     view=view, allowed_mentions=discord.AllowedMentions.none()
                 )

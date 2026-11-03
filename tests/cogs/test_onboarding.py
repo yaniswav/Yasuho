@@ -432,19 +432,21 @@ async def test_card_builds_and_sends_under_guild_locale(monkeypatch):
     assert onboarding.i18n.current_locale.get() == onboarding.i18n.DEFAULT_LOCALE
 
 
-async def test_card_content_mentions_guild_and_config_hub(monkeypatch):
+async def test_card_content_is_short_and_pitches_anime_first(monkeypatch):
     bot = _bot(monkeypatch=monkeypatch)
     channel = _FakeChannel("general")
     guild = _FakeGuild(name="My Cool Server", system_channel=channel)
 
     await _cog(bot).on_guild_join(guild)
 
-    view = channel.sent[0][1]["view"]
-    text = _card_text(view)
+    text = _card_text(channel.sent[0][1]["view"])
     assert "My Cool Server" in text
-    assert "/config" in text
-    assert "/help" in text
+    assert "anime and manga servers" in text
+    assert text.index("Anime & manga") < text.index("Music") < text.index("Plus")
     assert "/language" in text
+    # The long getting-started list is gone.
+    assert "Getting started" not in text and "Quote" not in text
+    assert len([line for line in text.splitlines() if line.strip()]) <= 9
 
 
 # ---------------------------------------------------------------------------
@@ -468,11 +470,145 @@ def test_card_stays_well_inside_the_components_v2_ceilings():
     assert container.accent_colour is not None
 
 
-def test_card_has_no_interactive_component():
-    # Read-only by design: nothing to dispatch, so nothing is retained in the
-    # view store after the send.
+def _buttons(view):
+    return [i for i in view.walk_children() if isinstance(i, onboarding.OnboardingButton)]
+
+
+def test_card_has_three_persistent_buttons_and_no_expiry():
     view = OnboardingCardView(_FakeGuild(name="Guild"))
-    assert not any(item.is_dispatchable() for item in view.walk_children())
+    buttons = _buttons(view)
+    assert [b.kind for b in buttons] == ["alerts", "settings", "help"]
+    assert buttons[0].item.style is discord.ButtonStyle.primary
+    # No timeout, so nothing can disable them; all three are dispatchable.
+    assert view.timeout is None
+    assert all(b.is_dispatchable() for b in buttons)
+    assert {b.item.custom_id for b in buttons} == {"onb:alerts", "onb:settings", "onb:help"}
+
+
+def test_owner_dm_card_has_no_buttons():
+    view = OnboardingCardView(_FakeGuild(name="Guild"), with_buttons=False)
+    assert _buttons(view) == []
+    assert "buttons below" not in _card_text(view)
+
+
+async def test_dm_fallback_sends_the_card_without_buttons(monkeypatch):
+    owner = _FakeOwner()
+    bot = _bot(monkeypatch=monkeypatch)
+    guild = _FakeGuild(system_channel=None, text_channels=[], owner=owner)
+
+    await _cog(bot).on_guild_join(guild)
+
+    assert _buttons(owner.sent[0][1]["view"]) == []
+
+
+@pytest.mark.parametrize("kind", ["alerts", "settings", "help"])
+async def test_custom_id_round_trips_through_from_custom_id(kind):
+    import re
+
+    button = onboarding.OnboardingButton(kind)
+    custom_id = button.item.custom_id
+    match = re.fullmatch(onboarding.BUTTON_TEMPLATE, custom_id)
+    assert match is not None
+    rebuilt = await onboarding.OnboardingButton.from_custom_id(None, None, match)
+    assert rebuilt.kind == kind and rebuilt.item.custom_id == custom_id
+    # The id carries only the kind: no guild or user id can ride in it.
+    assert not any(ch.isdigit() for ch in custom_id)
+
+
+def test_unknown_kind_does_not_match_the_template():
+    import re
+
+    assert re.fullmatch(onboarding.BUTTON_TEMPLATE, "onb:evil") is None
+
+
+async def test_cog_registers_and_removes_the_dynamic_items():
+    calls = []
+    bot = types.SimpleNamespace(
+        add_dynamic_items=lambda *a: calls.append(("add", a)),
+        remove_dynamic_items=lambda *a: calls.append(("remove", a)),
+    )
+    cog = _cog(bot)
+    await cog.cog_load()
+    cog.cog_unload()
+    assert calls == [
+        ("add", (onboarding.OnboardingButton,)),
+        ("remove", (onboarding.OnboardingButton,)),
+    ]
+
+
+# --- button callbacks -------------------------------------------------------
+class _Resp:
+    def __init__(self):
+        self.sent = []
+
+    def is_done(self):
+        return False
+
+    async def send_message(self, content=None, **kwargs):
+        self.sent.append((content, kwargs))
+
+
+def _click(*, manage, guild=True):
+    return types.SimpleNamespace(
+        guild=types.SimpleNamespace(id=1) if guild else None,
+        user=types.SimpleNamespace(
+            id=2, guild_permissions=discord.Permissions(manage_guild=manage)
+        ),
+        response=_Resp(),
+        followup=types.SimpleNamespace(),
+    )
+
+
+@pytest.fixture
+def openers(monkeypatch):
+    calls = []
+
+    def fake(name):
+        async def _open(interaction):
+            calls.append(name)
+
+        return _open
+
+    monkeypatch.setattr("cogs.anilist.alerts_wizard.open_anime_alerts_wizard", fake("alerts"))
+    monkeypatch.setattr("cogs.config.settings.open_config_panel", fake("settings"))
+    monkeypatch.setattr("cogs.system.help.open_help_home", fake("help"))
+    return calls
+
+
+@pytest.mark.parametrize("kind", ["alerts", "settings", "help"])
+async def test_each_button_calls_its_entry_point_for_a_manager(kind, openers):
+    inter = _click(manage=True)
+    await onboarding.OnboardingButton(kind).callback(inter)
+    assert openers == [kind]
+    assert inter.response.sent == []
+
+
+@pytest.mark.parametrize("kind", ["alerts", "settings"])
+async def test_manager_buttons_refuse_everyone_else_ephemerally(kind, openers):
+    inter = _click(manage=False)
+    await onboarding.OnboardingButton(kind).callback(inter)
+    assert openers == []
+    (text, kwargs), = inter.response.sent
+    assert "Manage Server" in text and kwargs["ephemeral"] is True
+
+
+async def test_help_button_is_open_to_everyone(openers):
+    await onboarding.OnboardingButton("help").callback(_click(manage=False))
+    assert openers == ["help"]
+
+
+async def test_buttons_refuse_outside_a_server(openers):
+    inter = _click(manage=True, guild=False)
+    await onboarding.OnboardingButton("alerts").callback(inter)
+    assert openers == [] and inter.response.sent
+
+
+def test_onboarding_module_has_no_fstring_prose():
+    import ast
+    import pathlib
+
+    tree = ast.parse(pathlib.Path(onboarding.__file__).read_text())
+    assert not [n for n in ast.walk(tree) if isinstance(n, ast.JoinedStr)]
 
 
 async def test_send_disables_every_mention(monkeypatch):
@@ -489,3 +625,61 @@ async def test_send_disables_every_mention(monkeypatch):
     assert mentions.everyone is False
     assert mentions.users is False
     assert mentions.roles is False
+
+
+# --- the entry points the buttons reuse ------------------------------------
+async def test_open_config_panel_refuses_a_non_manager_before_any_read():
+    from cogs.config import settings as config_settings
+
+    class _Cog:
+        async def _config_state(self, guild):
+            raise AssertionError("must not read state for a non-manager")
+
+    inter = _click(manage=False)
+    inter.client = types.SimpleNamespace(get_cog=lambda name: _Cog())
+    await config_settings.open_config_panel(inter)
+    (text, kwargs), = inter.response.sent
+    assert "Manage Server" in text and kwargs["ephemeral"] is True
+
+
+async def test_open_help_home_is_ephemeral_and_never_reposted(monkeypatch):
+    from cogs.system import help as help_module
+
+    sent = {}
+
+    async def followup_send(**kwargs):
+        sent.update(kwargs)
+        return "MESSAGE"
+
+    async def defer(**kwargs):
+        sent["deferred"] = kwargs
+
+    leveling = types.SimpleNamespace(is_enabled=lambda gid: True)
+    bot = types.SimpleNamespace(
+        prefixes={}, default_prefix="?",
+        user=types.SimpleNamespace(
+            name="Yasuho", display_avatar=types.SimpleNamespace(url="https://x/a.png")
+        ),
+        get_cog=lambda name: leveling,
+    )
+    category = {
+        "emoji": "x", "name": "Music", "description": "d", "groups": [], "total": 3,
+    }
+    monkeypatch.setattr(help_module, "build_categories", lambda b: [category])
+    inter = _click(manage=False)
+    inter.client = bot
+    inter.guild = types.SimpleNamespace(id=1, member_count=3)
+    inter.response.defer = defer
+    inter.followup = types.SimpleNamespace(send=followup_send)
+    done = []
+    inter.response.is_done = lambda: bool(done)
+
+    await help_module.open_help_home(inter)
+
+    assert sent["ephemeral"] is True and sent["deferred"]["ephemeral"] is True
+    view = sent["view"]
+    assert view.ephemeral is True and view.message == "MESSAGE"
+    # Buried-menu re-posting is a public channel.send: never for this copy.
+    view.message = object()
+    inter.channel = object()
+    assert await view._is_buried(inter) is False

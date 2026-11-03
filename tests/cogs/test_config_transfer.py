@@ -927,8 +927,10 @@ async def test_gifs_survive_a_welcome_change_elsewhere():
     assert pool.rows[2]["welcome"]["gifs"] == gifs
 
 
-def test_onboarding_points_at_the_panel_subcommand():
+def test_onboarding_opens_the_panel_through_its_entry_point():
     from pathlib import Path
 
     source = (Path(__file__).resolve().parents[2] / "cogs" / "system" / "onboarding.py").read_text()
-    assert "Use `/config panel` to set up" in source and "Use `/config` to set up" not in source
+    # The card no longer prints a command; its Server settings button opens the
+    # same panel as `/config panel` through the settings cog's entry point.
+    assert "open_config_panel" in source and "Use `/config` to set up" not in source

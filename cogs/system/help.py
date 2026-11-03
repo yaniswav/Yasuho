@@ -1,4 +1,5 @@
 import logging
+import types
 
 import discord
 from discord.ext import commands
@@ -410,6 +411,9 @@ class HelpView(AuthorLayoutView):
         # ``build_categories``); the index into it is the only navigation state.
         self.categories = categories
         self.index = None
+        # An ephemeral copy (open_help_home) must never be re-posted publicly
+        # by the "buried" re-post below.
+        self.ephemeral = False
 
     # -- data helpers -----------------------------------------------------
 
@@ -617,7 +621,7 @@ class HelpView(AuthorLayoutView):
     async def _is_buried(self, interaction):
         """True when enough messages piled up after the menu to re-post it."""
         channel = interaction.channel
-        if channel is None or self.message is None:
+        if channel is None or self.message is None or self.ephemeral:
             return False
         try:
             count = 0
@@ -814,6 +818,39 @@ class YasuhoHelp(commands.HelpCommand):
         await self.get_destination().send(
             view=_HelpCard(["### " + _("Help"), error])
         )
+
+
+async def open_help_home(interaction):
+    """Open the help home as an EPHEMERAL message answering ``interaction``.
+
+    For buttons (the onboarding card) that cannot go through the prefix
+    ``help`` command. The view only reads ``help_command.context`` for the
+    clicker, the bot, the guild and the prefix, so a small stand-in carries
+    those. Safe on a fresh or an already deferred interaction.
+    """
+
+    bot = interaction.client
+    guild = interaction.guild
+    categories = build_categories(bot)
+    if not interaction.response.is_done():
+        await interactions.defer(
+            interaction, ephemeral=True, thinking=True, surface="help home"
+        )
+    prefix = (bot.prefixes.get(guild.id) if guild else None) or bot.default_prefix
+    if not categories:
+        return await interactions.reply(
+            interaction,
+            _("Use `{prefix}help <command>` for more info on a command.").format(
+                prefix=prefix
+            ),
+        )
+    context = types.SimpleNamespace(
+        author=interaction.user, bot=bot, clean_prefix=prefix, guild=guild
+    )
+    view = HelpView(types.SimpleNamespace(context=context), categories)
+    view.ephemeral = True
+    await view.rebuild()
+    view.message = await interaction.followup.send(view=view, ephemeral=True, wait=True)
 
 
 class Help(commands.Cog):

@@ -7,7 +7,7 @@ from cogs.config import config_transfer
 from tools import db, modchecks, settings
 from tools.formats import random_colour
 from tools.i18n import N_, _
-from tools.interactions import notify_failure, refresh_layout
+from tools.interactions import defer, notify_failure, refresh_layout, reply
 from tools.views import AuthorLayoutView
 
 log = logging.getLogger(__name__)
@@ -636,6 +636,29 @@ class Settings(commands.Cog):
     async def config_template_delete(self, ctx, *, name: str):
         """Delete a saved configuration template."""
         await config_transfer.template_delete_command(self.bot, ctx, name)
+
+
+async def open_config_panel(interaction):
+    """Open the ``/config panel`` server-settings panel, ephemerally, for a click.
+
+    The same ``_config_state`` + ``ConfigPanel`` the command builds. Gated here
+    on Manage Server (the command's decorator does not run for a button), so no
+    caller can forget it. Safe on a fresh or an already deferred interaction.
+    """
+
+    guild = interaction.guild
+    cog = interaction.client.get_cog("Settings")
+    if guild is None or cog is None:
+        return await reply(interaction, _("The settings panel is unavailable here right now."))
+    if not interaction.user.guild_permissions.manage_guild:
+        return await reply(
+            interaction, _("You need the Manage Server permission to open the settings panel.")
+        )
+    if not interaction.response.is_done():
+        await defer(interaction, ephemeral=True, thinking=True, surface="config panel")
+    state = await cog._config_state(guild)
+    view = ConfigPanel(cog, interaction.user.id, guild, state)
+    view.message = await interaction.followup.send(view=view, ephemeral=True, wait=True)
 
 
 async def setup(bot: commands.Bot):

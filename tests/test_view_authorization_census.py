@@ -1163,9 +1163,19 @@ CLASSIFIED: dict[str, tuple[str, str]] = {
         "DISPLAY_ONLY",
         "Docstring: 'Purely presentational (no interactive components)'.",
     ),
+    "cogs.system.onboarding.OnboardingButton": (
+        "CALLBACK_CHECKS",
+        "A DynamicItem on a PUBLIC card, so its callback re-reads the live "
+        "clicker: the alerts and settings kinds refuse anyone without "
+        "manage_guild (callback, `needs_manager`), the help kind only opens an "
+        "ephemeral help menu. The guild comes from interaction.guild, never "
+        "from the custom_id.",
+    ),
     "cogs.system.onboarding.OnboardingCardView": (
         "DISPLAY_ONLY",
-        "Docstring: 'read-only, no controls'; _build adds only TextDisplay.",
+        "Adds only TextDisplay plus the persistent OnboardingButton "
+        "DynamicItems, dispatched without consulting this view (see that "
+        "entry); no actionable component belongs to this class.",
     ),
     "cogs.utility.info.UserInfoView": (
         "DISPLAY_ONLY",
