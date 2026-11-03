@@ -564,8 +564,11 @@ def openers(monkeypatch):
     calls = []
 
     def fake(name):
-        async def _open(interaction):
+        async def _open(interaction, **kwargs):
             calls.append(name)
+            if name == "alerts":
+                # The card's channel says nothing about where alerts belong.
+                assert kwargs == {"preselect_channel": False}
 
         return _open
 

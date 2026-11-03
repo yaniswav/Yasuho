@@ -207,7 +207,8 @@ async def test_create_feed_refused_at_the_free_cap_by_default():
 
     assert error is not None
     assert str(af.MAX_FEEDS_PER_GUILD) in error
-    assert pool.executes == []  # nothing stored past the cap
+    # Nothing stored past the cap (the advisory lock is the only statement).
+    assert [e for e in pool.executes if "pg_advisory" not in e[0]] == []
 
 
 async def test_create_feed_refused_at_the_premium_cap_shows_the_premium_number():

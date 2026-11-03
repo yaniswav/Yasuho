@@ -205,9 +205,13 @@ class _Pool:
 class _FeedCog:
     """Records the guarded helpers apply_alerts is allowed to call."""
 
-    def __init__(self, feed=None, tracked=(), cap=None, create_error=None):
+    def __init__(self, feed=None, tracked=(), cap=None, create_error=None, manga=(), race=None):
         self.bot = types.SimpleNamespace(db_pool=_Pool(feed))
         self.tracked = list(tracked)
+        self.manga = list(manga)
+        # race: the row another admin's feed has once _create_feed refuses
+        self.race = race
+        self.archived = set()
         self.cap = cap
         self.create_error = create_error
         self.created = 0
@@ -215,13 +219,20 @@ class _FeedCog:
 
     async def _create_feed(self, guild_id, channel_id, person_id=None):
         self.created += 1
+        if self.race is not None:
+            self.bot.db_pool.feed = self.race  # the other admin's feed appears
         return self.create_error
 
     async def _set_enabled(self, guild_id, channel_id, enabled, person_id=None):
         return None
 
     async def _channel_subs_for_feed(self, guild_id, channel_id):
-        return [{"media_id": m} for m in self.tracked]
+        rows = [{"media_id": m, "media_type": "ANIME"} for m in self.tracked]
+        return rows + [{"media_id": m, "media_type": "MANGA"} for m in self.manga]
+
+    async def _feed_sub_archival(self, guild_id, channel_id, subs=None):
+        archived = self.archived
+        return types.SimpleNamespace(is_active=lambda media_id: media_id not in archived)
 
     async def _add_channel_sub(self, guild_id, channel_id, media_id, media_type, title, added_by):
         if self.cap is not None and len(self.tracked) + len(self.added) >= self.cap:
@@ -278,8 +289,9 @@ class _Channel:
     id = 6
     mention = "<#6>"
 
-    def __init__(self, perms):
+    def __init__(self, perms, type=discord.ChannelType.text):
         self._perms = perms
+        self.type = type
 
     def permissions_for(self, me):
         return self._perms
@@ -394,3 +406,108 @@ def test_current_channel_is_the_default_only_when_a_feed_may_live_there():
     wizard = _wizard(_titles(3), channel_id=6, guild=guild)
     select = next(c for c in wizard.walk_children() if isinstance(c, aw._ChannelSelect))
     assert [d.id for d in select.default_values] == [6]
+
+
+# --- review fixes -----------------------------------------------------------
+
+
+async def test_losing_the_feed_race_still_adds_the_titles():
+    cog = _FeedCog(feed=None, create_error="already a feed", race={"enabled": True})
+    res = await aw.apply_alerts(cog, 5, 6, [(1, "A"), (2, "B")], 9)
+    assert (res.feed_created, res.added, res.skipped, res.error) == (False, 2, 0, None)
+
+
+async def test_losing_the_race_to_a_disabled_feed_reenables_it():
+    cog = _FeedCog(feed=None, create_error="already a feed", race={"enabled": False})
+    res = await aw.apply_alerts(cog, 5, 6, [(1, "A")], 9)
+    assert (res.feed_enabled, res.added) == (True, 1)
+
+
+async def test_a_real_create_refusal_still_skips_everything():
+    cog = _FeedCog(feed=None, create_error="max feeds")  # no feed appears
+    res = await aw.apply_alerts(cog, 5, 6, [(1, "A")], 9)
+    assert (res.skipped, res.error, cog.added) == (1, "max feeds", [])
+
+
+async def test_manga_subs_do_not_count_as_tracked_anime():
+    cog = _FeedCog(feed={"enabled": True}, tracked=[1], manga=[2, 3])
+    assert await aw.tracked_titles(cog, 5, 6) == ({1}, set())
+    res = await aw.apply_alerts(cog, 5, 6, [(2, "B")], 9)
+    assert (res.added, res.already) == (1, 0)
+
+
+async def test_archived_anime_subs_are_told_apart():
+    cog = _FeedCog(feed={"enabled": True}, tracked=[1, 2])
+    cog.archived = {2}
+    active, archived = await aw.tracked_titles(cog, 5, 6)
+    assert (active, archived) == ({1}, {2})
+    wizard = _wizard(_titles(3), channel_id=6, tracked=active)
+    wizard.archived = archived
+    wizard._build()
+    by_value = {o.value: o for o in _title_select(wizard).options}
+    assert by_value["1"].description == _("Already tracked here")
+    assert by_value["2"].description != _("Already tracked here")
+    assert by_value["2"].emoji is not None
+    # Only the active title is counted in the footer line.
+    text = "\n".join(c.content for c in wizard.walk_children() if isinstance(c, discord.ui.TextDisplay))
+    assert "1 title is already tracked" in text
+
+
+async def test_channel_must_be_an_allowed_type_the_invoker_can_see():
+    cog = _FeedCog(feed=None)
+    bot_ok = discord.Permissions(view_channel=True, send_messages=True, embed_links=True)
+    voice = _Channel(bot_ok, type=discord.ChannelType.voice)
+    wizard = _wizard(_titles(3), channel_id=6, guild=_Guild([voice]), cog=cog)
+    wizard.selected = {1}
+    await wizard.create(_interaction())
+    assert cog.created == 0 and wizard.result is None and wizard.note
+
+    class _Hidden(_Channel):
+        def permissions_for(self, who):
+            # the bot sees it, the invoker does not
+            return bot_ok if who is _Guild.me else discord.Permissions(view_channel=False)
+
+    wizard = _wizard(_titles(3), channel_id=6, guild=_Guild([_Hidden(bot_ok)]), cog=cog)
+    wizard.selected = {1}
+    await wizard.create(_interaction())
+    assert cog.created == 0 and cog.added == [] and wizard.result is None and wizard.note
+
+
+async def test_double_click_runs_the_creation_once():
+    cog = _FeedCog(feed=None)
+    gate = asyncio.Event()
+    original = cog._create_feed
+
+    async def slow_create(*args, **kwargs):
+        await gate.wait()
+        return await original(*args, **kwargs)
+
+    cog._create_feed = slow_create
+    perms = discord.Permissions(view_channel=True, send_messages=True, embed_links=True)
+    wizard = _wizard(_titles(3), channel_id=6, guild=_Guild([_Channel(perms)]), cog=cog)
+    wizard.selected = {1}
+    first = asyncio.ensure_future(wizard.create(_interaction()))
+    await asyncio.sleep(0)
+    second = asyncio.ensure_future(wizard.create(_interaction()))
+    await asyncio.sleep(0)
+    gate.set()
+    await asyncio.gather(first, second)
+    assert cog.created == 1 and cog.added == [1]
+
+
+async def test_preselect_channel_false_starts_without_a_channel():
+    cog = _feed_cog(mock.AsyncMock(return_value=_payload([_media(1)])))
+    cog._channel_subs_for_feed = mock.AsyncMock(return_value=[])
+    text = types.SimpleNamespace(id=6, type=discord.ChannelType.text)
+    member = types.SimpleNamespace(
+        id=9, guild_permissions=discord.Permissions(manage_guild=True)
+    )
+    guild = _Guild([text])
+    view = await aw.build_alerts_wizard(cog, guild, member, text, preselect_channel=False)
+    assert view.channel_id is None
+    cog._channel_subs_for_feed = mock.AsyncMock(return_value=[])
+    cog._feed_sub_archival = mock.AsyncMock(
+        return_value=types.SimpleNamespace(is_active=lambda m: True)
+    )
+    view = await aw.build_alerts_wizard(cog, guild, member, text)
+    assert view.channel_id == 6

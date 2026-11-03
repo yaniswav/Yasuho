@@ -31,7 +31,6 @@ import asyncio
 import logging
 import time
 
-import asyncpg
 import discord
 
 from . import feed_policy as af
@@ -173,6 +172,22 @@ def missing_bot_permissions(channel, me):
     return [_(label) for name, label in _REQUIRED_PERMISSIONS if not getattr(perms, name)]
 
 
+async def tracked_titles(cog, guild_id, channel_id):
+    """``(active, archived)``: the ANIME media ids a channel tracks.
+
+    Manga subs share the table but not this wizard, so they are left out.
+    Archived ones (over the guild's current titles cap, never delivered) are
+    told apart through the feed cog's own archival rule, applied to the rows
+    already fetched (no extra query).
+    """
+
+    rows = await cog._channel_subs_for_feed(guild_id, channel_id)
+    archival = await cog._feed_sub_archival(guild_id, channel_id, subs=rows)
+    anime = [row["media_id"] for row in rows if row["media_type"] == "ANIME"]
+    active = {m for m in anime if archival.is_active(m)}
+    return active, set(anime) - active
+
+
 class AlertsResult:
     """What :func:`apply_alerts` did."""
 
@@ -196,23 +211,22 @@ async def apply_alerts(cog, guild_id, channel_id, picks, person_id):
     """
 
     result = AlertsResult()
-    feed = await cog.bot.db_pool.fetchrow(
-        "SELECT enabled FROM anilist_feeds WHERE guild_id = $1 AND channel_id = $2;",
-        guild_id,
-        channel_id,
-    )
+    feed_query = "SELECT enabled FROM anilist_feeds WHERE guild_id = $1 AND channel_id = $2;"
+    feed = await cog.bot.db_pool.fetchrow(feed_query, guild_id, channel_id)
     if feed is None:
-        try:
-            error = await cog._create_feed(guild_id, channel_id, person_id)
-        except asyncpg.UniqueViolationError:
-            error = None  # raced another admin: the feed exists now, which is all we need
+        error = await cog._create_feed(guild_id, channel_id, person_id)
+        if error is None:
+            result.feed_created = True
         else:
-            result.feed_created = error is None
-        if error:
-            result.error = error
-            result.skipped = len(picks)
-            return result
-    elif not feed["enabled"]:
+            # Another admin may have created it between our read and the
+            # create (the create refuses under its lock): then the feed exists,
+            # which is all we need, and the titles still go in.
+            feed = await cog.bot.db_pool.fetchrow(feed_query, guild_id, channel_id)
+            if feed is None:
+                result.error = error
+                result.skipped = len(picks)
+                return result
+    if feed is not None and not feed["enabled"]:
         error = await cog._set_enabled(guild_id, channel_id, True, person_id)
         if error:
             result.error = error
@@ -221,7 +235,9 @@ async def apply_alerts(cog, guild_id, channel_id, picks, person_id):
         result.feed_enabled = True
 
     tracked = {
-        row["media_id"] for row in await cog._channel_subs_for_feed(guild_id, channel_id)
+        row["media_id"]
+        for row in await cog._channel_subs_for_feed(guild_id, channel_id)
+        if row["media_type"] == "ANIME"
     }
     for index, (media_id, title) in enumerate(picks):
         if media_id in tracked:
@@ -273,16 +289,19 @@ class _TitleSelect(discord.ui.Select):
         self._owner = wizard
         options = []
         for item in wizard.titles:
-            is_tracked = item["id"] in wizard.tracked
+            if item["id"] in wizard.tracked:
+                description, emoji = _("Already tracked here"), "\N{WHITE HEAVY CHECK MARK}"
+            elif item["id"] in wizard.archived:
+                description = _("Archived: over this server's titles limit")
+                emoji = "\N{WARNING SIGN}"
+            else:
+                description, emoji = item["format"].replace("_", " "), None
             options.append(
                 discord.SelectOption(
                     label=item["title"][:100],
                     value=str(item["id"]),
-                    description=(
-                        _("Already tracked here") if is_tracked else item["format"].replace("_", " ")
-                    )[:100]
-                    or None,
-                    emoji="\N{WHITE HEAVY CHECK MARK}" if is_tracked else None,
+                    description=description[:100] or None,
+                    emoji=emoji,
                     default=item["id"] in wizard.selected,
                 )
             )
@@ -321,14 +340,18 @@ class _CreateButton(discord.ui.Button):
 class AnimeAlertsWizard(AuthorLayoutView):
     """The ephemeral setup card: channel select, title select, Create."""
 
-    def __init__(self, cog, guild, author_id, titles, channel_id, tracked, *, timeout=300):
+    def __init__(
+        self, cog, guild, author_id, titles, channel_id, tracked, archived=(), *, timeout=300
+    ):
         super().__init__(author_id, timeout=timeout)
         self.cog = cog
         self.guild = guild
         self.titles = list(titles)[:MAX_OPTIONS]
         self.channel_id = channel_id
         self.tracked = set(tracked)
+        self.archived = set(archived)
         self.selected = set()
+        self._busy = False
         self.note = None
         self.result = None
         self._build()
@@ -434,8 +457,9 @@ class AnimeAlertsWizard(AuthorLayoutView):
 
     async def set_channel(self, interaction, channel_id):
         self.channel_id = channel_id
-        rows = await self.cog._channel_subs_for_feed(self.guild.id, channel_id)
-        self.tracked = {row["media_id"] for row in rows}
+        self.tracked, self.archived = await tracked_titles(
+            self.cog, self.guild.id, channel_id
+        )
         self.note = None
         await self._rerender(interaction)
 
@@ -445,7 +469,18 @@ class AnimeAlertsWizard(AuthorLayoutView):
         await self._rerender(interaction)
 
     async def create(self, interaction):
-        await interactions.defer(interaction, surface="anime alerts wizard")
+        if self._busy:
+            # A double click: the first one is already creating. Just answer.
+            return await interactions.defer(interaction, surface="anime alerts wizard")
+        self._busy = True
+        try:
+            await interactions.defer(interaction, surface="anime alerts wizard")
+            await self._create(interaction)
+        finally:
+            if self.result is None:  # a refusal or a crash: allow another try
+                self._busy = False
+
+    async def _create(self, interaction):
         # Fresh from the live interaction, not from when the card was opened.
         if not interaction.user.guild_permissions.manage_guild:
             self.note = _("You need the Manage Server permission to do that.")
@@ -453,6 +488,14 @@ class AnimeAlertsWizard(AuthorLayoutView):
         channel = self.guild.get_channel(self.channel_id)
         if channel is None:
             self.note = _("I can't see that channel any more - pick another one.")
+            return await self._finish(interaction)
+        if channel.type not in _CHANNEL_TYPES or not channel.permissions_for(
+            interaction.user
+        ).view_channel:
+            self.note = _(
+                "That channel can't host alerts: pick a text or announcement "
+                "channel you can see."
+            )
             return await self._finish(interaction)
         missing = missing_bot_permissions(channel, self.guild.me)
         if missing:
@@ -487,11 +530,13 @@ def _default_channel(guild, channel):
     return channel.id if guild.get_channel(channel.id) is not None else None
 
 
-async def build_alerts_wizard(cog, guild, member, channel):
+async def build_alerts_wizard(cog, guild, member, channel, *, preselect_channel=True):
     """The wizard view for ``member`` in ``guild``, or a refusal string.
 
     ``channel`` is where the command ran: it becomes the default target when a
-    feed may live there. The refusals are plain text so each caller can send
+    feed may live there, unless ``preselect_channel`` is False (a surface posted
+    in some arbitrary channel, like the onboarding card, has no say in where the
+    alerts should go). The refusals are plain text so each caller can send
     them its own way (ephemeral on an interaction, a reply on a prefix command).
     """
 
@@ -501,21 +546,21 @@ async def build_alerts_wizard(cog, guild, member, channel):
         titles = await fetch_airing_titles(cog)
     except SeasonUnavailable:
         return _("AniList isn't answering right now. Try again in a few minutes.")
-    channel_id = _default_channel(guild, channel)
-    tracked = set()
+    channel_id = _default_channel(guild, channel) if preselect_channel else None
+    tracked, archived = set(), set()
     if channel_id is not None:
-        rows = await cog._channel_subs_for_feed(guild.id, channel_id)
-        tracked = {row["media_id"] for row in rows}
-    return AnimeAlertsWizard(cog, guild, member.id, titles, channel_id, tracked)
+        tracked, archived = await tracked_titles(cog, guild.id, channel_id)
+    return AnimeAlertsWizard(cog, guild, member.id, titles, channel_id, tracked, archived)
 
 
-async def open_anime_alerts_wizard(interaction):
+async def open_anime_alerts_wizard(interaction, *, preselect_channel=True):
     """Open the anime alerts quick setup for ``interaction``'s user, ephemerally.
 
     The one entry point (slash subcommand, onboarding card, config panel, empty
     states). Answers by itself in every case: a refusal for a non-manager, a
     friendly line when AniList is unavailable, else the wizard card. Safe to call
-    on a fresh or an already deferred interaction.
+    on a fresh or an already deferred interaction. ``preselect_channel=False``
+    starts with no channel chosen instead of the one the interaction came from.
     """
 
     await i18n.apply_interaction_locale(interaction)
@@ -529,7 +574,10 @@ async def open_anime_alerts_wizard(interaction):
         await interactions.defer(
             interaction, ephemeral=True, thinking=True, surface="anime alerts wizard"
         )
-    view = await build_alerts_wizard(cog, guild, interaction.user, interaction.channel)
+    view = await build_alerts_wizard(
+        cog, guild, interaction.user, interaction.channel,
+        preselect_channel=preselect_channel,
+    )
     if isinstance(view, str):
         return await interactions.reply(interaction, view)
     view.message = await interaction.followup.send(

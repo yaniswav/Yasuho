@@ -480,11 +480,14 @@ class HelpView(AuthorLayoutView):
         self.add_item(container)
 
     async def _anime_alerts_line(self, guild):
-        """One status line on the guild's anime alerts, or None when unknown.
+        """One status line on the guild's anime alerts, or None for no line.
 
-        One bounded read (a guild holds at most ``max_feeds_per_guild`` feed
-        rows, served by the primary key's guild prefix) through the feed cog.
-        Any failure shows nothing: the status line must never break /help.
+        "Set up" means an ENABLED, non-archived feed that tracks at least one
+        ANIME title. Cost: the feed cog's own bounded feed read (at most
+        ``max_feeds_per_guild`` rows, primary-key prefix) plus one query over
+        those channel ids. Only a member with Manage Server is pointed at the
+        setup command; everyone else sees no line while nothing is set up. Any
+        failure shows nothing: the status line must never break /help.
         """
 
         try:
@@ -492,17 +495,37 @@ class HelpView(AuthorLayoutView):
             if feed_cog is None:
                 return None
             feeds = await feed_cog._feeds_for_guild(guild.id)
+            archival = await feed_cog._feed_archival(guild.id, feeds=feeds)
+            live = [
+                feed["channel_id"]
+                for feed in feeds
+                if feed["enabled"] and archival.is_active(feed["channel_id"])
+            ]
+            rows = (
+                await self.bot.db_pool.fetch(
+                    "SELECT DISTINCT channel_id FROM anilist_channel_subs "
+                    "WHERE guild_id = $1 AND channel_id = ANY($2::bigint[]) "
+                    "AND media_type = 'ANIME';",
+                    guild.id,
+                    live,
+                )
+                if live
+                else []
+            )
         except Exception:
             log.exception("Failed to read the anime alerts state for guild %s", guild.id)
             return None
-        count = sum(1 for feed in feeds if feed["enabled"])
-        if not count:
+        count = len(rows)
+        if count:
+            return ngettext(
+                "Anime alerts: set up in {count} channel",
+                "Anime alerts: set up in {count} channels",
+                count,
+            ).format(count=count)
+        perms = getattr(self.help_command.context.author, "guild_permissions", None)
+        if perms is not None and perms.manage_guild:
             return _("Anime alerts: not set up - `/anilistfeed quicksetup`")
-        return ngettext(
-            "Anime alerts: set up in {count} channel",
-            "Anime alerts: set up in {count} channels",
-            count,
-        ).format(count=count)
+        return None
 
     async def _build_home(self, container):
         """The friendly welcome page shown by the bot-wide help menu."""

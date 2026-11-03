@@ -169,6 +169,12 @@ from tools.premium_archive import classify as classify_archival
 log = logging.getLogger(__name__)
 
 
+# Per-guild advisory-lock namespaces (two-argument pg_advisory_xact_lock, whose key
+# space is separate from the one-argument form). Distinct from every other
+# namespace in the bot: ANWA/ANRR (anilist), ANNC, SUGT, BDAY, PLSY, TEMP, REMI.
+FEED_LOCK_NS = 0x414E4645  # 'ANFE': feeds-per-guild count guard
+SUB_LOCK_NS = 0x414E5342  # 'ANSB': tracked-titles count guard
+
 # Poller cadence. 120s stays far below the (currently degraded 30/min) rate
 # limit even with several chunks per tick.
 POLL_SECONDS = 120
@@ -1533,56 +1539,72 @@ class AniListFeed(NoPingReplies, commands.Cog):
         return classify_archival(resources, max_follows)
 
     async def _create_feed(self, guild_id, channel_id, person_id=None):
-        """Create a feed on ``channel_id``. Returns an error string, else None."""
+        """Create a feed on ``channel_id``. Returns an error string, else None.
 
-        exists = await self.bot.db_pool.fetchval(
-            "SELECT 1 FROM anilist_feeds WHERE guild_id = $1 AND channel_id = $2;",
-            guild_id,
-            channel_id,
-        )
-        if exists:
-            return _("{channel} is already an AniList feed.").format(
-                channel=f"<#{channel_id}>"
-            )
+        The existence check, the cap count and the insert run in ONE transaction
+        behind a per-guild advisory lock: READ COMMITTED alone lets concurrent
+        creations all pass the count and overshoot ``max_feeds_per_guild``.
+        """
+
         # The EFFECTIVE cap (M4a-2): the free value unless this guild has
         # Yasuho+ - tools.premium.GuildLimits.max_feeds_per_guild.
         max_feeds = self._guild_limits(guild_id).max_feeds_per_guild
-        count = await self.bot.db_pool.fetchval(
-            "SELECT COUNT(*) FROM anilist_feeds WHERE guild_id = $1;", guild_id
-        )
-        if count >= max_feeds:
-            text = _(
-                "This server already has the maximum of {max} feeds. Delete "
-                "one first."
-            ).format(max=max_feeds)
-            if person_id is not None:
-                # The panel's only caller (feed_views.py's creation/move
-                # ChannelSelect) is admin-only (the panel requires
-                # manage_guild to open) - same "anilist_feeds" key
-                # `/anilistfeed set` already wires. Text-only:
-                # interactions.reply (the panel's reply surface) has no
-                # view= support.
-                upsell = await premium_upsell.for_guild_refusal(
-                    self.bot,
-                    limit_key="anilist_feeds",
-                    guild_id=guild_id,
-                    person_id=person_id,
-                    is_admin=True,
-                    already_top_tier=premium_upsell.is_guild_already_top_tier(
-                        self.bot, guild_id
-                    ),
-                    benefit=str(premium.GUILD_PREMIUM.max_feeds_per_guild),
-                    allow_button=False,
+        async with self.bot.db_pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute(
+                    "SELECT pg_advisory_xact_lock($1, $2)",
+                    FEED_LOCK_NS,
+                    guild_id % 2147483647,
                 )
-                if upsell is not None:
-                    text = text + "\n" + upsell.line
-            return text
-        await self.bot.db_pool.execute(
-            "INSERT INTO anilist_feeds (guild_id, channel_id) VALUES ($1, $2);",
-            guild_id,
-            channel_id,
-        )
-        return None
+                exists = await conn.fetchval(
+                    "SELECT 1 FROM anilist_feeds "
+                    "WHERE guild_id = $1 AND channel_id = $2;",
+                    guild_id,
+                    channel_id,
+                )
+                if exists:
+                    return _("{channel} is already an AniList feed.").format(
+                        channel=f"<#{channel_id}>"
+                    )
+                count = await conn.fetchval(
+                    "SELECT COUNT(*) FROM anilist_feeds WHERE guild_id = $1;",
+                    guild_id,
+                )
+                if count < max_feeds:
+                    await conn.execute(
+                        "INSERT INTO anilist_feeds (guild_id, channel_id) "
+                        "VALUES ($1, $2);",
+                        guild_id,
+                        channel_id,
+                    )
+                    return None
+        # Over the cap. The upsell claim is its own write, so it happens after
+        # the transaction (and its lock) is released.
+        text = _(
+            "This server already has the maximum of {max} feeds. Delete "
+            "one first."
+        ).format(max=max_feeds)
+        if person_id is not None:
+            # The panel's only caller (feed_views.py's creation/move
+            # ChannelSelect) is admin-only (the panel requires manage_guild to
+            # open) - same "anilist_feeds" key `/anilistfeed set` already
+            # wires. Text-only: interactions.reply (the panel's reply surface)
+            # has no view= support.
+            upsell = await premium_upsell.for_guild_refusal(
+                self.bot,
+                limit_key="anilist_feeds",
+                guild_id=guild_id,
+                person_id=person_id,
+                is_admin=True,
+                already_top_tier=premium_upsell.is_guild_already_top_tier(
+                    self.bot, guild_id
+                ),
+                benefit=str(premium.GUILD_PREMIUM.max_feeds_per_guild),
+                allow_button=False,
+            )
+            if upsell is not None:
+                text = text + "\n" + upsell.line
+        return text
 
     async def _move_feed(self, guild_id, old_channel_id, new_channel_id, person_id=None):
         """Move a feed (and its follows) to a new channel, in one transaction.
@@ -1789,60 +1811,73 @@ class AniListFeed(NoPingReplies, commands.Cog):
         )
         if archived_error:
             return archived_error
-        already = await self.bot.db_pool.fetchval(
-            "SELECT 1 FROM anilist_channel_subs "
-            "WHERE guild_id = $1 AND channel_id = $2 AND media_id = $3;",
-            guild_id,
-            channel_id,
-            media_id,
-        )
         max_subs = self._guild_limits(guild_id).max_subs_per_feed
-        if af.sub_cap_exceeded(
-            await self._channel_sub_count(guild_id, channel_id),
-            bool(already),
-            max_subs,
-        ):
-            text = _(
-                "This feed already tracks the maximum of {max} titles. Remove "
-                "one first."
-            ).format(max=max_subs)
-            # Reached only from the subs panel (an interaction), never a bare
-            # ctx - no button here (the panel renders the error as plain text
-            # in a Container, with no ActionRow wired for one at this call
-            # depth), text-only upsell still respects the 7-day throttle.
-            get_guild = getattr(self.bot, "get_guild", None)
-            guild = get_guild(guild_id) if get_guild is not None else None
-            member = guild.get_member(added_by) if guild is not None else None
-            is_admin = premium_upsell.invoker_is_admin(member) if member else False
-            upsell = await premium_upsell.for_guild_refusal(
-                self.bot,
-                limit_key="anilist_subs",
-                guild_id=guild_id,
-                person_id=added_by,
-                is_admin=is_admin,
-                already_top_tier=premium_upsell.is_guild_already_top_tier(
-                    self.bot, guild_id
-                ),
-                benefit=str(max_subs),
-                allow_button=False,
-            )
-            if upsell is not None:
-                text = text + "\n" + upsell.line
-            return text
-        await self.bot.db_pool.execute(
-            "INSERT INTO anilist_channel_subs "
-            "(guild_id, channel_id, media_id, media_type, title, added_by) "
-            "VALUES ($1, $2, $3, $4, $5, $6) "
-            "ON CONFLICT (guild_id, channel_id, media_id) DO UPDATE SET "
-            "media_type = EXCLUDED.media_type, title = EXCLUDED.title;",
-            guild_id,
-            channel_id,
-            media_id,
-            media_type,
-            title,
-            added_by,
+        # Count guard and upsert in ONE transaction behind a per-guild advisory
+        # lock (READ COMMITTED alone lets concurrent adds all pass the count and
+        # overshoot ``max_subs_per_feed``).
+        async with self.bot.db_pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute(
+                    "SELECT pg_advisory_xact_lock($1, $2)",
+                    SUB_LOCK_NS,
+                    guild_id % 2147483647,
+                )
+                already = await conn.fetchval(
+                    "SELECT 1 FROM anilist_channel_subs "
+                    "WHERE guild_id = $1 AND channel_id = $2 AND media_id = $3;",
+                    guild_id,
+                    channel_id,
+                    media_id,
+                )
+                count = await conn.fetchval(
+                    "SELECT COUNT(*) FROM anilist_channel_subs "
+                    "WHERE guild_id = $1 AND channel_id = $2;",
+                    guild_id,
+                    channel_id,
+                )
+                full = af.sub_cap_exceeded(count, bool(already), max_subs)
+                if not full:
+                    await conn.execute(
+                        "INSERT INTO anilist_channel_subs "
+                        "(guild_id, channel_id, media_id, media_type, title, added_by) "
+                        "VALUES ($1, $2, $3, $4, $5, $6) "
+                        "ON CONFLICT (guild_id, channel_id, media_id) DO UPDATE SET "
+                        "media_type = EXCLUDED.media_type, title = EXCLUDED.title;",
+                        guild_id,
+                        channel_id,
+                        media_id,
+                        media_type,
+                        title,
+                        added_by,
+                    )
+                    return None
+        text = _(
+            "This feed already tracks the maximum of {max} titles. Remove "
+            "one first."
+        ).format(max=max_subs)
+        # Reached only from the subs panel (an interaction), never a bare
+        # ctx - no button here (the panel renders the error as plain text
+        # in a Container, with no ActionRow wired for one at this call
+        # depth), text-only upsell still respects the 7-day throttle.
+        get_guild = getattr(self.bot, "get_guild", None)
+        guild = get_guild(guild_id) if get_guild is not None else None
+        member = guild.get_member(added_by) if guild is not None else None
+        is_admin = premium_upsell.invoker_is_admin(member) if member else False
+        upsell = await premium_upsell.for_guild_refusal(
+            self.bot,
+            limit_key="anilist_subs",
+            guild_id=guild_id,
+            person_id=added_by,
+            is_admin=is_admin,
+            already_top_tier=premium_upsell.is_guild_already_top_tier(
+                self.bot, guild_id
+            ),
+            benefit=str(max_subs),
+            allow_button=False,
         )
-        return None
+        if upsell is not None:
+            text = text + "\n" + upsell.line
+        return text
 
     async def _remove_channel_sub(self, guild_id, channel_id, media_id):
         await self.bot.db_pool.execute(

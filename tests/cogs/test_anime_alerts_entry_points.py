@@ -109,7 +109,34 @@ def test_anime_and_manga_is_the_first_help_category():
     assert help_mod.CATEGORIES[0][1] == "Anime & Manga"
 
 
-def _home(feed_cog, *, leveling_on=False):
+class _Feeds:
+    """The feed cog and pool seams the help line reads."""
+
+    def __init__(self, rows=None, anime_channels=(), archived=(), boom=False):
+        self.rows, self.boom, self.calls = rows or [], boom, 0
+        self.anime_channels, self.archived = set(anime_channels), set(archived)
+        self.queries = []
+
+    async def _feeds_for_guild(self, guild_id):
+        self.calls += 1
+        if self.boom:
+            raise RuntimeError("db down")
+        return self.rows
+
+    async def _feed_archival(self, guild_id, feeds=None):
+        archived = self.archived
+        return types.SimpleNamespace(is_active=lambda cid: cid not in archived)
+
+    async def fetch(self, sql, guild_id, channel_ids):
+        self.queries.append((sql, channel_ids))
+        return [{"channel_id": c} for c in channel_ids if c in self.anime_channels]
+
+
+def _feed(cid, enabled=True):
+    return {"channel_id": cid, "enabled": enabled}
+
+
+def _home(feed_cog, *, leveling_on=False, manager=True):
     bot = types.SimpleNamespace(
         user=types.SimpleNamespace(
             name="Yasuho", display_avatar=types.SimpleNamespace(url="https://x/a.png")
@@ -118,11 +145,14 @@ def _home(feed_cog, *, leveling_on=False):
             "Leveling": types.SimpleNamespace(is_enabled=lambda gid: leveling_on),
             "AniListFeed": feed_cog,
         }.get(name),
+        db_pool=feed_cog,
     )
     guild = types.SimpleNamespace(id=1, member_count=3)
-    context = types.SimpleNamespace(author=types.SimpleNamespace(id=9), bot=bot, clean_prefix="?", guild=guild)
-    view = help_mod.HelpView(types.SimpleNamespace(context=context), [])
-    return view
+    author = types.SimpleNamespace(
+        id=9, guild_permissions=discord.Permissions(manage_guild=manager)
+    )
+    context = types.SimpleNamespace(author=author, bot=bot, clean_prefix="?", guild=guild)
+    return help_mod.HelpView(types.SimpleNamespace(context=context), [])
 
 
 async def _home_text(view):
@@ -131,39 +161,50 @@ async def _home_text(view):
     return "\n".join(c.content for c in container.walk_children() if isinstance(c, discord.ui.TextDisplay))
 
 
-class _Feeds:
-    def __init__(self, rows=None, boom=False):
-        self.rows, self.boom, self.calls = rows or [], boom, 0
-
-    async def _feeds_for_guild(self, guild_id):
-        self.calls += 1
-        if self.boom:
-            raise RuntimeError("db down")
-        return self.rows
-
-
-async def test_home_shows_set_up_channels_count():
-    feeds = _Feeds([{"enabled": True}, {"enabled": True}, {"enabled": False}])
+async def test_home_counts_only_enabled_unarchived_feeds_with_an_anime_title():
+    feeds = _Feeds(
+        [_feed(1), _feed(2), _feed(3, enabled=False), _feed(4), _feed(5)],
+        anime_channels={1, 3, 4, 5},  # 2 tracks no anime; 3 is disabled
+        archived={4},
+    )
     text = await _home_text(_home(feeds))
     assert "Anime alerts: set up in 2 channels" in text
     assert feeds.calls == 1
+    assert len(feeds.queries) == 1 and feeds.queries[0][1] == [1, 2, 5]
 
 
-async def test_home_shows_how_to_set_up_when_there_is_no_feed():
-    text = await _home_text(_home(_Feeds([])))
+async def test_a_feed_with_no_anime_title_is_not_set_up():
+    text = await _home_text(_home(_Feeds([_feed(1)], anime_channels=())))
+    assert "not set up" in text and "set up in" not in text
+
+
+async def test_home_shows_how_to_set_up_to_managers_only():
+    feeds = _Feeds([])
+    text = await _home_text(_home(feeds))
     assert "Anime alerts: not set up - `/anilistfeed quicksetup`" in text
+    plain = await _home_text(_home(_Feeds([]), manager=False))
+    assert "Anime alerts" not in plain and "quicksetup" not in plain
+    assert "Prefix:" in plain
+
+
+async def test_home_shows_the_count_to_everyone():
+    feeds = _Feeds([_feed(1)], anime_channels={1})
+    assert "set up in 1 channel" in await _home_text(_home(feeds, manager=False))
 
 
 async def test_home_leveling_off_is_not_a_fault():
     text = await _home_text(_home(_Feeds([])))
     assert "Leveling: off" in text
-    assert "❌" not in text and "\U0001F534" not in text
+    assert "\u274c" not in text and "\U0001F534" not in text
     assert "Leveling: on" in await _home_text(_home(_Feeds([]), leveling_on=True))
 
 
 @pytest.mark.parametrize("feed_cog", [None, _Feeds(boom=True)], ids=["cog-missing", "query-fails"])
 async def test_home_never_breaks_when_the_anime_line_is_unavailable(feed_cog):
-    text = await _home_text(_home(feed_cog))
+    view = _home(feed_cog or _Feeds([]))
+    if feed_cog is None:
+        view.bot.get_cog = lambda name: types.SimpleNamespace(is_enabled=lambda gid: False) if name == "Leveling" else None
+    text = await _home_text(view)
     assert "Anime alerts" not in text
     assert "Prefix:" in text and "Leveling: off" in text
 

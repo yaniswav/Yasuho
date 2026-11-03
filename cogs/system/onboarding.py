@@ -153,7 +153,9 @@ _BUTTONS = {
 async def _open_alerts(interaction):
     from cogs.anilist.alerts_wizard import open_anime_alerts_wizard
 
-    await open_anime_alerts_wizard(interaction)
+    # The card sits in whatever channel the bot found: that says nothing about
+    # where the alerts belong, so no channel is preselected.
+    await open_anime_alerts_wizard(interaction, preselect_channel=False)
 
 
 async def _open_settings(interaction):
