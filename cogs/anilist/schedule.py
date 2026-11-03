@@ -740,8 +740,8 @@ class ScheduleMixin:
             ids = await self._channel_media_ids(guild_id, channel_id)
             if not ids:
                 return _(
-                    "This channel does not track any anime titles yet - add some "
-                    "from the `/anilistfeed` panel."
+                    "This channel does not track any anime titles yet - set up "
+                    "episode alerts with `/anilistfeed quicksetup`."
                 ), None
         else:
             anilist_user_id, error = await self._resolve_anilist_user_id(user_id)

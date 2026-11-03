@@ -50,13 +50,20 @@ REPOST_AFTER_MESSAGES = 4
 #   * the trailing list holds one or more cog *class names* (what ``bot.get_cog``
 #     expects) grouped under this single, human-friendly category.
 #
-# The order is member-relevance first (what a fresh member opens help for -
-# music, games, anime, levels) and the admin-facing categories last. Every cog
+# The order is positioning first (Yasuho is the bot for anime and manga
+# servers), then what a fresh member opens help for - music, games, levels - and
+# the admin-facing categories last. Every cog
 # with visible commands MUST live in exactly one category (or in EXCLUDED_COGS);
 # anything unclaimed is swept into the "Other" catch-all (see
 # ``build_categories``) and, redundantly, flagged by the guard test - so "Other"
 # should now always be empty.
 CATEGORIES = [
+    (
+        "🎬",
+        "Anime & Manga",
+        N_("Search AniList, track your list and get airing alerts."),
+        ["AniList", "AniListFeed"],
+    ),
     (
         "🎵",
         "Music",
@@ -68,12 +75,6 @@ CATEGORIES = [
         "Fun & Games",
         N_("Memes, dice, minigames and quick laughs."),
         ["Fun", "Games"],
-    ),
-    (
-        "🎬",
-        "Anime & Manga",
-        N_("Search AniList, track your list and get airing alerts."),
-        ["AniList", "AniListFeed"],
     ),
     (
         "✨",
@@ -478,6 +479,31 @@ class HelpView(AuthorLayoutView):
         )
         self.add_item(container)
 
+    async def _anime_alerts_line(self, guild):
+        """One status line on the guild's anime alerts, or None when unknown.
+
+        One bounded read (a guild holds at most ``max_feeds_per_guild`` feed
+        rows, served by the primary key's guild prefix) through the feed cog.
+        Any failure shows nothing: the status line must never break /help.
+        """
+
+        try:
+            feed_cog = self.bot.get_cog("AniListFeed")
+            if feed_cog is None:
+                return None
+            feeds = await feed_cog._feeds_for_guild(guild.id)
+        except Exception:
+            log.exception("Failed to read the anime alerts state for guild %s", guild.id)
+            return None
+        count = sum(1 for feed in feeds if feed["enabled"])
+        if not count:
+            return _("Anime alerts: not set up - `/anilistfeed quicksetup`")
+        return ngettext(
+            "Anime alerts: set up in {count} channel",
+            "Anime alerts: set up in {count} channels",
+            count,
+        ).format(count=count)
+
     async def _build_home(self, container):
         """The friendly welcome page shown by the bot-wide help menu."""
         bot = self.bot
@@ -514,26 +540,22 @@ class HelpView(AuthorLayoutView):
                     enabled = await settings.get_guild(
                         bot.db_pool, guild.id, "leveling_enabled", False
                     )
-                leveling = _("Enabled ✅") if enabled else _("Disabled ❌")
+                # Off is the default, not a fault: no red mark.
+                leveling = _("on") if enabled else _("off")
             except Exception:
                 log.exception(
                     "Failed to read leveling state for guild %s", guild.id
                 )
                 leveling = _("Unknown")
-            server_block = (
-                "**"
-                + _("🏠 Server")
-                + "**\n"
-                + _(
-                    "Prefix: `{prefix}`\n"
-                    "Members: **{members}**\n"
-                    "Leveling: {leveling}"
-                ).format(
-                    prefix=prefix,
-                    members=f"{guild.member_count:,}",
-                    leveling=leveling,
-                )
-            )
+            lines = [
+                _("Prefix: `{prefix}`").format(prefix=prefix),
+                _("Members: **{members}**").format(members=f"{guild.member_count:,}"),
+            ]
+            anime_line = await self._anime_alerts_line(guild)
+            if anime_line:
+                lines.append(anime_line)
+            lines.append(_("Leveling: {leveling}").format(leveling=leveling))
+            server_block = "**" + _("🏠 Server") + "**\n" + "\n".join(lines)
         else:
             server_block = (
                 "**"

@@ -2477,10 +2477,17 @@ class AniListFeed(NoPingReplies, commands.Cog):
                 ctx.guild.id,
                 target.id,
             )
-            message = _(
-                "AniList feed created in {channel}. Add users with "
-                "`/anilistfeed follow`."
-            ).format(channel=target.mention)
+            message = (
+                _(
+                    "AniList feed created in {channel}. Add users with "
+                    "`/anilistfeed follow`."
+                ).format(channel=target.mention)
+                + "\n\n"
+                + _(
+                    "Next: track the shows you want episode alerts for with "
+                    "`/anilistfeed quicksetup`."
+                )
+            )
         elif not row["enabled"]:
             # M4a-2: re-enabling is an edit too, refused the same way the
             # panel's Enable/Disable button is (_set_enabled).

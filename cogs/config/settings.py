@@ -87,6 +87,12 @@ class ConfigSelect(discord.ui.Select):
 
         options = [
             discord.SelectOption(
+                label=_("Anime alerts"),
+                value="anime",
+                emoji="📺",
+                description=_("Episode alerts for the shows you follow"),
+            ),
+            discord.SelectOption(
                 label=_("Leveling"),
                 value="leveling",
                 emoji="📈",
@@ -285,6 +291,9 @@ class ConfigPanel(AuthorLayoutView):
         if key == "leveling":
             await self._toggle_leveling(interaction)
             return
+        if key == "anime":
+            await self._open_anime_alerts(interaction)
+            return
 
         guidance = _(
             GUIDANCE.get(
@@ -297,6 +306,18 @@ class ConfigPanel(AuthorLayoutView):
             await interaction.followup.send(guidance, ephemeral=True)
         except Exception:
             log.exception("Config panel guidance failed")
+            await notify_failure(interaction)
+
+    async def _open_anime_alerts(self, interaction):
+        # The wizard checks Manage Server itself and opens as its own ephemeral
+        # message; the panel re-renders first so its dropdown resets.
+        from cogs.anilist.alerts_wizard import open_anime_alerts_wizard
+
+        try:
+            await self._rerender(interaction)
+            await open_anime_alerts_wizard(interaction)
+        except Exception:
+            log.exception("Config panel anime alerts failed")
             await notify_failure(interaction)
 
     async def _toggle_leveling(self, interaction):

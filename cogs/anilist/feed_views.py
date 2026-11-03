@@ -16,6 +16,7 @@ import logging
 import discord
 
 from . import feed_policy as af
+from .alerts_wizard import open_anime_alerts_wizard
 from .feed_delivery import _run_add, _run_like, _run_reply
 from tools import i18n, interactions, premium, premium_upsell
 from tools.i18n import N_, _, ngettext
@@ -229,6 +230,22 @@ class _FeedChannelSelect(discord.ui.ChannelSelect):
             )
         except Exception:
             log.exception("AniList feed panel channel select failed")
+            await interactions.notify_failure(interaction)
+
+
+class _QuickSetupButton(discord.ui.Button):
+    """Open the anime alerts wizard (cogs/anilist/alerts_wizard.py) from the panel."""
+
+    def __init__(self):
+        super().__init__(
+            label=_("Quick setup (anime alerts)"), style=discord.ButtonStyle.primary
+        )
+
+    async def callback(self, interaction):
+        try:
+            await open_anime_alerts_wizard(interaction)
+        except Exception:
+            log.exception("AniList feed panel quick setup failed")
             await interactions.notify_failure(interaction)
 
 
@@ -1372,9 +1389,16 @@ class AniListFeedPanel(LocaleLayoutView):
                         "This server has no AniList feed yet. Pick a channel "
                         "below to create one (up to {max} per server)."
                     ).format(max=self.limits.max_feeds_per_guild)
+                    + "\n"
+                    + _(
+                        "A feed posts what the AniList users you follow are up "
+                        "to, and the new episodes and chapters of the titles "
+                        "you track."
+                    )
                 )
             )
             container.add_item(discord.ui.ActionRow(_FeedChannelSelect(self)))
+            container.add_item(discord.ui.ActionRow(_QuickSetupButton()))
             container.add_item(
                 discord.ui.TextDisplay(
                     "-# " + _("Only you can use these controls.")
