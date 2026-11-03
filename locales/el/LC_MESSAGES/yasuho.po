@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-02 18:50+0000\n"
+"POT-Creation-Date: 2026-11-03 15:37+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: el\n"
@@ -85,7 +85,7 @@ msgid "Link your account first with `/anilist login`."
 msgstr "Σύνδεσε πρώτα τον λογαριασμό σου με `/anilist login`."
 
 #: cogs/anilist/account.py:273 cogs/anilist/account.py:668
-#: cogs/anilist/feed.py:2801
+#: cogs/anilist/feed.py:2861
 msgid "Could not resolve your AniList account."
 msgstr "Δεν ήταν δυνατός ο εντοπισμός του λογαριασμού σου AniList."
 
@@ -152,7 +152,7 @@ msgstr "Δεν μπόρεσα να ξαναβρώ αυτόν τον τίτλο �
 #: cogs/anilist/airing.py:336 cogs/anilist/airing.py:382
 #: cogs/anilist/airing.py:387 cogs/anilist/chapters.py:544
 #: cogs/anilist/chapters.py:590 cogs/anilist/chapters.py:595
-#: cogs/anilist/feed.py:2066 cogs/anilist/feed_delivery.py:436
+#: cogs/anilist/feed.py:2102 cogs/anilist/feed_delivery.py:436
 #: cogs/anilist/feed_delivery.py:558 cogs/anilist/feed_delivery.py:602
 #: cogs/anilist/feed_delivery.py:607 cogs/anilist/feed_delivery.py:708
 msgid "I could not reach AniList - try again shortly."
@@ -200,7 +200,7 @@ msgid "Link your AniList account first with `/anilist login`, then run this agai
 msgstr "Σύνδεσε πρώτα τον λογαριασμό σου AniList με `/anilist login`, και μετά τρέξε ξανά αυτή την εντολή για να ενεργοποιήσεις τις ειδοποιήσεις προβολής."
 
 #: cogs/anilist/airing.py:567 cogs/anilist/chapters.py:784
-#: cogs/anilist/feed.py:2792 cogs/anilist/feed_delivery.py:381
+#: cogs/anilist/feed.py:2852 cogs/anilist/feed_delivery.py:381
 #: cogs/anilist/schedule.py:642
 msgid "Your AniList link is no longer valid - re-link it with `/anilist login`."
 msgstr "Η σύνδεση του AniList σου δεν ισχύει πια - επανασύνδεσέ τη με `/anilist login`."
@@ -255,14 +255,156 @@ msgstr "Ο ρόλος ειδοποιήσεων αφαιρέθηκε."
 msgid "No ping role is set. Use `/anilist pingrole set`."
 msgstr "Δεν έχει οριστεί ρόλος ειδοποιήσεων. Χρησιμοποίησε το `/anilist pingrole set`."
 
-#: cogs/anilist/airing_roles.py:326 cogs/anilist/feed.py:2947
-#: cogs/anilist/feed_views.py:658 cogs/anilist/feed_views.py:953
-#: cogs/anilist/feed_views.py:1349 cogs/anilist/feed_views.py:1399
+#: cogs/anilist/airing_roles.py:326 cogs/anilist/feed.py:3007
+#: cogs/anilist/feed_views.py:675 cogs/anilist/feed_views.py:970
+#: cogs/anilist/feed_views.py:1366 cogs/anilist/feed_views.py:1423
 #: cogs/anilist/watchalong.py:497 cogs/community/reminders.py:723
 #: cogs/config/rooms.py:1183 cogs/config/rooms_config.py:430
 #: cogs/music/playlists_shared.py:355 cogs/music/views.py:2475
 msgid "(archived)"
 msgstr "(αρχειοθετημένο)"
+
+#: cogs/anilist/alerts_wizard.py:61 cogs/community/serverstats/digest.py:120
+#: cogs/config/tickets/preflight.py:73
+#: tests/cogs/test_anilist_alerts_wizard.py:322
+msgid "View Channel"
+msgstr "Προβολή Καναλιού"
+
+#: cogs/anilist/alerts_wizard.py:62 cogs/community/serverstats/digest.py:121
+#: cogs/config/tickets/preflight.py:74
+#: tests/cogs/test_anilist_alerts_wizard.py:321
+msgid "Send Messages"
+msgstr "Αποστολή Μηνυμάτων"
+
+#: cogs/anilist/alerts_wizard.py:63 cogs/community/serverstats/digest.py:122
+#: cogs/config/tickets/preflight.py:75
+#: tests/cogs/test_anilist_alerts_wizard.py:321
+#: tests/cogs/test_anilist_alerts_wizard.py:392
+msgid "Embed Links"
+msgstr "Ενσωμάτωση Συνδέσμων"
+
+#: cogs/anilist/alerts_wizard.py:271
+msgid "Pick the channel for the alerts..."
+msgstr "Διάλεξε το κανάλι για τις ειδοποιήσεις..."
+
+#: cogs/anilist/alerts_wizard.py:293
+#: tests/cogs/test_anilist_alerts_wizard.py:88
+#: tests/cogs/test_anilist_alerts_wizard.py:448
+#: tests/cogs/test_anilist_alerts_wizard.py:449
+msgid "Already tracked here"
+msgstr "Παρακολουθείται ήδη εδώ"
+
+#: cogs/anilist/alerts_wizard.py:295
+msgid "Archived: over this server's titles limit"
+msgstr "Αρχειοθετήθηκε: ξεπέρασε το όριο τίτλων αυτού του server"
+
+#: cogs/anilist/alerts_wizard.py:309
+msgid "Pick the anime you follow..."
+msgstr "Διάλεξε τα anime που ακολουθείς..."
+
+#: cogs/anilist/alerts_wizard.py:327
+msgid "Create alerts"
+msgstr "Δημιουργία ειδοποιήσεων"
+
+#: cogs/anilist/alerts_wizard.py:371 cogs/config/settings.py:90
+msgid "Anime alerts"
+msgstr "Ειδοποιήσεις anime"
+
+#: cogs/anilist/alerts_wizard.py:373
+msgid "Pick a channel and the shows you follow. Yasuho posts every new episode of them there."
+msgstr "Διάλεξε ένα κανάλι και τις σειρές που ακολουθείς. Η Yasuho δημοσιεύει εκεί κάθε νέο επεισόδιό τους."
+
+#: cogs/anilist/alerts_wizard.py:387
+#, python-brace-format
+msgid "{count} title is already tracked in this channel."
+msgid_plural "{count} titles are already tracked in this channel."
+msgstr[0] "{count} τίτλος παρακολουθείται ήδη σε αυτό το κανάλι."
+msgstr[1] "{count} τίτλοι παρακολουθούνται ήδη σε αυτό το κανάλι."
+
+#: cogs/anilist/alerts_wizard.py:395 cogs/anilist/feed_views.py:429
+#: cogs/anilist/feed_views.py:707 cogs/anilist/feed_views.py:1006
+#: cogs/anilist/feed_views.py:1404 cogs/anilist/feed_views.py:1498
+#: cogs/anilist/hub.py:333 cogs/config/buttonroles.py:572
+#: cogs/moderation/modlog.py:243
+msgid "Only you can use these controls."
+msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου."
+
+#: cogs/anilist/alerts_wizard.py:404
+msgid "Anime alerts are ready"
+msgstr "Οι ειδοποιήσεις anime είναι έτοιμες"
+
+#: cogs/anilist/alerts_wizard.py:404
+msgid "Anime alerts were not set up"
+msgstr "Οι ειδοποιήσεις anime δεν ρυθμίστηκαν"
+
+#: cogs/anilist/alerts_wizard.py:407
+#, python-brace-format
+msgid "Created the AniList feed in {channel}."
+msgstr "Δημιουργήθηκε το feed AniList στο {channel}."
+
+#: cogs/anilist/alerts_wizard.py:409
+#, python-brace-format
+msgid "Turned the AniList feed in {channel} back on."
+msgstr "Ενεργοποιήθηκε ξανά το feed AniList στο {channel}."
+
+#: cogs/anilist/alerts_wizard.py:413
+#, python-brace-format
+msgid "{count} title is now tracked."
+msgid_plural "{count} titles are now tracked."
+msgstr[0] "{count} τίτλος παρακολουθείται πλέον."
+msgstr[1] "{count} τίτλοι παρακολουθούνται πλέον."
+
+#: cogs/anilist/alerts_wizard.py:421
+#, python-brace-format
+msgid "{count} title was already tracked."
+msgid_plural "{count} titles were already tracked."
+msgstr[0] "{count} τίτλος παρακολουθούνταν ήδη."
+msgstr[1] "{count} τίτλοι παρακολουθούνταν ήδη."
+
+#: cogs/anilist/alerts_wizard.py:429
+#, python-brace-format
+msgid "{count} title was skipped:"
+msgid_plural "{count} titles were skipped:"
+msgstr[0] "Παραλείφθηκε {count} τίτλος:"
+msgstr[1] "Παραλείφθηκαν {count} τίτλοι:"
+
+#: cogs/anilist/alerts_wizard.py:438
+#, python-brace-format
+msgid "New episodes of these titles will be posted in {channel}."
+msgstr "Τα νέα επεισόδια αυτών των τίτλων θα δημοσιεύονται στο {channel}."
+
+#: cogs/anilist/alerts_wizard.py:445
+msgid "Want to follow AniList users too? Use `/anilistfeed follow`. Manage the tracked titles from `/anilistfeed`."
+msgstr "Θες να ακολουθείς και χρήστες του AniList; Χρησιμοποίησε το `/anilistfeed follow`. Διαχειρίσου τους παρακολουθούμενους τίτλους από το `/anilistfeed`."
+
+#: cogs/anilist/alerts_wizard.py:486 cogs/config/config_transfer.py:904
+msgid "You need the Manage Server permission to do that."
+msgstr "Χρειάζεστε την άδεια Διαχείριση διακομιστή για να το κάνετε αυτό."
+
+#: cogs/anilist/alerts_wizard.py:490
+msgid "I can't see that channel any more - pick another one."
+msgstr "Δεν μπορώ πια να δω αυτό το κανάλι. Διάλεξε άλλο."
+
+#: cogs/anilist/alerts_wizard.py:496
+msgid "That channel can't host alerts: pick a text or announcement channel you can see."
+msgstr "Αυτό το κανάλι δεν μπορεί να φιλοξενήσει ειδοποιήσεις: διάλεξε ένα κανάλι κειμένου ή ανακοινώσεων που βλέπεις."
+
+#: cogs/anilist/alerts_wizard.py:503
+#, python-brace-format
+msgid "I'm missing permissions in {channel}: {permissions}. Grant them and press Create again."
+msgstr "Μου λείπουν δικαιώματα στο {channel}: {permissions}. Δώσε τα και πάτησε ξανά Δημιουργία."
+
+#: cogs/anilist/alerts_wizard.py:544
+msgid "You need the Manage Server permission to set up anime alerts."
+msgstr "Χρειάζεσαι το δικαίωμα Manage Server για να ρυθμίσεις ειδοποιήσεις anime."
+
+#: cogs/anilist/alerts_wizard.py:548
+msgid "AniList isn't answering right now. Try again in a few minutes."
+msgstr "Το AniList δεν απαντά αυτή τη στιγμή. Δοκίμασε ξανά σε λίγα λεπτά."
+
+#: cogs/anilist/alerts_wizard.py:571
+msgid "Anime alerts are unavailable here right now."
+msgstr "Οι ειδοποιήσεις anime δεν είναι διαθέσιμες εδώ αυτή τη στιγμή."
 
 #: cogs/anilist/base.py:316
 msgid "AniList user"
@@ -470,15 +612,15 @@ msgid "Filter by status..."
 msgstr "Φιλτράρισμα κατά κατάσταση..."
 
 #: cogs/anilist/collection.py:110 cogs/anilist/collection.py:359
-#: cogs/anilist/feed_views.py:141 cogs/anilist/feed_views.py:336
-#: cogs/anilist/feed_views.py:518 cogs/anilist/feed_views.py:651
+#: cogs/anilist/feed_views.py:142 cogs/anilist/feed_views.py:353
+#: cogs/anilist/feed_views.py:535 cogs/anilist/feed_views.py:668
 #: cogs/anilist/hub.py:55
 msgid "Anime"
 msgstr "Anime"
 
 #: cogs/anilist/collection.py:110 cogs/anilist/collection.py:359
-#: cogs/anilist/feed_views.py:142 cogs/anilist/feed_views.py:336
-#: cogs/anilist/feed_views.py:518 cogs/anilist/feed_views.py:651
+#: cogs/anilist/feed_views.py:143 cogs/anilist/feed_views.py:353
+#: cogs/anilist/feed_views.py:535 cogs/anilist/feed_views.py:668
 #: cogs/anilist/hub.py:56
 msgid "Manga"
 msgstr "Manga"
@@ -499,7 +641,7 @@ msgstr "Εγκατάλειψη"
 msgid "Edit"
 msgstr "Επεξεργασία"
 
-#: cogs/anilist/collection.py:381 cogs/anilist/feed_views.py:1308
+#: cogs/anilist/collection.py:381 cogs/anilist/feed_views.py:1325
 #: cogs/anilist/hub.py:285 cogs/community/usersettings.py:481
 #: cogs/config/rooms_config.py:489 tools/views.py:80
 msgid "This panel isn't for you."
@@ -591,7 +733,7 @@ msgstr "Επεξεργασία: {title}"
 msgid "Keep current status"
 msgstr "Διατήρηση τρέχουσας κατάστασης"
 
-#: cogs/anilist/edit_forms.py:179 cogs/anilist/feed_views.py:1409
+#: cogs/anilist/edit_forms.py:179 cogs/anilist/feed_views.py:1433
 #: cogs/anilist/media_view.py:396 cogs/community/birthdays/panel.py:170
 #: cogs/community/suggestions/panel.py:195
 #: cogs/community/suggestions/render.py:55 cogs/config/event_reminders.py:259
@@ -659,194 +801,198 @@ msgstr "Κάτι πήγε στραβά κατά το άνοιγμα του επ�
 msgid "Pick which one to update..."
 msgstr "Διάλεξε ποιο να ενημερωθεί..."
 
-#: cogs/anilist/feed.py:1480
+#: cogs/anilist/feed.py:1487
 msgid "This feed is archived - this server is over its current feed limit. It can be deleted, but not edited. See /premium for options."
 msgstr "Αυτή η ροή είναι αρχειοθετημένη - αυτός ο διακομιστής ξεπερνά το τρέχον όριο ροών. Μπορείς να τη διαγράψεις, αλλά όχι να την επεξεργαστείς. Δες το /premium για επιλογές."
 
-#: cogs/anilist/feed.py:1543 cogs/anilist/feed.py:1626
-#: cogs/anilist/feed.py:2508
+#: cogs/anilist/feed.py:1566 cogs/anilist/feed.py:1649
+#: cogs/anilist/feed.py:2551
 #, python-brace-format
 msgid "{channel} is already an AniList feed."
 msgstr "Το {channel} είναι ήδη ροή AniList."
 
-#: cogs/anilist/feed.py:1554
+#: cogs/anilist/feed.py:1584
 #, python-brace-format
 msgid "This server already has the maximum of {max} feeds. Delete one first."
 msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {max} ροών. Διάγραψε μία πρώτα."
 
-#: cogs/anilist/feed.py:1638
+#: cogs/anilist/feed.py:1661
 msgid "That feed no longer exists."
 msgstr "Αυτή η ροή δεν υπάρχει πια."
 
-#: cogs/anilist/feed.py:1782 tests/cogs/test_anilist_feed_subs.py:14
-#: tests/cogs/test_anilist_premium_archival.py:1016
+#: cogs/anilist/feed.py:1805 tests/cogs/test_anilist_feed_subs.py:14
+#: tests/cogs/test_anilist_premium_archival.py:1017
 msgid "I couldn't read that title - try searching again."
 msgstr "Δεν μπόρεσα να διαβάσω αυτόν τον τίτλο - δοκίμασε να ψάξεις ξανά."
 
-#: cogs/anilist/feed.py:1805 cogs/anilist/feed_views.py:482
+#: cogs/anilist/feed.py:1855 cogs/anilist/feed_views.py:499
 #, python-brace-format
 msgid "This feed already tracks the maximum of {max} titles. Remove one first."
 msgstr "Αυτή η ροή παρακολουθεί ήδη το μέγιστο των {max} τίτλων. Αφαίρεσε έναν πρώτα."
 
-#: cogs/anilist/feed.py:2027
+#: cogs/anilist/feed.py:2063
 msgid "Give me an AniList username to follow."
 msgstr "Δώσε μου ένα όνομα χρήστη AniList για να ακολουθήσω."
 
-#: cogs/anilist/feed.py:2044 cogs/anilist/feed.py:2057
+#: cogs/anilist/feed.py:2080 cogs/anilist/feed.py:2093
 msgid "AniList is rate limiting me right now - try again in a minute."
 msgstr "Το AniList με περιορίζει αυτή τη στιγμή - δοκίμασε ξανά σε ένα λεπτό."
 
-#: cogs/anilist/feed.py:2075
+#: cogs/anilist/feed.py:2111
 #, python-brace-format
 msgid "I found no AniList user named **{name}**."
 msgstr "Δεν βρήκα κανέναν χρήστη AniList με το όνομα **{name}**."
 
-#: cogs/anilist/feed.py:2145 cogs/anilist/feed_views.py:1175
+#: cogs/anilist/feed.py:2181 cogs/anilist/feed_views.py:1192
 #, python-brace-format
 msgid "This feed already follows the maximum of {max} users."
 msgstr "Αυτή η ροή ακολουθεί ήδη το μέγιστο των {max} χρηστών."
 
-#: cogs/anilist/feed.py:2311
+#: cogs/anilist/feed.py:2347
 #, python-brace-format
 msgid "This feed already mutes the maximum of {max} users."
 msgstr "Αυτή η ροή έχει ήδη σε σίγαση το μέγιστο των {max} χρηστών."
 
-#: cogs/anilist/feed.py:2406
+#: cogs/anilist/feed.py:2442
 msgid "This server has no active AniList feed. Create or re-enable one with `/anilistfeed set` first."
 msgstr "Αυτός ο διακομιστής δεν έχει ενεργή ροή AniList. Δημιούργησε ή ενεργοποίησε ξανά μία με `/anilistfeed set` πρώτα."
 
-#: cogs/anilist/feed.py:2417
+#: cogs/anilist/feed.py:2453
 #, python-brace-format
 msgid "This server has several feeds. Run this in a feed channel ({channels})."
 msgstr "Αυτός ο διακομιστής έχει πολλές ροές. Εκτέλεσε αυτό σε ένα κανάλι ροής ({channels})."
 
-#: cogs/anilist/feed.py:2468
+#: cogs/anilist/feed.py:2504
 #, python-brace-format
 msgid "This server already has the maximum of {max} feeds. Remove one with `/anilistfeed remove` first."
 msgstr "Αυτός ο διακομιστής έχει ήδη το μέγιστο των {max} ροών. Αφαίρεσε μία με `/anilistfeed remove` πρώτα."
 
-#: cogs/anilist/feed.py:2480
+#: cogs/anilist/feed.py:2517
 #, python-brace-format
 msgid "AniList feed created in {channel}. Add users with `/anilistfeed follow`."
 msgstr "Η ροή AniList δημιουργήθηκε στο {channel}. Πρόσθεσε χρήστες με `/anilistfeed follow`."
 
-#: cogs/anilist/feed.py:2504
+#: cogs/anilist/feed.py:2522
+msgid "Next: track the shows you want episode alerts for with `/anilistfeed quicksetup`."
+msgstr "Επόμενο βήμα: διάλεξε τις σειρές για τις οποίες θες ειδοποιήσεις επεισοδίων με `/anilistfeed quicksetup`."
+
+#: cogs/anilist/feed.py:2547
 #, python-brace-format
 msgid "AniList feed re-enabled in {channel}."
 msgstr "Η ροή AniList ενεργοποιήθηκε ξανά στο {channel}."
 
-#: cogs/anilist/feed.py:2512
+#: cogs/anilist/feed.py:2555
 msgid "AniList feed"
 msgstr "Ροή AniList"
 
-#: cogs/anilist/feed.py:2544
+#: cogs/anilist/feed.py:2604
 msgid "User"
 msgstr "Χρήστης"
 
-#: cogs/anilist/feed.py:2544
+#: cogs/anilist/feed.py:2604
 msgid "Feed"
 msgstr "Ροή"
 
-#: cogs/anilist/feed.py:2546
+#: cogs/anilist/feed.py:2606
 msgid "Now following"
 msgstr "Ακολουθεί πλέον"
 
-#: cogs/anilist/feed.py:2566 cogs/anilist/feed.py:2576
+#: cogs/anilist/feed.py:2626 cogs/anilist/feed.py:2636
 #, python-brace-format
 msgid "This feed is not following **{name}**."
 msgstr "Αυτή η ροή δεν ακολουθεί **{name}**."
 
-#: cogs/anilist/feed.py:2579
+#: cogs/anilist/feed.py:2639
 #, python-brace-format
 msgid "Unfollowed **{name}**."
 msgstr "Δεν ακολουθεί πλέον **{name}**."
 
-#: cogs/anilist/feed.py:2600
+#: cogs/anilist/feed.py:2660
 #, python-brace-format
 msgid "This feed is not following **{name}**, so there is nothing to mute. Muting only hides someone the feed already follows - see `/anilistfeed list`."
 msgstr "Αυτή η ροή δεν ακολουθεί τον/την **{name}**, οπότε δεν υπάρχει τίποτα να σιγήσεις. Η σίγαση κρύβει μόνο κάποιον που η ροή ήδη ακολουθεί - δες το `/anilistfeed list`."
 
-#: cogs/anilist/feed.py:2619
+#: cogs/anilist/feed.py:2679
 #, python-brace-format
 msgid "**{name}** stays followed, but their activity is no longer posted in <#{channel}>. Other feeds following them are unaffected."
 msgstr "Ο/Η **{name}** παραμένει ακολουθούμενος/η, αλλά η δραστηριότητά του/της δεν δημοσιεύεται πια στο <#{channel}>. Άλλες ροές που τον/την ακολουθούν δεν επηρεάζονται."
 
-#: cogs/anilist/feed.py:2622
+#: cogs/anilist/feed.py:2682
 msgid "Muted here"
 msgstr "Σε σίγαση εδώ"
 
-#: cogs/anilist/feed.py:2648
+#: cogs/anilist/feed.py:2708
 #, python-brace-format
 msgid "**{name}** is not muted in this feed."
 msgstr "Ο/Η **{name}** δεν είναι σε σίγαση σε αυτή τη ροή."
 
-#: cogs/anilist/feed.py:2652
+#: cogs/anilist/feed.py:2712
 #, python-brace-format
 msgid "Unmuted **{name}** - their activity is posted here again."
 msgstr "Κατάργησα τη σίγαση του/της **{name}** - η δραστηριότητά του/της δημοσιεύεται ξανά εδώ."
 
-#: cogs/anilist/feed.py:2761 cogs/anilist/feed.py:2817
+#: cogs/anilist/feed.py:2821 cogs/anilist/feed.py:2877
 #, python-brace-format
 msgid "You have left the AniList feed in <#{channel}>."
 msgstr "Έφυγες από τη ροή AniList στο <#{channel}>."
 
-#: cogs/anilist/feed.py:2774
+#: cogs/anilist/feed.py:2834
 msgid "This feed does not let members join themselves. Ask a moderator to turn on **Members can join** in `/anilistfeed`."
 msgstr "Αυτή η ροή δεν επιτρέπει στα μέλη να μπουν μόνα τους. Ζήτησε από έναν συντονιστή να ενεργοποιήσει το **Τα μέλη μπορούν να μπουν** στο `/anilistfeed`."
 
-#: cogs/anilist/feed.py:2782 cogs/anilist/feed_delivery.py:363
+#: cogs/anilist/feed.py:2842 cogs/anilist/feed_delivery.py:363
 msgid "AniList actions are unavailable right now."
 msgstr "Οι ενέργειες AniList δεν είναι διαθέσιμες αυτή τη στιγμή."
 
-#: cogs/anilist/feed.py:2787
+#: cogs/anilist/feed.py:2847
 msgid "Link your AniList account first with `/anilist login`."
 msgstr "Σύνδεσε πρώτα τον λογαριασμό σου AniList με `/anilist login`."
 
-#: cogs/anilist/feed.py:2846
+#: cogs/anilist/feed.py:2906
 msgid "This feed is full right now - ask a moderator to make room."
 msgstr "Αυτή η ροή είναι γεμάτη αυτή τη στιγμή - ζήτησε από έναν συντονιστή να κάνει χώρο."
 
-#: cogs/anilist/feed.py:2851
+#: cogs/anilist/feed.py:2911
 #, python-brace-format
 msgid "You have joined the AniList feed in <#{channel}>."
 msgstr "Μπήκες στη ροή AniList στο <#{channel}>."
 
-#: cogs/anilist/feed.py:2859
+#: cogs/anilist/feed.py:2919
 msgid "A moderator has hidden your activity in that channel, so nothing of yours is posted there until they unhide it."
 msgstr "Ένας συντονιστής έκρυψε τη δραστηριότητά σου σε εκείνο το κανάλι, οπότε τίποτα δικό σου δεν δημοσιεύεται εκεί μέχρι να την επαναφέρει."
 
-#: cogs/anilist/feed.py:2907
+#: cogs/anilist/feed.py:2967
 msgid "This server has no AniList feed yet. Create one with `/anilistfeed set`."
 msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή AniList. Δημιούργησε μία με `/anilistfeed set`."
 
-#: cogs/anilist/feed.py:2949
+#: cogs/anilist/feed.py:3009
 msgid "none"
 msgstr "κανένα"
 
-#: cogs/anilist/feed.py:2950 cogs/moderation/automod.py:263
+#: cogs/anilist/feed.py:3010 cogs/moderation/automod.py:263
 msgid "enabled"
 msgstr "ενεργοποιημένο"
 
-#: cogs/anilist/feed.py:2950 cogs/moderation/automod.py:263
+#: cogs/anilist/feed.py:3010 cogs/moderation/automod.py:263
 msgid "disabled"
 msgstr "απενεργοποιημένο"
 
-#: cogs/anilist/feed.py:2957 cogs/anilist/feed_views.py:1453
+#: cogs/anilist/feed.py:3017 cogs/anilist/feed_views.py:1477
 msgid "no one yet"
 msgstr "κανείς ακόμα"
 
-#: cogs/anilist/feed.py:2965
+#: cogs/anilist/feed.py:3025
 #, python-brace-format
 msgid "{names} ({count} user hidden here, still followed)"
 msgid_plural "{names} ({count} users hidden here, still followed)"
 msgstr[0] "{names} ({count} χρήστης κρυμμένος εδώ, ακόμα ακολουθείται)"
 msgstr[1] "{names} ({count} χρήστες κρυμμένοι εδώ, ακόμα ακολουθούνται)"
 
-#: cogs/anilist/feed.py:2970
+#: cogs/anilist/feed.py:3030
 msgid "no one"
 msgstr "κανείς"
 
-#: cogs/anilist/feed.py:2977
+#: cogs/anilist/feed.py:3037
 #, python-brace-format
 msgid ""
 "Status: {status}\n"
@@ -857,26 +1003,26 @@ msgstr ""
 "Τύποι: {types}\n"
 "Ακολουθεί: {names}"
 
-#: cogs/anilist/feed.py:2979
+#: cogs/anilist/feed.py:3039
 #, python-brace-format
 msgid "Muted: {muted}"
 msgstr "Σε σίγαση: {muted}"
 
-#: cogs/anilist/feed.py:2982 tools/botstats_features.py:62
+#: cogs/anilist/feed.py:3042 tools/botstats_features.py:62
 msgid "AniList feeds"
 msgstr "Ροές AniList"
 
-#: cogs/anilist/feed.py:3002
+#: cogs/anilist/feed.py:3062
 #, python-brace-format
 msgid "{channel} is not an AniList feed."
 msgstr "Το {channel} δεν είναι ροή AniList."
 
-#: cogs/anilist/feed.py:3007
+#: cogs/anilist/feed.py:3067
 #, python-brace-format
 msgid "Removed the AniList feed in {channel}."
 msgstr "Η ροή AniList στο {channel} αφαιρέθηκε."
 
-#: cogs/anilist/feed_delivery.py:100 cogs/anilist/feed_views.py:339
+#: cogs/anilist/feed_delivery.py:100 cogs/anilist/feed_views.py:356
 #: cogs/music/music.py:5727 cogs/music/search.py:342 cogs/music/views.py:2266
 #: cogs/music/views.py:2449 cogs/music/views.py:2583 cogs/music/views.py:2716
 msgid "Unknown title"
@@ -1105,32 +1251,37 @@ msgid_plural "+{count} others"
 msgstr[0] "+{count} ακόμα"
 msgstr[1] "+{count} ακόμα"
 
-#: cogs/anilist/feed_views.py:143
+#: cogs/anilist/feed_views.py:144
 msgid "Posts"
 msgstr "Δημοσιεύσεις"
 
-#: cogs/anilist/feed_views.py:163
+#: cogs/anilist/feed_views.py:164
 msgid "Switch feed..."
 msgstr "Αλλαγή ροής..."
 
-#: cogs/anilist/feed_views.py:198
+#: cogs/anilist/feed_views.py:199
 msgid "Move this feed to..."
 msgstr "Μετακίνηση αυτής της ροής σε..."
 
-#: cogs/anilist/feed_views.py:200
+#: cogs/anilist/feed_views.py:201
 msgid "Pick a channel to create a feed..."
 msgstr "Διάλεξε ένα κανάλι για να δημιουργήσεις μια ροή..."
 
-#: cogs/anilist/feed_views.py:256
+#: cogs/anilist/feed_views.py:241
+#: tests/cogs/test_anime_alerts_entry_points.py:80
+msgid "Quick setup (anime alerts)"
+msgstr "Γρήγορη ρύθμιση (ειδοποιήσεις anime)"
+
+#: cogs/anilist/feed_views.py:273
 msgid "At least one activity type must stay enabled."
 msgstr "Τουλάχιστον ένας τύπος δραστηριότητας πρέπει να παραμείνει ενεργός."
 
-#: cogs/anilist/feed_views.py:283
+#: cogs/anilist/feed_views.py:300
 #, python-brace-format
 msgid "Members can join: {state}"
 msgstr "Τα μέλη μπορούν να μπουν: {state}"
 
-#: cogs/anilist/feed_views.py:284 cogs/config/welcome.py:245
+#: cogs/anilist/feed_views.py:301 cogs/config/welcome.py:245
 #: cogs/config/welcome.py:583 cogs/config/welcome.py:585
 #: cogs/config/welcome.py:587 cogs/config/welcome.py:701
 #: cogs/config/welcome.py:703 cogs/config/welcome.py:705
@@ -1138,7 +1289,7 @@ msgstr "Τα μέλη μπορούν να μπουν: {state}"
 msgid "On"
 msgstr "Ενεργό"
 
-#: cogs/anilist/feed_views.py:284 cogs/community/suggestions/panel.py:214
+#: cogs/anilist/feed_views.py:301 cogs/community/suggestions/panel.py:214
 #: cogs/config/welcome.py:245 cogs/config/welcome.py:583
 #: cogs/config/welcome.py:585 cogs/config/welcome.py:587
 #: cogs/config/welcome.py:701 cogs/config/welcome.py:703
@@ -1147,160 +1298,153 @@ msgstr "Ενεργό"
 msgid "Off"
 msgstr "Ανενεργό"
 
-#: cogs/anilist/feed_views.py:350
+#: cogs/anilist/feed_views.py:367
 msgid "Pick the title to track..."
 msgstr "Διάλεξε τον τίτλο για παρακολούθηση..."
 
-#: cogs/anilist/feed_views.py:370 cogs/music/views.py:674
+#: cogs/anilist/feed_views.py:387 cogs/music/views.py:674
 msgid "Back"
 msgstr "Πίσω"
 
-#: cogs/anilist/feed_views.py:403 cogs/anilist/feed_views.py:451
-#: cogs/anilist/feed_views.py:476
+#: cogs/anilist/feed_views.py:420 cogs/anilist/feed_views.py:468
+#: cogs/anilist/feed_views.py:493
 msgid "Track a title"
 msgstr "Παρακολούθηση τίτλου"
 
-#: cogs/anilist/feed_views.py:405
+#: cogs/anilist/feed_views.py:422
 msgid "Pick the exact title to track:"
 msgstr "Διάλεξε τον ακριβή τίτλο για παρακολούθηση:"
 
-#: cogs/anilist/feed_views.py:412 cogs/anilist/feed_views.py:690
-#: cogs/anilist/feed_views.py:989 cogs/anilist/feed_views.py:1380
-#: cogs/anilist/feed_views.py:1474 cogs/anilist/hub.py:333
-#: cogs/config/buttonroles.py:572 cogs/moderation/modlog.py:243
-msgid "Only you can use these controls."
-msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου."
-
-#: cogs/anilist/feed_views.py:419
+#: cogs/anilist/feed_views.py:436
 msgid "I couldn't read that selection - try again."
 msgstr "Δεν μπόρεσα να διαβάσω αυτή την επιλογή - δοκίμασε ξανά."
 
-#: cogs/anilist/feed_views.py:431
+#: cogs/anilist/feed_views.py:448
 #, python-brace-format
 msgid "Now tracking **{title}** in this feed."
 msgstr "Τώρα παρακολουθώ το **{title}** σε αυτή τη ροή."
 
-#: cogs/anilist/feed_views.py:454
+#: cogs/anilist/feed_views.py:471
 msgid "Title to search"
 msgstr "Τίτλος για αναζήτηση"
 
-#: cogs/anilist/feed_views.py:528
+#: cogs/anilist/feed_views.py:545
 msgid "Stop tracking a title..."
 msgstr "Διακοπή παρακολούθησης τίτλου..."
 
-#: cogs/anilist/feed_views.py:562 cogs/anilist/feed_views.py:841
+#: cogs/anilist/feed_views.py:579 cogs/anilist/feed_views.py:858
 #: cogs/community/leveling/leveling.py:241
 #: cogs/community/leveling/seasons_views.py:170 cogs/community/reminders.py:823
 #: cogs/music/views.py:1668 cogs/music/views.py:2101 cogs/music/views.py:2506
 msgid "Next"
 msgstr "Επόμ."
 
-#: cogs/anilist/feed_views.py:562 cogs/anilist/feed_views.py:841
+#: cogs/anilist/feed_views.py:579 cogs/anilist/feed_views.py:858
 msgid "Previous"
 msgstr "Προηγούμενο"
 
-#: cogs/anilist/feed_views.py:635
+#: cogs/anilist/feed_views.py:652
 msgid "Tracked releases"
 msgstr "Κυκλοφορίες υπό παρακολούθηση"
 
-#: cogs/anilist/feed_views.py:642
+#: cogs/anilist/feed_views.py:659
 #, python-brace-format
 msgid "New episodes (anime) and chapters (manga) of these titles are posted in {channel}, independently of any DM alerts. Up to {max} titles per feed."
 msgstr "Τα νέα επεισόδια (anime) και κεφάλαια (manga) αυτών των τίτλων δημοσιεύονται στο {channel}, ανεξάρτητα από τυχόν ειδοποιήσεις σε προσωπικά μηνύματα. Έως {max} τίτλοι ανά ροή."
 
-#: cogs/anilist/feed_views.py:660
+#: cogs/anilist/feed_views.py:677
 msgid "No titles tracked yet."
 msgstr "Δεν παρακολουθείται κανένας τίτλος ακόμα."
 
-#: cogs/anilist/feed_views.py:663
+#: cogs/anilist/feed_views.py:680
 #, python-brace-format
 msgid "Tracking {count}/{max}"
 msgstr "Παρακολούθηση {count}/{max}"
 
-#: cogs/anilist/feed_views.py:711
+#: cogs/anilist/feed_views.py:728
 #, python-brace-format
 msgid "No AniList match for **{query}**."
 msgstr "Καμία αντιστοιχία στο AniList για **{query}**."
 
-#: cogs/anilist/feed_views.py:742
+#: cogs/anilist/feed_views.py:759
 #, python-brace-format
 msgid "Tracked releases ({count})"
 msgstr "Κυκλοφορίες υπό παρακολούθηση ({count})"
 
-#: cogs/anilist/feed_views.py:780
+#: cogs/anilist/feed_views.py:797
 msgid "Muted here - pick to unmute"
 msgstr "Σε σίγαση εδώ - επίλεξε για κατάργηση σίγασης"
 
-#: cogs/anilist/feed_views.py:782
+#: cogs/anilist/feed_views.py:799
 msgid "Posted here - pick to mute"
 msgstr "Δημοσιεύεται εδώ - επίλεξε για σίγαση"
 
-#: cogs/anilist/feed_views.py:788
+#: cogs/anilist/feed_views.py:805
 msgid "Mute or unmute a followed user..."
 msgstr "Σίγαση ή κατάργηση σίγασης ενός ακολουθούμενου χρήστη..."
 
-#: cogs/anilist/feed_views.py:803
+#: cogs/anilist/feed_views.py:820
 #, python-brace-format
 msgid "**{name}** is posted in this feed again."
 msgstr "Ο/Η **{name}** δημοσιεύεται ξανά σε αυτή τη ροή."
 
-#: cogs/anilist/feed_views.py:815
+#: cogs/anilist/feed_views.py:832
 #, python-brace-format
 msgid "**{name}** is hidden here. They stay followed, so other feeds still receive them."
 msgstr "Ο/Η **{name}** είναι κρυμμένος/η εδώ. Παραμένει ακολουθούμενος/η, οπότε άλλες ροές συνεχίζουν να τον/την λαμβάνουν."
 
-#: cogs/anilist/feed_views.py:930
+#: cogs/anilist/feed_views.py:947
 msgid "Muted users"
 msgstr "Χρήστες σε σίγαση"
 
-#: cogs/anilist/feed_views.py:937
+#: cogs/anilist/feed_views.py:954
 #, python-brace-format
 msgid "A muted user is still followed and still polled - their activity is simply not posted in {channel}. Any other feed following them keeps receiving everything."
 msgstr "Ένας χρήστης σε σίγαση εξακολουθεί να ακολουθείται και να ελέγχεται - η δραστηριότητά του απλώς δεν δημοσιεύεται στο {channel}. Κάθε άλλη ροή που τον ακολουθεί συνεχίζει να λαμβάνει τα πάντα."
 
-#: cogs/anilist/feed_views.py:948
+#: cogs/anilist/feed_views.py:965
 msgid "muted here"
 msgstr "σε σίγαση εδώ"
 
-#: cogs/anilist/feed_views.py:948
+#: cogs/anilist/feed_views.py:965
 msgid "posted"
 msgstr "δημοσιεύεται"
 
-#: cogs/anilist/feed_views.py:955
+#: cogs/anilist/feed_views.py:972
 msgid "This feed follows no one yet."
 msgstr "Αυτή η ροή δεν ακολουθεί κανέναν ακόμα."
 
-#: cogs/anilist/feed_views.py:960
+#: cogs/anilist/feed_views.py:977
 #, python-brace-format
 msgid "{count} muted user out of {total} followed"
 msgid_plural "{count} muted users out of {total} followed"
 msgstr[0] "{count} χρήστης σε σίγαση από {total} ακολουθούμενους"
 msgstr[1] "{count} χρήστες σε σίγαση από {total} ακολουθούμενους"
 
-#: cogs/anilist/feed_views.py:1006
+#: cogs/anilist/feed_views.py:1023
 #, python-brace-format
 msgid "Muted here ({count})"
 msgstr "Σε σίγαση εδώ ({count})"
 
-#: cogs/anilist/feed_views.py:1033 cogs/community/birthdays/panel.py:126
+#: cogs/anilist/feed_views.py:1050 cogs/community/birthdays/panel.py:126
 #: cogs/community/suggestions/panel.py:138 cogs/config/event_reminders.py:204
 #: cogs/config/milestones.py:201 cogs/config/twitch.py:321
 #: cogs/config/welcome.py:340
 msgid "Disable"
 msgstr "Απενεργοποίηση"
 
-#: cogs/anilist/feed_views.py:1033 cogs/community/birthdays/panel.py:126
+#: cogs/anilist/feed_views.py:1050 cogs/community/birthdays/panel.py:126
 #: cogs/community/suggestions/panel.py:138 cogs/config/event_reminders.py:204
 #: cogs/config/milestones.py:201 cogs/config/twitch.py:321
 #: cogs/config/welcome.py:340
 msgid "Enable"
 msgstr "Ενεργοποίηση"
 
-#: cogs/anilist/feed_views.py:1064 cogs/config/announcements.py:566
+#: cogs/anilist/feed_views.py:1081 cogs/config/announcements.py:566
 msgid "Delete"
 msgstr "Διαγραφή"
 
-#: cogs/anilist/feed_views.py:1065 cogs/community/leveling/level_admin.py:68
+#: cogs/anilist/feed_views.py:1082 cogs/community/leveling/level_admin.py:68
 #: cogs/community/leveling/level_admin.py:176 cogs/community/profile/cog.py:247
 #: cogs/community/usersettings.py:246 cogs/community/usersettings.py:361
 #: cogs/config/config_transfer.py:888 cogs/config/tickets/lifecycle.py:280
@@ -1308,59 +1452,63 @@ msgstr "Διαγραφή"
 msgid "Cancel"
 msgstr "Ακύρωση"
 
-#: cogs/anilist/feed_views.py:1069
+#: cogs/anilist/feed_views.py:1086
 msgid "Delete this feed?"
 msgstr "Διαγραφή αυτής της ροής;"
 
-#: cogs/anilist/feed_views.py:1071
+#: cogs/anilist/feed_views.py:1088
 #, python-brace-format
 msgid "This permanently deletes the AniList feed in {channel} and everyone it follows. This cannot be undone."
 msgstr "Αυτό διαγράφει οριστικά τη ροή AniList στο {channel} και όλους όσους ακολουθεί. Δεν μπορεί να αναιρεθεί."
 
-#: cogs/anilist/feed_views.py:1086
+#: cogs/anilist/feed_views.py:1103
 msgid "Feed deleted."
 msgstr "Η ροή διαγράφηκε."
 
-#: cogs/anilist/feed_views.py:1099 cogs/moderation/moderation.py:1144
+#: cogs/anilist/feed_views.py:1116 cogs/moderation/moderation.py:1144
 #: cogs/moderation/moderation.py:1217 cogs/system/arg_completion.py:548
 msgid "Cancelled."
 msgstr "Ακυρώθηκε."
 
-#: cogs/anilist/feed_views.py:1109
+#: cogs/anilist/feed_views.py:1126
 msgid "Delete feed"
 msgstr "Διαγραφή ροής"
 
-#: cogs/anilist/feed_views.py:1127
+#: cogs/anilist/feed_views.py:1144
 msgid "Add a follow"
 msgstr "Προσθήκη ακολούθησης"
 
-#: cogs/anilist/feed_views.py:1130
+#: cogs/anilist/feed_views.py:1147
 msgid "AniList username"
 msgstr "Όνομα χρήστη AniList"
 
-#: cogs/anilist/feed_views.py:1158
+#: cogs/anilist/feed_views.py:1175
 #, python-brace-format
 msgid "Now following **{name}**."
 msgstr "Ακολουθεί πλέον **{name}**."
 
-#: cogs/anilist/feed_views.py:1168
+#: cogs/anilist/feed_views.py:1185
 msgid "Add follow"
 msgstr "Προσθήκη ακολούθησης"
 
-#: cogs/anilist/feed_views.py:1216
+#: cogs/anilist/feed_views.py:1233
 msgid "Remove a follow..."
 msgstr "Αφαίρεση ακολούθησης..."
 
-#: cogs/anilist/feed_views.py:1369 cogs/anilist/feed_views.py:1401
+#: cogs/anilist/feed_views.py:1386 cogs/anilist/feed_views.py:1425
 msgid "AniList activity feed"
 msgstr "Ροή δραστηριότητας AniList"
 
-#: cogs/anilist/feed_views.py:1372
+#: cogs/anilist/feed_views.py:1389
 #, python-brace-format
 msgid "This server has no AniList feed yet. Pick a channel below to create one (up to {max} per server)."
 msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή AniList. Διάλεξε ένα κανάλι παρακάτω για να δημιουργήσεις μία (έως {max} ανά διακομιστή)."
 
-#: cogs/anilist/feed_views.py:1391 cogs/community/birthdays/panel.py:170
+#: cogs/anilist/feed_views.py:1394
+msgid "A feed posts what the AniList users you follow are up to, and the new episodes and chapters of the titles you track."
+msgstr "Ένα feed δημοσιεύει τι κάνουν οι χρήστες του AniList που ακολουθείς, και τα νέα επεισόδια και κεφάλαια των τίτλων που παρακολουθείς."
+
+#: cogs/anilist/feed_views.py:1415 cogs/community/birthdays/panel.py:170
 #: cogs/community/suggestions/panel.py:195 cogs/config/event_reminders.py:260
 #: cogs/config/milestones.py:247 cogs/config/settings.py:54
 #: cogs/config/tickets/panel.py:98 cogs/config/tickets/panel.py:495
@@ -1370,7 +1518,7 @@ msgstr "Αυτός ο διακομιστής δεν έχει ακόμα ροή A
 msgid "Enabled"
 msgstr "Ενεργοποιημένο"
 
-#: cogs/anilist/feed_views.py:1391 cogs/community/birthdays/panel.py:170
+#: cogs/anilist/feed_views.py:1415 cogs/community/birthdays/panel.py:170
 #: cogs/community/suggestions/panel.py:195 cogs/config/event_reminders.py:260
 #: cogs/config/milestones.py:247 cogs/config/settings.py:54
 #: cogs/config/tickets/panel.py:100 cogs/config/tickets/panel.py:497
@@ -1380,16 +1528,16 @@ msgstr "Ενεργοποιημένο"
 msgid "Disabled"
 msgstr "Απενεργοποιημένο"
 
-#: cogs/anilist/feed_views.py:1393
+#: cogs/anilist/feed_views.py:1417
 #, python-brace-format
 msgid "{status} ({count} recent failures)"
 msgstr "{status} ({count} πρόσφατες αποτυχίες)"
 
-#: cogs/anilist/feed_views.py:1403
+#: cogs/anilist/feed_views.py:1427
 msgid "Configure how AniList activity is mirrored into this server. Every change saves instantly."
 msgstr "Ρύθμισε πώς η δραστηριότητα AniList αντικατοπτρίζεται σε αυτόν τον διακομιστή. Κάθε αλλαγή αποθηκεύεται αμέσως."
 
-#: cogs/anilist/feed_views.py:1407 cogs/community/birthdays/panel.py:172
+#: cogs/anilist/feed_views.py:1431 cogs/community/birthdays/panel.py:172
 #: cogs/community/suggestions/panel.py:197 cogs/config/announcements.py:315
 #: cogs/config/event_reminders.py:264 cogs/config/milestones.py:251
 #: cogs/config/rolemenus.py:686 cogs/config/starboard.py:357
@@ -1399,15 +1547,15 @@ msgstr "Ρύθμισε πώς η δραστηριότητα AniList αντικα
 msgid "Channel"
 msgstr "Κανάλι"
 
-#: cogs/anilist/feed_views.py:1416
+#: cogs/anilist/feed_views.py:1440
 msgid "Feeds"
 msgstr "Ροές"
 
-#: cogs/anilist/feed_views.py:1429
+#: cogs/anilist/feed_views.py:1453
 msgid "Types"
 msgstr "Τύποι"
 
-#: cogs/anilist/feed_views.py:1457
+#: cogs/anilist/feed_views.py:1481
 #, python-brace-format
 msgid "Following ({count})"
 msgstr "Ακολουθεί ({count})"
@@ -1499,9 +1647,9 @@ msgid "Could not open the code form."
 msgstr "Δεν ήταν δυνατό το άνοιγμα της φόρμας κωδικού."
 
 #: cogs/anilist/lookup.py:39 cogs/config/settings.py:53
-#: cogs/config/settings.py:174 cogs/config/settings.py:183
-#: cogs/config/settings.py:197 cogs/config/settings.py:205
-#: cogs/system/help.py:518 cogs/utility/info.py:36 cogs/utility/info.py:148
+#: cogs/config/settings.py:180 cogs/config/settings.py:189
+#: cogs/config/settings.py:203 cogs/config/settings.py:211
+#: cogs/system/help.py:572 cogs/utility/info.py:36 cogs/utility/info.py:148
 msgid "Unknown"
 msgstr "Άγνωστο"
 
@@ -1790,8 +1938,8 @@ msgid "Run this in a server channel to see that channel's tracked titles."
 msgstr "Τρέξε αυτό σε ένα κανάλι διακομιστή για να δεις τους τίτλους που παρακολουθεί εκείνο το κανάλι."
 
 #: cogs/anilist/schedule.py:743
-msgid "This channel does not track any anime titles yet - add some from the `/anilistfeed` panel."
-msgstr "Αυτό το κανάλι δεν παρακολουθεί ακόμα κανέναν τίτλο anime - πρόσθεσε μερικούς από το πάνελ `/anilistfeed`."
+msgid "This channel does not track any anime titles yet - set up episode alerts with `/anilistfeed quicksetup`."
+msgstr "Αυτό το κανάλι δεν παρακολουθεί ακόμη κανέναν τίτλο anime - ρύθμισε ειδοποιήσεις επεισοδίων με `/anilistfeed quicksetup`."
 
 #: cogs/anilist/schedule.py:757
 msgid "I cannot see anything on your **Watching** anime list - add some titles on AniList, and make sure your anime list is public."
@@ -2986,7 +3134,7 @@ msgstr "Στιλ κάρτας μελών"
 #: cogs/community/leveling/seasons_views.py:185
 #: cogs/community/leveling/seasons_views.py:431
 #: cogs/community/profile/views.py:897 cogs/community/serverstats/views.py:769
-#: cogs/config/settings.py:266 cogs/config/tickets/panel.py:609
+#: cogs/config/settings.py:272 cogs/config/tickets/panel.py:609
 #: cogs/moderation/automod_panel.py:401 cogs/moderation/warn_config.py:437
 msgid "Only you can use these controls"
 msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυτά τα στοιχεία ελέγχου"
@@ -2995,7 +3143,7 @@ msgstr "Μόνο εσύ μπορείς να χρησιμοποιήσεις αυ�
 #: cogs/community/leveling/seasons_views.py:187
 #: cogs/community/leveling/seasons_views.py:433
 #: cogs/community/profile/views.py:899 cogs/community/serverstats/views.py:771
-#: cogs/config/settings.py:268 cogs/config/tickets/panel.py:611
+#: cogs/config/settings.py:274 cogs/config/tickets/panel.py:611
 #: cogs/moderation/automod_panel.py:403 cogs/moderation/warn_config.py:439
 msgid "times out after 3 min"
 msgstr "λήγει μετά από 3 λεπτά"
@@ -3157,8 +3305,8 @@ msgstr ""
 msgid "The leveling system isn't loaded right now."
 msgstr "Το σύστημα επιπέδων δεν είναι φορτωμένο αυτή τη στιγμή."
 
-#: cogs/community/leveling/level_config_ui.py:1275 cogs/config/settings.py:90
-#: cogs/config/settings.py:216
+#: cogs/community/leveling/level_config_ui.py:1275 cogs/config/settings.py:96
+#: cogs/config/settings.py:222
 msgid "Leveling"
 msgstr "Επίπεδα"
 
@@ -4251,18 +4399,6 @@ msgstr "Μέλη"
 msgid "{day} (complete UTC day)."
 msgstr "{day} (ολόκληρη ημέρα UTC)."
 
-#: cogs/community/serverstats/digest.py:120 cogs/config/tickets/preflight.py:73
-msgid "View Channel"
-msgstr "Προβολή Καναλιού"
-
-#: cogs/community/serverstats/digest.py:121 cogs/config/tickets/preflight.py:74
-msgid "Send Messages"
-msgstr "Αποστολή Μηνυμάτων"
-
-#: cogs/community/serverstats/digest.py:122 cogs/config/tickets/preflight.py:75
-msgid "Embed Links"
-msgstr "Ενσωμάτωση Συνδέσμων"
-
 #: cogs/community/serverstats/digest.py:498
 msgid "Weekly server digest"
 msgstr "Εβδομαδιαία σύνοψη διακομιστή"
@@ -5122,8 +5258,8 @@ msgstr "Αφαιρέθηκαν `{count}` κουμπιά ρόλου για το �
 msgid "Language"
 msgstr "Γλώσσα"
 
-#: cogs/config/config_transfer.py:317 cogs/config/settings.py:126
-#: cogs/config/settings.py:231
+#: cogs/config/config_transfer.py:317 cogs/config/settings.py:132
+#: cogs/config/settings.py:237
 msgid "Welcome"
 msgstr "Καλωσόρισμα"
 
@@ -5230,10 +5366,6 @@ msgstr "Η εισαγωγή ρυθμίσεων και τα πρότυπα είν
 #: cogs/config/config_transfer.py:887
 msgid "Apply"
 msgstr "Εφαρμογή"
-
-#: cogs/config/config_transfer.py:904
-msgid "You need the Manage Server permission to do that."
-msgstr "Χρειάζεστε την άδεια Διαχείριση διακομιστή για να το κάνετε αυτό."
 
 #: cogs/config/config_transfer.py:913
 msgid "Import finished"
@@ -6451,122 +6583,134 @@ msgstr "Αυτή τη στιγμή ενεργοποιημένο - επίλεξε
 msgid "Currently disabled - select to enable"
 msgstr "Αυτή τη στιγμή απενεργοποιημένο - επίλεξε για ενεργοποίηση"
 
-#: cogs/config/settings.py:96 cogs/config/settings.py:213
+#: cogs/config/settings.py:93
+msgid "Episode alerts for the shows you follow"
+msgstr "Ειδοποιήσεις επεισοδίων για τις σειρές που ακολουθείς"
+
+#: cogs/config/settings.py:102 cogs/config/settings.py:219
 msgid "Prefix"
 msgstr "Πρόθεμα"
 
-#: cogs/config/settings.py:99
+#: cogs/config/settings.py:105
 msgid "Change the command prefix"
 msgstr "Άλλαξε το πρόθεμα εντολών"
 
-#: cogs/config/settings.py:102 cogs/config/settings.py:219
-#: cogs/config/settings.py:456 cogs/config/settings.py:484
-#: cogs/config/settings.py:491
+#: cogs/config/settings.py:108 cogs/config/settings.py:225
+#: cogs/config/settings.py:477 cogs/config/settings.py:505
+#: cogs/config/settings.py:512
 msgid "Auto-role"
 msgstr "Αυτόματος ρόλος"
 
-#: cogs/config/settings.py:105
+#: cogs/config/settings.py:111
 msgid "Role granted to new members"
 msgstr "Ρόλος που δίνεται στα νέα μέλη"
 
-#: cogs/config/settings.py:108 cogs/config/settings.py:225
+#: cogs/config/settings.py:114 cogs/config/settings.py:231
 #: cogs/moderation/automod.py:272
 msgid "AutoMod"
 msgstr "AutoMod"
 
-#: cogs/config/settings.py:111
+#: cogs/config/settings.py:117
 msgid "Open the AutoMod control panel"
 msgstr "Άνοιξε το πάνελ ελέγχου AutoMod"
 
-#: cogs/config/settings.py:114 cogs/config/settings.py:228
+#: cogs/config/settings.py:120 cogs/config/settings.py:234
 msgid "Mod-log"
 msgstr "Mod-log"
 
-#: cogs/config/settings.py:117
+#: cogs/config/settings.py:123
 msgid "Open the mod-log control panel"
 msgstr "Άνοιξε το πάνελ ελέγχου mod-log"
 
-#: cogs/config/settings.py:120 cogs/config/settings.py:222
+#: cogs/config/settings.py:126 cogs/config/settings.py:228
 #: cogs/config/starboard.py:356 cogs/config/starboard.py:393
 #: cogs/config/starboard.py:430 cogs/config/starboard.py:455
 #: tools/botstats_features.py:81
 msgid "Starboard"
 msgstr "Starboard"
 
-#: cogs/config/settings.py:123 cogs/config/starboard.py:175
+#: cogs/config/settings.py:129 cogs/config/starboard.py:175
 #: cogs/config/starboard.py:257
 msgid "Configure the starboard"
 msgstr "Ρύθμισε το starboard"
 
-#: cogs/config/settings.py:129
+#: cogs/config/settings.py:135
 msgid "Configure welcome messages"
 msgstr "Ρύθμισε τα μηνύματα καλωσορίσματος"
 
-#: cogs/config/settings.py:133
+#: cogs/config/settings.py:139
 msgid "Configure a feature..."
 msgstr "Ρύθμισε μια λειτουργία..."
 
-#: cogs/config/settings.py:169 cogs/config/settings.py:176
-#: cogs/config/settings.py:185 cogs/config/settings.py:201
-#: cogs/config/settings.py:209
+#: cogs/config/settings.py:175 cogs/config/settings.py:182
+#: cogs/config/settings.py:191 cogs/config/settings.py:207
+#: cogs/config/settings.py:215
 msgid "Not set up"
 msgstr "Δεν έχει ρυθμιστεί"
 
-#: cogs/config/settings.py:189
+#: cogs/config/settings.py:195
 msgid "Anti-link"
 msgstr "Anti-link"
 
-#: cogs/config/settings.py:191
+#: cogs/config/settings.py:197
 msgid "Anti-spam"
 msgstr "Anti-spam"
 
-#: cogs/config/settings.py:237
+#: cogs/config/settings.py:243
 msgid "Configuration"
 msgstr "Διαμόρφωση"
 
-#: cogs/config/settings.py:241
+#: cogs/config/settings.py:247
 msgid "An overview of every feature for this server. Use the menu below to toggle **Leveling** or jump to a feature's setup command."
 msgstr "Μια επισκόπηση κάθε λειτουργίας αυτού του διακομιστή. Χρησιμοποίησε το μενού παρακάτω για να εναλλάξεις τα **Επίπεδα** ή να μεταβείς στην εντολή ρύθμισης μιας λειτουργίας."
 
-#: cogs/config/settings.py:246
+#: cogs/config/settings.py:252
 msgid "Full leveling setup lives in `/levelconfig`."
 msgstr "Η πλήρης ρύθμιση του συστήματος επιπέδων βρίσκεται στο `/levelconfig`."
 
-#: cogs/config/settings.py:353
+#: cogs/config/settings.py:374
 msgid "The prefix can't be blank."
 msgstr "Το πρόθεμα δεν μπορεί να είναι κενό."
 
-#: cogs/config/settings.py:356
+#: cogs/config/settings.py:377
 msgid "The prefix can't be longer than 10 characters."
 msgstr "Το πρόθεμα δεν μπορεί να είναι μεγαλύτερο από 10 χαρακτήρες."
 
-#: cogs/config/settings.py:370 cogs/config/settings.py:394
+#: cogs/config/settings.py:391 cogs/config/settings.py:415
 msgid "Server prefix"
 msgstr "Πρόθεμα διακομιστή"
 
-#: cogs/config/settings.py:372
+#: cogs/config/settings.py:393
 msgid "Prefix has been set to:"
 msgstr "Το πρόθεμα ορίστηκε σε:"
 
-#: cogs/config/settings.py:396
+#: cogs/config/settings.py:417
 msgid "Current server prefix"
 msgstr "Τρέχον πρόθεμα διακομιστή"
 
-#: cogs/config/settings.py:433
+#: cogs/config/settings.py:454
 msgid "Auto-role role"
 msgstr "Ρόλος αυτόματου ρόλου"
 
-#: cogs/config/settings.py:436
+#: cogs/config/settings.py:457
 msgid "Auto-role has been set to:"
 msgstr "Ο αυτόματος ρόλος ορίστηκε σε:"
 
-#: cogs/config/settings.py:459
+#: cogs/config/settings.py:480
 msgid "Auto-role has been remove from the guild"
 msgstr "Ο αυτόματος ρόλος αφαιρέθηκε από τον διακομιστή"
 
-#: cogs/config/settings.py:486 cogs/config/settings.py:493
+#: cogs/config/settings.py:507 cogs/config/settings.py:514
 msgid "Current auto-role"
 msgstr "Τρέχων αυτόματος ρόλος"
+
+#: cogs/config/settings.py:673
+msgid "The settings panel is unavailable here right now."
+msgstr "Το πάνελ ρυθμίσεων δεν είναι διαθέσιμο εδώ αυτή τη στιγμή."
+
+#: cogs/config/settings.py:676
+msgid "You need the Manage Server permission to open the settings panel."
+msgstr "Χρειάζεσαι το δικαίωμα Manage Server για να ανοίξεις το πάνελ ρυθμίσεων."
 
 #: cogs/config/starboard.py:181
 msgid "Pick the starboard channel"
@@ -10246,11 +10390,13 @@ msgstr "Παραλείφθηκε."
 msgid "Volume set to {volume}%."
 msgstr "Η ένταση ορίστηκε σε {volume}%."
 
-#: cogs/music/views.py:1025 locales/command_strings.py:447
+#: cogs/music/views.py:1025 cogs/system/help.py:567
+#: locales/command_strings.py:447
 msgid "off"
 msgstr "ανενεργή"
 
-#: cogs/music/views.py:1028 locales/command_strings.py:449
+#: cogs/music/views.py:1028 cogs/system/help.py:567
+#: locales/command_strings.py:449
 msgid "on"
 msgstr "ενεργή"
 
@@ -11231,88 +11377,99 @@ msgstr "**Φαίνεται ότι μου λείπουν δικαιώματα:**"
 msgid "You are blacklisted from bot. You can ask to be unblacklisted by send a message to <@228895251576782858>"
 msgstr "Είσαι στη μαύρη λίστα του bot. Μπορείς να ζητήσεις να αφαιρεθείς από αυτήν στέλνοντας μήνυμα στο <@228895251576782858>"
 
-#: cogs/system/help.py:62
-msgid "Play music, queue tracks, tune filters and see lyrics."
-msgstr "Παίξε μουσική, βάλε κομμάτια στην ουρά, ρύθμισε εφέ και δες στίχους."
-
-#: cogs/system/help.py:68
-msgid "Memes, dice, minigames and quick laughs."
-msgstr "Memes, ζάρια, μίνι παιχνίδια και γρήγορο γέλιο."
-
-#: cogs/system/help.py:74
+#: cogs/system/help.py:64
 msgid "Search AniList, track your list and get airing alerts."
 msgstr "Αναζήτησε στο AniList, παρακολούθησε τη λίστα σου και λάβε ειδοποιήσεις προβολής."
 
-#: cogs/system/help.py:80
+#: cogs/system/help.py:70
+msgid "Play music, queue tracks, tune filters and see lyrics."
+msgstr "Παίξε μουσική, βάλε κομμάτια στην ουρά, ρύθμισε εφέ και δες στίχους."
+
+#: cogs/system/help.py:76
+msgid "Memes, dice, minigames and quick laughs."
+msgstr "Memes, ζάρια, μίνι παιχνίδια και γρήγορο γέλιο."
+
+#: cogs/system/help.py:82
 msgid "Earn XP, climb the leaderboard and set up rewards."
 msgstr "Κέρδισε XP, ανέβα στην κατάταξη και όρισε ανταμοιβές."
 
-#: cogs/system/help.py:86
+#: cogs/system/help.py:88
 msgid "Your profile, reminders, AFK and personal preferences."
 msgstr "Το προφίλ σου, υπενθυμίσεις, AFK και προσωπικές προτιμήσεις."
 
-#: cogs/system/help.py:101
+#: cogs/system/help.py:103
 msgid "Server info, polls, translations and handy utilities."
 msgstr "Πληροφορίες διακομιστή, ψηφοφορίες, μεταφράσεις και χρήσιμα εργαλεία."
 
-#: cogs/system/help.py:115
+#: cogs/system/help.py:117
 msgid "Kicks, bans, warnings, automod and mod logs."
 msgstr "Kicks, bans, προειδοποιήσεις, automod και αρχεία καταγραφής."
 
-#: cogs/system/help.py:121
+#: cogs/system/help.py:123
 msgid "Welcome messages, starboard, custom commands and more."
 msgstr "Μηνύματα καλωσορίσματος, starboard, προσαρμοσμένες εντολές και άλλα."
 
-#: cogs/system/help.py:141
+#: cogs/system/help.py:143
 msgid "Reaction roles, role menus, button roles and verification."
 msgstr "Ρόλοι με αντίδραση, μενού ρόλων, ρόλοι με κουμπιά και επαλήθευση."
 
-#: cogs/system/help.py:149
+#: cogs/system/help.py:151
 msgid "Anything not yet sorted into a category."
 msgstr "Ο,τι δεν έχει ακόμα ταξινομηθεί σε κατηγορία."
 
-#: cogs/system/help.py:251 cogs/system/help.py:298 cogs/system/help.py:311
-#: cogs/system/help.py:791
+#: cogs/system/help.py:253 cogs/system/help.py:300 cogs/system/help.py:313
+#: cogs/system/help.py:840
 msgid "No description provided."
 msgstr "Δεν δόθηκε περιγραφή."
 
-#: cogs/system/help.py:303 cogs/system/help.py:795
+#: cogs/system/help.py:305 cogs/system/help.py:844
 msgid "Aliases"
 msgstr "Συνώνυμα"
 
-#: cogs/system/help.py:316
+#: cogs/system/help.py:318
 #, python-brace-format
 msgid "This command has {count}. Toggle expansion in /preferences, or use `{prefix}help {group} <subcommand>`."
 msgstr "Αυτή η εντολή έχει {count}. Εναλλάξε την ανάπτυξη στο /preferences ή χρησιμοποίησε `{prefix}help {group} <subcommand>`."
 
-#: cogs/system/help.py:321
+#: cogs/system/help.py:323
 #, python-brace-format
 msgid "{n} subcommand"
 msgid_plural "{n} subcommands"
 msgstr[0] "{n} υποεντολή"
 msgstr[1] "{n} υποεντολές"
 
-#: cogs/system/help.py:326
+#: cogs/system/help.py:328
 msgid "Subcommands"
 msgstr "Υποεντολές"
 
-#: cogs/system/help.py:355
+#: cogs/system/help.py:357
 msgid "Jump to a category..."
 msgstr "Μετάβαση σε κατηγορία..."
 
-#: cogs/system/help.py:424 cogs/system/help.py:553 cogs/system/help.py:572
+#: cogs/system/help.py:429 cogs/system/help.py:602 cogs/system/help.py:621
 #, python-brace-format
 msgid "{n} command"
 msgid_plural "{n} commands"
 msgstr[0] "{n} εντολή"
 msgstr[1] "{n} εντολές"
 
-#: cogs/system/help.py:485
+#: cogs/system/help.py:521
+#, python-brace-format
+msgid "Anime alerts: set up in {count} channel"
+msgid_plural "Anime alerts: set up in {count} channels"
+msgstr[0] "Ειδοποιήσεις anime: ρυθμίστηκαν σε {count} κανάλι"
+msgstr[1] "Ειδοποιήσεις anime: ρυθμίστηκαν σε {count} κανάλια"
+
+#: cogs/system/help.py:527
+msgid "Anime alerts: not set up - `/anilistfeed quicksetup`"
+msgstr "Ειδοποιήσεις anime: δεν έχουν ρυθμιστεί - `/anilistfeed quicksetup`"
+
+#: cogs/system/help.py:538
 #, python-brace-format
 msgid "{bot} • Help"
 msgstr "{bot} • Βοήθεια"
 
-#: cogs/system/help.py:487
+#: cogs/system/help.py:540
 #, python-brace-format
 msgid ""
 "Hey there! I'm **{bot}**, glad to help. 💫\n"
@@ -11323,139 +11480,132 @@ msgstr ""
 "\n"
 "Χρησιμοποίησε το μενού για να μεταβείς σε μια κατηγορία, τα βέλη για περιήγηση, ή `{prefix}help <command>` για μια συγκεκριμένη εντολή."
 
-#: cogs/system/help.py:513
-msgid "Enabled ✅"
-msgstr "Ενεργοποιημένο ✅"
+#: cogs/system/help.py:574
+#, python-brace-format
+msgid "Prefix: `{prefix}`"
+msgstr "Πρόθεμα: `{prefix}`"
 
-#: cogs/system/help.py:513
-msgid "Disabled ❌"
-msgstr "Απενεργοποιημένο ❌"
+#: cogs/system/help.py:575
+#, python-brace-format
+msgid "Members: **{members}**"
+msgstr "Μέλη: **{members}**"
 
-#: cogs/system/help.py:521
+#: cogs/system/help.py:580
+#, python-brace-format
+msgid "Leveling: {leveling}"
+msgstr "Επίπεδα: {leveling}"
+
+#: cogs/system/help.py:581
 msgid "🏠 Server"
 msgstr "🏠 Διακομιστής"
 
-#: cogs/system/help.py:524
-#, python-brace-format
-msgid ""
-"Prefix: `{prefix}`\n"
-"Members: **{members}**\n"
-"Leveling: {leveling}"
-msgstr ""
-"Πρόθεμα: `{prefix}`\n"
-"Μέλη: **{members}**\n"
-"Επίπεδα: {leveling}"
-
-#: cogs/system/help.py:536
+#: cogs/system/help.py:585
 msgid "🏠 Direct Messages"
 msgstr "🏠 Προσωπικά μηνύματα"
 
-#: cogs/system/help.py:538
+#: cogs/system/help.py:587
 #, python-brace-format
 msgid "Default prefix: `{prefix}`"
 msgstr "Προεπιλεγμένο πρόθεμα: `{prefix}`"
 
-#: cogs/system/help.py:564
+#: cogs/system/help.py:613
 msgid "📚 Categories"
 msgstr "📚 Κατηγορίες"
 
-#: cogs/system/help.py:570
+#: cogs/system/help.py:619
 #, python-brace-format
 msgid "{commands} across {categories} • Use the menu or arrows to explore"
 msgstr "{commands} σε {categories} • Χρησιμοποίησε το μενού ή τα βέλη για εξερεύνηση"
 
-#: cogs/system/help.py:576
+#: cogs/system/help.py:625
 #, python-brace-format
 msgid "{n} category"
 msgid_plural "{n} categories"
 msgstr[0] "{n} κατηγορία"
 msgstr[1] "{n} κατηγορίες"
 
-#: cogs/system/help.py:585
+#: cogs/system/help.py:634
 #, python-brace-format
 msgid "Category {current}/{total} • {prefix}help <command> for details"
 msgstr "Κατηγορία {current}/{total} • {prefix}help <command> για λεπτομέρειες"
 
-#: cogs/system/help.py:591
+#: cogs/system/help.py:640
 #, python-brace-format
 msgid "...more commands available. Use `{prefix}help <command>` to see them."
 msgstr "...υπάρχουν περισσότερες εντολές. Χρησιμοποίησε `{prefix}help <command>` για να τις δεις."
 
-#: cogs/system/help.py:608
+#: cogs/system/help.py:657
 msgid "No commands available."
 msgstr "Δεν υπάρχουν διαθέσιμες εντολές."
 
-#: cogs/system/help.py:673
+#: cogs/system/help.py:722
 msgid "Something went wrong opening the help menu."
 msgstr "Κάτι πήγε στραβά κατά το άνοιγμα του μενού βοήθειας."
 
-#: cogs/system/help.py:742
+#: cogs/system/help.py:791
 msgid "Collapse subcommands"
 msgstr "Σύμπτυξη υποεντολών"
 
-#: cogs/system/help.py:742
+#: cogs/system/help.py:791
 msgid "Expand subcommands"
 msgstr "Ανάπτυξη υποεντολών"
 
-#: cogs/system/help.py:759
+#: cogs/system/help.py:808
 msgid "Something went wrong updating that preference."
 msgstr "Κάτι πήγε στραβά κατά την ενημέρωση αυτής της προτίμησης."
 
-#: cogs/system/help.py:775 cogs/system/help.py:815
+#: cogs/system/help.py:824 cogs/system/help.py:864
+#: cogs/system/onboarding.py:149
 msgid "Help"
 msgstr "Βοήθεια"
 
-#: cogs/system/help.py:777
+#: cogs/system/help.py:826 cogs/system/help.py:888
 #, python-brace-format
 msgid "Use `{prefix}help <command>` for more info on a command."
 msgstr "Χρησιμοποίησε `{prefix}help <command>` για περισσότερες πληροφορίες σχετικά με μια εντολή."
 
-#: cogs/system/onboarding.py:155
+#: cogs/system/onboarding.py:147
+msgid "Set up anime alerts"
+msgstr "Ρύθμιση ειδοποιήσεων anime"
+
+#: cogs/system/onboarding.py:148
+msgid "Server settings"
+msgstr "Ρυθμίσεις server"
+
+#: cogs/system/onboarding.py:203
+msgid "This only works in a server."
+msgstr "Αυτό λειτουργεί μόνο σε server."
+
+#: cogs/system/onboarding.py:211
+msgid "You need the Manage Server permission to use this button."
+msgstr "Χρειάζεσαι το δικαίωμα Manage Server για να χρησιμοποιήσεις αυτό το κουμπί."
+
+#: cogs/system/onboarding.py:235
 #, python-brace-format
 msgid "Hello, {guild}! I'm Yasuho."
 msgstr "Γεια σου, {guild}! Είμαι η Yasuho."
 
-#: cogs/system/onboarding.py:161
-msgid "I'm ready and delighted to help out here. Here's what I can do:"
-msgstr "Είμαι έτοιμη και χαίρομαι να βοηθήσω εδώ. Να τι μπορώ να κάνω:"
+#: cogs/system/onboarding.py:241
+msgid "I'm the bot for anime and manga servers."
+msgstr "Είμαι το bot για servers anime και manga."
 
-#: cogs/system/onboarding.py:164
-msgid "- **Music**: full-featured player with queues, effects, and synced lyrics."
-msgstr "- **Μουσική**: πλήρης media player με ουρές, εφέ και συγχρονισμένους στίχους."
+#: cogs/system/onboarding.py:244
+msgid "- **Anime & manga**: AniList feed, episode and chapter alerts, watch-alongs."
+msgstr "- **Anime και manga**: feed AniList, ειδοποιήσεις επεισοδίων και κεφαλαίων, παρακολούθηση μαζί."
 
-#: cogs/system/onboarding.py:168
-msgid "- **Moderation**: automod, warnings, mutes, and a searchable case history."
-msgstr "- **Διαχείριση**: automod, προειδοποιήσεις, mute και ένα αναζητήσιμο ιστορικό υποθέσεων."
+#: cogs/system/onboarding.py:247
+msgid "- **Music**: queues, effects and synced lyrics."
+msgstr "- **Μουσική**: ουρές, εφέ και συγχρονισμένοι στίχοι."
 
-#: cogs/system/onboarding.py:171
-msgid "- **Leveling**: XP, levels, and role rewards for your members."
-msgstr "- **Επίπεδα**: XP, επίπεδα και ανταμοιβές ρόλων για τα μέλη σου."
+#: cogs/system/onboarding.py:248
+msgid "- **Plus** levels, moderation, tickets and more."
+msgstr "- **Plus**: επίπεδα, moderation, tickets και άλλα."
 
-#: cogs/system/onboarding.py:173
-msgid "- **AniList & manga**: watch/reading lists, airing alerts, and new-chapter alerts."
-msgstr "- **AniList & manga**: λίστες παρακολούθησης/ανάγνωσης, ειδοποιήσεις προβολής και ειδοποιήσεις νέων κεφαλαίων."
+#: cogs/system/onboarding.py:251
+msgid "Use the buttons below to get started."
+msgstr "Χρησιμοποίησε τα κουμπιά παρακάτω για να ξεκινήσεις."
 
-#: cogs/system/onboarding.py:176
-msgid "- **Fun**: games and more to keep the server lively."
-msgstr "- **Διασκέδαση**: παιχνίδια και πολλά άλλα για να ζωντανεύει ο server."
-
-#: cogs/system/onboarding.py:182
-msgid "Getting started"
-msgstr "Ξεκινώντας"
-
-#: cogs/system/onboarding.py:184
-msgid "Use `/config panel` to set up prefixes, autorole, leveling, starboard, automod, mod-log, and welcome messages in one place."
-msgstr "Χρησιμοποιήστε την `/config panel` για να ορίσετε σε ένα μέρος τα προθέματα, τον αυτόματο ρόλο, τα επίπεδα, το starboard, το automod, το αρχείο καταγραφής και τα μηνύματα καλωσορίσματος."
-
-#: cogs/system/onboarding.py:187
-msgid "Use `/help` to browse every command."
-msgstr "Χρησιμοποίησε `/help` για να δεις όλες τις εντολές."
-
-#: cogs/system/onboarding.py:188
-msgid "Right-click a message, then **Apps > Quote**, to quote it."
-msgstr "Κάνε δεξί κλικ σε ένα μήνυμα και μετά **Apps > Quote** για να το παραθέσεις."
-
-#: cogs/system/onboarding.py:189
+#: cogs/system/onboarding.py:260
 msgid "Use `/language` to pick the language I speak in this server."
 msgstr "Χρησιμοποίησε `/language` για να επιλέξεις τη γλώσσα που μιλάω σε αυτόν τον server."
 
