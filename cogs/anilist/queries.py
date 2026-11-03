@@ -119,6 +119,23 @@ query ($sort: [MediaSort], $type: MediaType, $season: MediaSeason, $seasonYear: 
 }
 """
 
+# What is airing right now, most popular first - the quick-setup wizard's list
+# (cogs/anilist/alerts_wizard.py). One page of 25 = the most a Discord select
+# can show. ``isAdult: false`` is filtered server-side so no adult row is ever
+# sent back to be dropped.
+AIRING_NOW_QUERY = """
+query {
+  Page(perPage: 25) {
+    media(type: ANIME, status: RELEASING, sort: POPULARITY_DESC, isAdult: false) {
+      id
+      isAdult
+      title { romaji english }
+      format
+    }
+  }
+}
+"""
+
 USER_STATS_QUERY = """
 query ($name: String) {
   User(name: $name) {

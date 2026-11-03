@@ -92,6 +92,7 @@ from discord.ext import commands, tasks
 from . import feed_coalesce as afc
 from . import feed_filters
 from . import feed_policy as af
+from .alerts_wizard import build_alerts_wizard, open_anime_alerts_wizard
 from .breaker import (
     CircuitOpen,
     breaker_for,
@@ -159,7 +160,7 @@ from .helpers import API_URL, channel_allows_adult, resolve_guild_limits
 from .queries import SEARCH_QUERY, VIEWER_QUERY
 from .replies import NoPingReplies
 from .throttle import note_response, recorder_for
-from tools import i18n, premium, premium_upsell
+from tools import i18n, interactions, premium, premium_upsell
 from tools.db import affected_rows
 from tools.http import TIMEOUT, get_session
 from tools.i18n import _, ngettext
@@ -2510,6 +2511,23 @@ class AniListFeed(NoPingReplies, commands.Cog):
             )
 
         await ctx.send(view=_FeedNoticeView(_("AniList feed"), message))
+
+    @anilistfeed.command(name="quicksetup")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def anilistfeed_quicksetup(self, ctx: commands.Context):
+        """Set up anime episode alerts in a few clicks."""
+
+        if ctx.interaction is None:
+            # Prefix path: no interaction to answer, so the card is a plain
+            # (author-locked) message.
+            view = await build_alerts_wizard(self, ctx.guild, ctx.author, ctx.channel)
+            if isinstance(view, str):
+                return await ctx.send(view)
+            view.message = await ctx.send(view=view)
+            return
+        await interactions.defer_ephemeral(ctx)
+        await open_anime_alerts_wizard(ctx.interaction)
 
     @anilistfeed.command(name="follow")
     @commands.guild_only()
