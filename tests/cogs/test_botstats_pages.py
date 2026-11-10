@@ -121,23 +121,6 @@ def test_failed_read_renders_unavailable_not_zeros():
 def test_zero_guilds_does_not_divide_by_zero():
     text = _flat(bf.render_features({"welcome": 0}, 0))
     assert "Welcome messages - 0 of 0 (-)" in text
-    assert "Least adopted" not in text
-
-
-def test_least_adopted_hint_lists_features_under_five_percent():
-    counts = {f.key: 50 for f in bf.FEATURES}
-    counts["starboard"] = 1
-    counts["welcome"] = 0
-    text = _flat(bf.render_features(counts, 100))
-    hint = [line for line in text.splitlines() if line.startswith("Under 5%")][0]
-    assert "Starboard" in hint and "Welcome messages" in hint
-    assert "Tickets" not in hint
-
-
-def test_least_adopted_hint_ignores_unknown_and_says_none_when_healthy():
-    counts = {f.key: 90 for f in bf.FEATURES}
-    assert "No feature is under 5%" in _flat(bf.render_features(counts, 100))
-    assert "Under 5%" not in _flat(bf.render_features({}, 100))
 
 
 def test_features_truncate_with_a_count_of_the_rest():

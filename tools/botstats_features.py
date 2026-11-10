@@ -21,10 +21,9 @@ from tools.i18n import N_, _
 # A feature is "under-adopted" below this share of the guilds the bot is in.
 LOW_ADOPTION = 0.05
 
-# Hard cap on listed features and on names in the hint line, so a long list can
-# never push the card past Discord's text budget.
+# Hard cap on listed features, so a long list can never push the card past
+# Discord's text budget.
 FEATURE_LINES_LIMIT = 40
-LOW_NAMES_LIMIT = 8
 
 
 @dataclasses.dataclass(frozen=True)
@@ -238,23 +237,6 @@ def render_features(counts, guild_total, *, features=FEATURES, limit=FEATURE_LIN
             )
     if people:
         sections.append((_("People"), people))
-
-    if guild_total:
-        low = [
-            f
-            for f in reversed(ranked)
-            if counts.get(f.key) is not None
-            and counts[f.key] / guild_total < LOW_ADOPTION
-        ]
-        names = ", ".join(_(f.label) for f in low[:LOW_NAMES_LIMIT])
-        if len(low) > LOW_NAMES_LIMIT:
-            names += _(", ... and {count} more").format(count=len(low) - LOW_NAMES_LIMIT)
-        hint = (
-            _("Under 5% of servers: {names}.").format(names=names)
-            if low
-            else _("No feature is under 5% of servers.")
-        )
-        sections.append((_("Least adopted"), [hint]))
 
     sections[-1][1].append(
         "-# "
