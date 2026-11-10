@@ -309,21 +309,21 @@ WHERE extra->>'guild_id' ~ '^[0-9]+$'
 
 
 async def schedule_guild_purge(pool, guild_id, *, left_at=None):
-    """Create or reset a guild's 30-day grace-period purge job."""
+    """Create a guild's 30-day grace-period purge job.
+
+    Returns the deadline, or ``None`` when a job already exists: a rejoin deletes
+    the job, so an existing one means the bot never came back and it must hold.
+    """
     left_at = left_at or datetime.datetime.now(datetime.timezone.utc)
     purge_after = left_at + datetime.timedelta(days=GUILD_GRACE_DAYS)
-    await pool.execute(
-        "INSERT INTO guild_retention_jobs "
-        "(guild_id, left_at, purge_after, attempts, last_error, claimed_at) "
-        "VALUES ($1, $2, $3, 0, NULL, NULL) "
-        "ON CONFLICT (guild_id) DO UPDATE SET "
-        "left_at = EXCLUDED.left_at, purge_after = EXCLUDED.purge_after, "
-        "attempts = 0, last_error = NULL, claimed_at = NULL",
+    return await pool.fetchval(
+        "INSERT INTO guild_retention_jobs (guild_id, left_at, purge_after) "
+        "VALUES ($1, $2, $3) "
+        "ON CONFLICT (guild_id) DO NOTHING RETURNING purge_after",
         guild_id,
         left_at,
         purge_after,
     )
-    return purge_after
 
 
 async def list_guild_jobs(pool, limit=50):

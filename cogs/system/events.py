@@ -115,6 +115,9 @@ class Events(commands.Cog):
             purge_after = await retention.schedule_guild_purge(
                 self.bot.db_pool, guild.id
             )
+            if purge_after is None:
+                # Discord re-announces some long-gone guilds on each new session.
+                return
             log.info(
                 "Guild %s data scheduled for purge at %s",
                 guild.id,

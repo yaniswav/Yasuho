@@ -157,14 +157,15 @@ class _Pool:
 async def test_schedule_guild_purge_uses_thirty_day_grace(fake_pool):
     left_at = datetime.datetime(2030, 1, 1, tzinfo=datetime.timezone.utc)
 
-    purge_after = await retention.schedule_guild_purge(
-        fake_pool, 42, left_at=left_at
-    )
+    fake_pool.fetchval_return = "the deadline"
 
-    assert purge_after == left_at + datetime.timedelta(days=30)
+    assert (
+        await retention.schedule_guild_purge(fake_pool, 42, left_at=left_at)
+        == "the deadline"
+    )
     _method, query, args = fake_pool.calls[0]
-    assert "ON CONFLICT (guild_id)" in query
-    assert args == (42, left_at, purge_after)
+    assert "DO NOTHING RETURNING purge_after" in query
+    assert args == (42, left_at, left_at + datetime.timedelta(days=30))
 
 
 async def test_avatar_prune_query_pins_approved_policy(fake_pool):

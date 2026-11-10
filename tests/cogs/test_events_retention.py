@@ -37,6 +37,33 @@ async def test_guild_remove_schedules_grace_job_and_invalidates_caches(
     assert invalidated == [42]
 
 
+async def test_guild_remove_of_an_already_departed_guild_is_not_a_new_leave(
+    monkeypatch,
+):
+    recorded = []
+    invalidated = []
+
+    async def schedule(_pool, _guild_id):
+        return None
+
+    async def record(_pool, _guild, kind):
+        recorded.append(kind)
+
+    monkeypatch.setattr(events.retention, "schedule_guild_purge", schedule)
+    monkeypatch.setattr(events.botstats_growth, "record_guild_event", record)
+    monkeypatch.setattr(
+        events.retention,
+        "invalidate_guild_caches",
+        lambda _bot, guild_id: invalidated.append(guild_id),
+    )
+
+    bot = types.SimpleNamespace(db_pool=object())
+    await _cog(bot).on_guild_remove(types.SimpleNamespace(id=42))
+
+    assert recorded == []
+    assert invalidated == [42]
+
+
 async def test_guild_join_cancels_purge_and_restores_startup_caches(
     monkeypatch,
 ):
