@@ -95,7 +95,7 @@ async def test_a_failed_write_is_swallowed():
 
 
 async def test_the_events_cog_logs_a_join_and_a_leave(monkeypatch):
-    async def cancel(_pool, guild_id):
+    async def cancel(_pool, guild_id, **_kwargs):
         raise RuntimeError("retention outage")
 
     monkeypatch.setattr(events.retention, "cancel_guild_purge", cancel)
@@ -104,7 +104,7 @@ async def test_the_events_cog_logs_a_join_and_a_leave(monkeypatch):
     pool = _Pool()
     cog = object.__new__(events.Events)
     cog.bot = types.SimpleNamespace(db_pool=pool)
-    guild = types.SimpleNamespace(id=7, member_count=10, me=None)
+    guild = types.SimpleNamespace(id=7, member_count=10, me=None, unavailable=False)
     await cog.on_guild_join(guild)  # the restore failed, the statistic still lands
     await cog.on_guild_remove(guild)
     assert pool.rows == [("join", 10, None), ("leave", 10, None)]

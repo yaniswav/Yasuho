@@ -111,18 +111,19 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
+        # Discord re-announces some long-gone guilds on each new session, while
+        # they are still READY stubs: their deadline holds and it is not a leave.
+        already_gone = guild.unavailable
         try:
             purge_after = await retention.schedule_guild_purge(
-                self.bot.db_pool, guild.id
+                self.bot.db_pool, guild.id, keep_existing=already_gone
             )
-            if purge_after is None:
-                # Discord re-announces some long-gone guilds on each new session.
-                return
-            log.info(
-                "Guild %s data scheduled for purge at %s",
-                guild.id,
-                purge_after.isoformat(),
-            )
+            if not already_gone:
+                log.info(
+                    "Guild %s data scheduled for purge at %s",
+                    guild.id,
+                    purge_after.isoformat(),
+                )
         except Exception:
             # Never turn a transient outage into immediate data loss.
             log.exception(
@@ -130,6 +131,8 @@ class Events(commands.Cog):
             )
         finally:
             retention.invalidate_guild_caches(self.bot, guild.id)
+        if already_gone:
+            return
         await botstats_growth.record_guild_event(self.bot.db_pool, guild, "leave")
 
     @commands.Cog.listener()

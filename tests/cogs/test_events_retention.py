@@ -19,7 +19,8 @@ async def test_guild_remove_schedules_grace_job_and_invalidates_caches(
         2030, 2, 1, tzinfo=datetime.timezone.utc
     )
 
-    async def schedule(_pool, guild_id):
+    async def schedule(_pool, guild_id, keep_existing):
+        assert keep_existing is False
         scheduled.append(guild_id)
         return purge_after
 
@@ -31,20 +32,22 @@ async def test_guild_remove_schedules_grace_job_and_invalidates_caches(
     )
     bot = types.SimpleNamespace(db_pool=object())
 
-    await _cog(bot).on_guild_remove(types.SimpleNamespace(id=42))
+    await _cog(bot).on_guild_remove(types.SimpleNamespace(id=42, unavailable=False))
 
     assert scheduled == [42]
     assert invalidated == [42]
 
 
-async def test_guild_remove_of_an_already_departed_guild_is_not_a_new_leave(
+async def test_guild_remove_of_a_ready_stub_keeps_the_deadline_and_is_no_leave(
     monkeypatch,
 ):
     recorded = []
+    kept = []
     invalidated = []
 
-    async def schedule(_pool, _guild_id):
-        return None
+    async def schedule(_pool, _guild_id, keep_existing):
+        kept.append(keep_existing)
+        return datetime.datetime(2030, 2, 1, tzinfo=datetime.timezone.utc)
 
     async def record(_pool, _guild, kind):
         recorded.append(kind)
@@ -58,8 +61,9 @@ async def test_guild_remove_of_an_already_departed_guild_is_not_a_new_leave(
     )
 
     bot = types.SimpleNamespace(db_pool=object())
-    await _cog(bot).on_guild_remove(types.SimpleNamespace(id=42))
+    await _cog(bot).on_guild_remove(types.SimpleNamespace(id=42, unavailable=True))
 
+    assert kept == [True]
     assert recorded == []
     assert invalidated == [42]
 
