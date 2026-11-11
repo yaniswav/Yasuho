@@ -210,7 +210,10 @@ class Extras(commands.Cog):
             manage_messages=True,
             manage_roles=True,
             manage_channels=True,
-            manage_nicknames=True,
+            # Tickets run in private threads; /ticket setup refuses without these.
+            create_public_threads=True,
+            create_private_threads=True,
+            manage_threads=True,
             kick_members=True,
             ban_members=True,
             moderate_members=True,
